@@ -1,5 +1,5 @@
 // Forzar la URL de la API de Render si no está definida en el entorno
-const VITE_API_URL = import.meta.env.VITE_API_URL || 'https://sav-proyecto.onrender.com/api';
+const VITE_API_URL = import.meta.env.VITE_API_URL || 'https://sav-zhyg.onrender.com/api';
 const API = VITE_API_URL;
 
 function getToken() {
@@ -90,7 +90,7 @@ export const api = {
     if (path.startsWith('http')) return path;
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     // Usamos el dominio de Render para los archivos estáticos
-    const renderUrl = 'https://sav-proyecto.onrender.com';
+    const renderUrl = 'https://sav-zhyg.onrender.com';
     return renderUrl + normalizedPath;
   },
   post: (url, data) => request(url, { method: 'POST', body: JSON.stringify(data) }),

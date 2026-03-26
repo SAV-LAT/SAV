@@ -31,9 +31,9 @@ app.use((req, res, next) => {
 // Configuración de CORS estricta para producción
 console.log('[SERVER] Configurando CORS...');
 const whitelist = [
-  'https://sav-proyecto.vercel.app', // Dominio de producción en Vercel
-  'https://sav-iouoxrj8r-moicon123s-projects.vercel.app', // Dominio de despliegue en Vercel
-  'http://localhost:5173',          // Entorno de desarrollo local
+  'https://sav-g9xx.vercel.app',         // Tu nuevo dominio de producción en Vercel
+  'https://sav-proyecto.vercel.app',     // Dominios antiguos
+  'http://localhost:5173',               // Entorno de desarrollo local
   'http://127.0.0.1:5173'
 ];
 

@@ -59,7 +59,13 @@ export default function Dashboard() {
         setPublicConfig(data);
         setGuideText(g => data.home_guide || g);
         setPopup(data);
-        if (data.popup_enabled) setShowPopup(true);
+        
+        // Lógica para mostrar el popup solo una vez por sesión
+        const hasSeenPopup = sessionStorage.getItem('sav_popup_seen');
+        if (data.popup_enabled && !hasSeenPopup) {
+          setShowPopup(true);
+          sessionStorage.setItem('sav_popup_seen', 'true');
+        }
       })
       .catch(() => {});
   }, [isMounted]);

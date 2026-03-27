@@ -39,21 +39,36 @@ export default function Ganancias() {
   useEffect(() => {
     fetchData();
 
-    // Suscripción en tiempo real a movimientos_saldo
+    // Suscripción en tiempo real a movimientos_saldo y usuarios
     if (user?.id) {
-      const channel = supabase.channel(`movimientos_saldo:usuario_id=eq.${user.id}`)
+      console.log(`[GananciasRealtime] Suscribiendo para usuario: ${user.id}`);
+      
+      const channel = supabase.channel(`ganancias_realtime_${user.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'usuarios', 
+          filter: `id=eq.${user.id}` 
+        }, () => {
+          console.log('[GananciasRealtime] Usuario actualizado, refrescando summary...');
+          fetchData();
+        })
         .on('postgres_changes', { 
           event: 'INSERT', 
           schema: 'public', 
           table: 'movimientos_saldo', 
           filter: `usuario_id=eq.${user.id}` 
-        }, () => {
+        }, (payload) => {
+          console.log('[GananciasRealtime] Nuevo movimiento:', payload.new.tipo_movimiento);
           fetchData(); // Recargar datos si hay un nuevo movimiento
           refreshUser(); // Actualizar el perfil del usuario (saldos)
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`[GananciasRealtime] Estado: ${status}`);
+        });
 
       return () => {
+        console.log('[GananciasRealtime] Desuscribiendo...');
         supabase.removeChannel(channel);
       };
     }

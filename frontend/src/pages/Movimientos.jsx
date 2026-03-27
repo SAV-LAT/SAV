@@ -42,19 +42,46 @@ export default function Movimientos() {
   useEffect(() => {
     fetchData();
 
-    // Suscripción Realtime para recargas y retiros
+    // Suscripción Realtime para recargas, retiros y usuarios (saldo)
     if (user?.id) {
-      const recargasChannel = supabase.channel(`public:recargas:usuario_id=eq.${user.id}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'recargas', filter: `usuario_id=eq.${user.id}` }, () => fetchData())
-        .subscribe();
-
-      const retirosChannel = supabase.channel(`public:retiros:usuario_id=eq.${user.id}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'retiros', filter: `usuario_id=eq.${user.id}` }, () => fetchData())
-        .subscribe();
+      console.log(`[MovimientosRealtime] Suscribiendo para usuario: ${user.id}`);
+      
+      const channel = supabase.channel(`movimientos_realtime_${user.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'recargas', 
+          filter: `usuario_id=eq.${user.id}` 
+        }, () => {
+          console.log('[MovimientosRealtime] Cambio en recargas detectado');
+          fetchData();
+        })
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'retiros', 
+          filter: `usuario_id=eq.${user.id}` 
+        }, () => {
+          console.log('[MovimientosRealtime] Cambio en retiros detectado');
+          fetchData();
+        })
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'usuarios', 
+          filter: `id=eq.${user.id}` 
+        }, () => {
+          console.log('[MovimientosRealtime] Usuario actualizado (saldo/nivel)');
+          // refreshUser() ya está en el AuthContext escuchando 'usuarios', 
+          // pero forzamos recarga local si es necesario.
+        })
+        .subscribe((status) => {
+          console.log(`[MovimientosRealtime] Estado: ${status}`);
+        });
 
       return () => {
-        supabase.removeChannel(recargasChannel);
-        supabase.removeChannel(retirosChannel);
+        console.log('[MovimientosRealtime] Desuscribiendo...');
+        supabase.removeChannel(channel);
       };
     }
   }, [user?.id]);

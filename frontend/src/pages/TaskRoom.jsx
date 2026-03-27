@@ -53,39 +53,44 @@ export default function TaskRoom() {
   useEffect(() => {
     fetchTasks();
 
-    // Suscripción Realtime para actualizar la lista si cambia algo (opcional pero bueno)
+    // Suscripción Realtime Unificada para TaskRoom
     if (user?.id) {
-      const channel = supabase.channel(`public:actividad_tareas:usuario_id=eq.${user.id}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actividad_tareas', filter: `usuario_id=eq.${user.id}` }, () => {
+      console.log(`[TaskRoomRealtime] Suscribiendo para usuario: ${user.id}`);
+      
+      const channel = supabase.channel(`taskroom_realtime_${user.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'usuarios', 
+          filter: `id=eq.${user.id}` 
+        }, (payload) => {
+          console.log('[TaskRoomRealtime] Usuario actualizado, refrescando datos de sesión...');
+          refreshUser();
+        })
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'actividad_tareas', 
+          filter: `usuario_id=eq.${user.id}` 
+        }, () => {
+          console.log('[TaskRoomRealtime] Nueva actividad detectada, refrescando lista...');
           fetchTasks();
         })
-        .subscribe();
-      return () => supabase.removeChannel(channel);
-    }
-  }, [user?.id]);
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'movimientos_saldo', 
+          filter: `usuario_id=eq.${user.id}` 
+        }, () => {
+          console.log('[TaskRoomRealtime] Nuevo movimiento de ganancia, refrescando...');
+          // Opcional: mostrar notificación de crédito
+        })
+        .subscribe((status) => {
+          console.log(`[TaskRoomRealtime] Estado: ${status}`);
+        });
 
-  // Efecto para Realtime (Saldo y Estadísticas)
-  useEffect(() => {
-    if (user?.id) {
-      const channel = supabase.channel(`taskroom_realtime:${user.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'usuarios', filter: `id=eq.${user.id}` },
-          () => {
-            console.log('[Realtime] Saldo actualizado, refrescando datos...');
-            refreshUser();
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'movimientos_saldo', filter: `usuario_id=eq.${user.id}` },
-          () => {
-            console.log('[Realtime] Nuevo movimiento de ganancia, refrescando...');
-            fetchTasks();
-          }
-        )
-        .subscribe();
       return () => {
+        console.log('[TaskRoomRealtime] Desuscribiendo...');
         supabase.removeChannel(channel);
       };
     }

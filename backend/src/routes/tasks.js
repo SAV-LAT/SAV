@@ -73,7 +73,21 @@ router.get('/', authenticate, async (req, res) => {
       
       // Filtrar tareas que NO se han intentado hoy (ni bien ni mal)
       const attemptedTaskIdsToday = new Set(todayActivity.map(a => String(a.tarea_id)));
-      const pool = allTasks.filter(t => !attemptedTaskIdsToday.has(String(t.id)));
+      
+      // FILTRO DE INTEGRIDAD: Solo tareas que tengan video, pregunta, opciones y respuesta correcta
+      const pool = allTasks.filter(t => {
+        const hasVideo = !!t.video_url;
+        const hasQuestion = !!t.pregunta;
+        const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0;
+        const hasAnswer = !!t.respuesta_correcta;
+        const isNotAttempted = !attemptedTaskIdsToday.has(String(t.id));
+        
+        if (!hasVideo || !hasQuestion || !hasOptions || !hasAnswer) {
+          console.warn(`[Tasks v4] Tarea ${t.id} ("${t.nombre}") excluida del pool por estar incompleta.`);
+        }
+        
+        return hasVideo && hasQuestion && hasOptions && hasAnswer && isNotAttempted;
+      });
       
       // Selección aleatoria
       availableTasks = pool.sort(() => 0.5 - Math.random()).slice(0, remaining);
@@ -84,25 +98,17 @@ router.get('/', authenticate, async (req, res) => {
       nivel_id: level.id,
       tareas_restantes: remaining,
       tareas_completadas: todayCompletedCount,
-      tareas: availableTasks.map(t => {
-        // Validación básica de integridad
-        const hasQuestion = !!t.pregunta;
-        const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0;
-        const hasAnswer = !!t.respuesta_correcta;
-        const hasVideo = !!t.video_url;
-
-        return {
-          id: t.id,
-          nombre: t.nombre,
-          recompensa: t.recompensa,
-          video_url: t.video_url,
-          descripcion: t.descripcion,
-          pregunta: t.pregunta,
-          opciones: t.opciones,
-          respuesta_correcta: t.respuesta_correcta,
-          esta_incompleta: !hasQuestion || !hasOptions || !hasAnswer || !hasVideo
-        };
-      }),
+      tareas: availableTasks.map(t => ({
+        id: t.id,
+        nombre: t.nombre,
+        recompensa: t.recompensa,
+        video_url: t.video_url,
+        descripcion: t.descripcion,
+        comentario_ingles: t.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.',
+        pregunta: t.pregunta,
+        opciones: t.opciones,
+        respuesta_correcta: t.respuesta_correcta
+      })),
       mensaje
     });
   } catch (err) {
@@ -132,10 +138,21 @@ router.get('/:id', authenticate, async (req, res) => {
            a.respuesta_correcta === true
     );
 
+    // Validación de integridad del detalle
+    const options = Array.isArray(task.opciones) ? task.opciones : [];
+    const hasCorrectAnswerInOptions = options.some(opt => 
+      String(opt).trim().toUpperCase() === String(task.respuesta_correcta).trim().toUpperCase()
+    );
+
+    if (!hasCorrectAnswerInOptions && task.respuesta_correcta) {
+      console.error(`[Tasks v4] ALERTA: La tarea ${task.id} tiene una respuesta correcta ("${task.respuesta_correcta}") que no figura en sus opciones: ${JSON.stringify(options)}`);
+    }
+
     res.json({
       ...task,
       nivel: level?.nombre,
       completada_hoy: yaCompletadaExitosamente,
+      error_configuracion: !hasCorrectAnswerInOptions
     });
   } catch (err) {
     console.error(`[Tasks v4] Error en GET /api/tasks/${req.params.id}:`, err.message);
@@ -188,9 +205,12 @@ router.post('/:id/responder', authenticate, async (req, res) => {
 
     console.log(`[Tasks v4] Validación de tarea ${task.id}:`);
     console.log(`  - Usuario: ${user.nombre_usuario} (${user.id})`);
+    console.log(`  - Pregunta: "${task.pregunta}"`);
+    console.log(`  - Opciones disponibles: ${JSON.stringify(task.opciones)}`);
     console.log(`  - Respuesta enviada: "${respuesta}" (Normalizada: "${respuestaUsuario}")`);
     console.log(`  - Respuesta esperada: "${task.respuesta_correcta}" (Normalizada: "${respuestaCorrecta}")`);
     console.log(`  - ¿Respuesta correcta está en opciones?: ${esCorrectaEnOpciones ? 'SÍ' : 'NO ⚠️'}`);
+    console.log(`  - Resultado final: ${respuestaUsuario === respuestaCorrecta ? 'CORRECTA ✅' : 'INCORRECTA ❌'}`);
     
     if (!esCorrectaEnOpciones) {
       console.error(`[Tasks v4] ERROR DE CONFIGURACIÓN: La respuesta correcta "${task.respuesta_correcta}" no coincide con ninguna de las opciones: ${JSON.stringify(task.opciones)}`);

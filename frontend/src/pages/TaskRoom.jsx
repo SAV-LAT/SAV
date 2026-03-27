@@ -106,13 +106,19 @@ export default function TaskRoom() {
     }
 
     if (!task.pregunta || !task.opciones || !Array.isArray(task.opciones) || task.opciones.length === 0 || !task.video_url) {
+      const missing = [];
+      if (!task.pregunta) missing.push('pregunta');
+      if (!task.opciones || !Array.isArray(task.opciones) || task.opciones.length === 0) missing.push('opciones');
+      if (!task.video_url) missing.push('video_url');
+      if (!task.respuesta_correcta) missing.push('respuesta_correcta');
+
       console.error('[TaskRoom] Error: Tarea incompleta detectada.', {
         id: task.id,
-        hasQuestion: !!task.pregunta,
-        hasOptions: !!(task.opciones && task.opciones.length > 0),
-        hasVideo: !!task.video_url
+        nombre: task.nombre,
+        missing: missing.join(', '),
+        data: task
       });
-      alert(`Error técnico: La tarea (ID: ${task.id.substring(0, 8)}) no está configurada correctamente. Por favor, intenta con otra o contacta al soporte.`);
+      alert(`Error técnico: La tarea "${task.nombre}" (ID: ${task.id.substring(0, 8)}) está incompleta. Faltan: ${missing.join(', ')}. Por favor, contacta al soporte.`);
       return;
     }
 
@@ -325,9 +331,9 @@ export default function TaskRoom() {
                           <p className="text-[10px] text-[#1a1f36] font-bold leading-relaxed line-clamp-2">
                             {activeTask.descripcion}
                           </p>
-                          {/* Comentario en inglés (si es diferente a la descripción principal) */}
+                          {/* Comentario en inglés dinámico */}
                           <p className="text-[9px] text-gray-400 font-medium italic leading-relaxed">
-                            Verification: Watch the video carefully to answer correctly.
+                            {activeTask.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.'}
                           </p>
                         </div>
                       )}

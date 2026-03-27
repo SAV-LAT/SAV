@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { 
   Wallet, HandCoins, Calendar, Clock, ArrowUpCircle, ArrowDownCircle, 
   History, TrendingUp, Sparkles, Filter, CheckCircle2, AlertCircle,
-  Trophy, Users, UserPlus, Receipt, ArrowRightLeft, MinusCircle
+  Trophy, Users, UserPlus, FileText, ArrowRightLeft, MinusCircle
 } from 'lucide-react';
 
 /**
@@ -84,7 +84,7 @@ export default function Ganancias() {
       case 'recompensa_invitacion': return <UserPlus className="text-emerald-500" size={24} />;
       case 'recarga': return <ArrowUpCircle className="text-emerald-500" size={24} />;
       case 'retiro': return <ArrowDownCircle className="text-orange-500" size={24} />;
-      default: return <Receipt className="text-gray-500" size={24} />;
+      default: return <FileText className="text-gray-500" size={24} />;
     }
   };
 
@@ -308,7 +308,7 @@ export default function Ganancias() {
             ) : (
               <div className="text-center py-24 bg-white rounded-[3.5rem] border-2 border-dashed border-gray-100 flex flex-col items-center gap-6">
                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-200">
-                  <Receipt size={40} />
+                  <FileText size={40} />
                 </div>
                 <div className="space-y-2">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">No hay registros en esta categoría</p>

@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { 
   Wallet, HandCoins, Calendar, Clock, ArrowUpCircle, ArrowDownCircle, 
   History, TrendingUp, Sparkles, Filter, CheckCircle2, AlertCircle,
-  Trophy, Users, UserPlus, Receipt, ArrowRightLeft, MinusCircle
+  Trophy, Users, UserPlus, FileText, ArrowRightLeft, MinusCircle
 } from 'lucide-react';
 
 /**
@@ -129,7 +129,7 @@ export default function Movimientos() {
           {filteredItems.length === 0 ? (
             <div className="text-center py-24 bg-white rounded-[3.5rem] border-2 border-dashed border-gray-100 flex flex-col items-center gap-6">
               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-200">
-                <Receipt size={40} />
+                <FileText size={40} />
               </div>
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Sin movimientos financieros</p>

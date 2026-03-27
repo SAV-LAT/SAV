@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { 
   User, 
   Users, 
@@ -54,7 +55,7 @@ export default function Profile() {
     { to: '/vip', icon: TrendingUp, label: 'Subir de Nivel VIP', color: 'bg-sav-accent', isHot: true },
     { to: '/invitar', icon: UserPlus, label: 'Invitar amigos', color: 'bg-orange-500' },
     { to: '/equipo', icon: Users, label: 'Informe del equipo', color: 'bg-blue-500' },
-    { to: '/movimientos', icon: Receipt, label: 'Movimientos financieros', color: 'bg-emerald-500' },
+    { to: '/movimientos', icon: FileText, label: 'Movimientos financieros', color: 'bg-emerald-500' },
     { to: '/ganancias', icon: Trophy, label: 'Historial de ganancias', color: 'bg-purple-500' },
     { to: '/recompensas', icon: Gift, label: 'Premios y Recompensas', color: 'bg-rose-500' },
     { to: '/seguridad', icon: ShieldCheck, label: 'Seguridad de la cuenta', color: 'bg-amber-500' },

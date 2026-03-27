@@ -153,10 +153,21 @@ export async function getPublicContent() {
 
 export async function getBanners() {
   const { data } = await trySupabase(() => supabase.from('banners_carrusel').select('*').eq('activo', true).order('orden', { ascending: true }));
-  return (data || []).map(b => ({
-    ...b,
-    imagen_url: b.imagen_url === '/imag/carusel1.jpeg' ? '/imag/carrusel1.jpeg' : b.imagen_url
-  }));
+  
+  const defaultBanners = [
+    { id: 'def-1', imagen_url: '/imag/carrusel1.jpeg', titulo: 'SAV 1', orden: 0, activo: true },
+    { id: 'def-2', imagen_url: '/imag/carrusel2.jpeg', titulo: 'SAV 2', orden: 1, activo: true },
+    { id: 'def-3', imagen_url: '/imag/carrusel3.jpeg', titulo: 'SAV 3', orden: 2, activo: true },
+    { id: 'def-4', imagen_url: '/imag/carrusel4.jpeg', titulo: 'SAV 4', orden: 3, activo: true },
+  ];
+
+  if (data && data.length > 0) {
+    return data.map(b => ({
+      ...b,
+      imagen_url: b.imagen_url === '/imag/carusel1.jpeg' ? '/imag/carrusel1.jpeg' : b.imagen_url
+    }));
+  }
+  return defaultBanners;
 }
 
 export async function getAllTasks() {

@@ -1,5 +1,25 @@
 {
   "appId": "com.sav.app",
-  "appName": "SAV Proyecto",
-  "webDir": "dist"
+  "appName": "SAV",
+  "webDir": "dist",
+  "server": {
+    "url": "https://sav-g9xx.vercel.app",
+    "allowNavigation": [
+      "sav-g9xx.vercel.app",
+      "sav-zhyg.onrender.com",
+      "supabase.co"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "launchAutoHide": true,
+      "backgroundColor": "#1a1f36",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": true,
+      "androidSpinnerStyle": "large",
+      "spinnerColor": "#ffffff"
+    }
+  }
 }

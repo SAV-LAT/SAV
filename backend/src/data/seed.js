@@ -55,16 +55,16 @@ export async function initStore() {
   // Generamos tareas limpias con nombres reales de marcas y URLs de video
   const tasks = [
     // Tareas Pasante
-    { id: uuidv4(), nivel_id: 'pasante', nombre: 'Adidas Global', recompensa: 1.80, video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', descripcion: 'Nueva campaña Adidas 2026', pregunta: '¿Qué marca viste?', respuesta_correcta: 'ADIDAS', opciones: ['ADIDAS', 'NIKE', 'PUMA', 'REEBOK'] },
-    { id: uuidv4(), nivel_id: 'pasante', nombre: 'Coca-Cola Summer', recompensa: 1.80, video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', descripcion: 'Refrescante sabor Coca-Cola', pregunta: '¿Qué marca viste?', respuesta_correcta: 'COCACOLA', opciones: ['COCACOLA', 'PEPSI', 'SPRITE', 'FANTA'] },
-    { id: uuidv4(), nivel_id: 'pasante', nombre: 'Chanel Classic', recompensa: 1.80, video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', descripcion: 'Elegancia atemporal Chanel', pregunta: '¿Qué marca viste?', respuesta_correcta: 'CHANEL', opciones: ['CHANEL', 'DIOR', 'GUCCI', 'PRADA'] },
-    { id: uuidv4(), nivel_id: 'pasante', nombre: 'Dior Fashion', recompensa: 1.80, video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', descripcion: 'Alta costura con Dior', pregunta: '¿Qué marca viste?', respuesta_correcta: 'DIOR', opciones: ['DIOR', 'CHANEL', 'HERMES', 'PRADA'] },
+    { id: uuidv4(), nivel_id: 'pasante', nombre: 'Adidas Global', recompensa: 1.80, video_url: '/video/adidas1.mp4', descripcion: 'Nueva campaña Adidas 2026', pregunta: '¿Qué marca viste?', respuesta_correcta: 'ADIDAS', opciones: ['ADIDAS', 'NIKE', 'PUMA', 'REEBOK'] },
+    { id: uuidv4(), nivel_id: 'pasante', nombre: 'Coca-Cola Summer', recompensa: 1.80, video_url: '/video/cocacola1.mp4', descripcion: 'Refrescante sabor Coca-Cola', pregunta: '¿Qué marca viste?', respuesta_correcta: 'COCACOLA', opciones: ['COCACOLA', 'PEPSI', 'SPRITE', 'FANTA'] },
+    { id: uuidv4(), nivel_id: 'pasante', nombre: 'Chanel Classic', recompensa: 1.80, video_url: '/video/chanel1.mp4', descripcion: 'Elegancia atemporal Chanel', pregunta: '¿Qué marca viste?', respuesta_correcta: 'CHANEL', opciones: ['CHANEL', 'DIOR', 'GUCCI', 'PRADA'] },
+    { id: uuidv4(), nivel_id: 'pasante', nombre: 'Dior Fashion', recompensa: 1.80, video_url: '/video/dior1.mp4', descripcion: 'Alta costura con Dior', pregunta: '¿Qué marca viste?', respuesta_correcta: 'DIOR', opciones: ['DIOR', 'CHANEL', 'HERMES', 'PRADA'] },
     
     // Tareas S1
-    { id: uuidv4(), nivel_id: 'S1', nombre: 'Nike Air Max', recompensa: 1.80, video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', descripcion: 'Innovación en cada paso', pregunta: '¿Qué marca viste?', respuesta_correcta: 'NIKE', opciones: ['NIKE', 'ADIDAS', 'PUMA', 'REEBOK'] },
-    { id: uuidv4(), nivel_id: 'S1', nombre: 'Puma Speed', recompensa: 1.80, video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', descripcion: 'Diseño y velocidad Puma', pregunta: '¿Qué marca viste?', respuesta_correcta: 'PUMA', opciones: ['PUMA', 'NIKE', 'ADIDAS', 'REEBOK'] },
-    { id: uuidv4(), nivel_id: 'S1', nombre: 'Rolex Luxury', recompensa: 1.80, video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', descripcion: 'Precisión y prestigio Rolex', pregunta: '¿Qué marca viste?', respuesta_correcta: 'ROLEX', opciones: ['ROLEX', 'OMEGA', 'CASIO', 'CARTIER'] },
-    { id: uuidv4(), nivel_id: 'S1', nombre: 'Ferrari F8', recompensa: 1.80, video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', descripcion: 'Potencia pura Ferrari', pregunta: '¿Qué marca viste?', respuesta_correcta: 'FERRARI', opciones: ['FERRARI', 'LAMBORGHINI', 'PORSCHE', 'MCLAREN'] },
+    { id: uuidv4(), nivel_id: 'S1', nombre: 'Nike Air Max', recompensa: 1.80, video_url: '/video/nike1.mp4', descripcion: 'Innovación en cada paso', pregunta: '¿Qué marca viste?', respuesta_correcta: 'NIKE', opciones: ['NIKE', 'ADIDAS', 'PUMA', 'REEBOK'] },
+    { id: uuidv4(), nivel_id: 'S1', nombre: 'Puma Speed', recompensa: 1.80, video_url: '/video/puma1.mp4', descripcion: 'Diseño y velocidad Puma', pregunta: '¿Qué marca viste?', respuesta_correcta: 'PUMA', opciones: ['PUMA', 'NIKE', 'ADIDAS', 'REEBOK'] },
+    { id: uuidv4(), nivel_id: 'S1', nombre: 'Rolex Luxury', recompensa: 1.80, video_url: '/video/rolex1.mp4', descripcion: 'Precisión y prestigio Rolex', pregunta: '¿Qué marca viste?', respuesta_correcta: 'ROLEX', opciones: ['ROLEX', 'OMEGA', 'CASIO', 'CARTIER'] },
+    { id: uuidv4(), nivel_id: 'S1', nombre: 'Ferrari F8', recompensa: 1.80, video_url: '/video/lamborghini1.mp4', descripcion: 'Potencia pura en pista', pregunta: '¿Qué marca viste?', respuesta_correcta: 'LAMBORGHINI', opciones: ['LAMBORGHINI', 'FERRARI', 'PORSCHE', 'MCLAREN'] },
   ];
 
   const banners = [

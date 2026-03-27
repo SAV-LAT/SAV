@@ -37,7 +37,7 @@ async function syncV4() {
       continue;
     }
 
-    const { error: errIns } = await supabase.from('tareas').upsert({
+    const taskData = {
       nombre: task.nombre,
       nivel_id: levelId,
       recompensa: task.recompensa,
@@ -47,12 +47,22 @@ async function syncV4() {
       respuesta_correcta: task.respuesta_correcta,
       opciones: task.opciones,
       comentario_ingles: task.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.'
-    }, { onConflict: 'nombre,nivel_id' });
+    };
+
+    let { error: errIns } = await supabase.from('tareas').upsert(taskData, { onConflict: 'nombre,nivel_id' });
+    
+    // Fallback si la columna comentario_ingles no existe aún
+    if (errIns && errIns.message?.includes('comentario_ingles')) {
+      console.warn(`⚠️ Aviso: La columna 'comentario_ingles' no existe. Reintentando sin ella...`);
+      delete taskData.comentario_ingles;
+      const { error: errRetry } = await supabase.from('tareas').upsert(taskData, { onConflict: 'nombre,nivel_id' });
+      errIns = errRetry;
+    }
 
     if (errIns) {
       console.error(`❌ Error insertando ${task.nombre}:`, errIns.message);
     } else {
-      console.log(`✅ ${task.nombre} sincronizada correctamente.`);
+      console.log(`✅ Tarea sincronizada: ${task.nombre}`);
     }
   }
 

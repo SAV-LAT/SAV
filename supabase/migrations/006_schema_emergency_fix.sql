@@ -1,8 +1,9 @@
 -- SAV - Schema Fix for Task Activity and Earnings
 -- Execute in Supabase SQL Editor
 
--- 1. Add nivel_id to actividad_tareas
+-- 1. Add nivel_id to actividad_tareas and comentario_ingles to tareas
 ALTER TABLE actividad_tareas ADD COLUMN IF NOT EXISTS nivel_id UUID REFERENCES niveles(id);
+ALTER TABLE tareas ADD COLUMN IF NOT EXISTS comentario_ingles TEXT;
 
 -- 2. Ensure movimientos_saldo exists (Redundant check from 005)
 CREATE TABLE IF NOT EXISTS movimientos_saldo (

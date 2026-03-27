@@ -157,14 +157,25 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Ya intentaste esta tarea hoy' });
     }
 
-    // Normalización para validación
+    // Normalización para validación (quitar tildes, mayúsculas, espacios)
     const normalizar = (str) => {
       if (!str) return '';
-      return String(str).toUpperCase().trim();
+      return String(str)
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar tildes
+        .toUpperCase()
+        .trim();
     };
 
-    const esCorrectaReal = normalizar(respuesta) === normalizar(task.respuesta_correcta);
+    const respuestaUsuario = normalizar(respuesta);
+    const respuestaCorrecta = normalizar(task.respuesta_correcta);
+    const esCorrectaReal = respuestaUsuario === respuestaCorrecta;
     const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
+
+    console.log(`[Tasks v4] Validación de tarea ${task.id}:`);
+    console.log(`  - Usuario: ${user.nombre_usuario} (${user.id})`);
+    console.log(`  - Respuesta enviada: "${respuesta}" (Normalizada: "${respuestaUsuario}")`);
+    console.log(`  - Respuesta esperada: "${task.respuesta_correcta}" (Normalizada: "${respuestaCorrecta}")`);
+    console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTA ✅' : 'INCORRECTA ❌'}`);
     
     const levels = await getLevels();
     const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];

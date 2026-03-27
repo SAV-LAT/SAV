@@ -5,7 +5,7 @@ import Layout from '../components/Layout.jsx';
 import Header from '../components/Header.jsx';
 import { api } from '../lib/api.js';
 import { supabase } from '../lib/supabase.js';
-import { TrendingUp, Info, ShieldCheck, Play, Check, Clock, Wallet, ArrowRight, X, Sparkles, AlertCircle, ClipboardList } from 'lucide-react';
+import { TrendingUp, Info, ShieldCheck, Play, Check, Clock, Wallet, ArrowRight, X, Sparkles, AlertCircle, ClipboardList, Trophy } from 'lucide-react';
 
 /**
  * SAV v4.1.0 - RECONSTRUCCIÓN INTEGRAL Y MODERNA
@@ -114,21 +114,34 @@ export default function TaskRoom() {
         refreshUser();
       } else {
         setIsCorrect(false);
-        setErrorMessage('Respuesta incorrecta. Tarea registrada sin recompensa.');
+        // Mostrar la respuesta correcta para depuración si es necesario, 
+        // o un mensaje más amigable.
+        setErrorMessage('La respuesta seleccionada no coincide con el contenido del video.');
       }
       
-      // Auto-regreso después de mostrar el resultado
+      // Auto-regreso desactivado para que el usuario pueda ver el resultado
+      // El usuario deberá pulsar un botón para volver o esperar más tiempo
+      /*
       setTimeout(() => {
         setActiveTask(null);
         fetchTasks();
         refreshUser();
       }, 3500);
+      */
 
     } catch (err) {
       setErrorMessage(err.message || 'Error al validar la respuesta.');
+      setShowResult(true);
+      setIsCorrect(false);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const finishAndGoBack = () => {
+    setActiveTask(null);
+    fetchTasks();
+    refreshUser();
   };
 
   if (loading && !activeTask) {
@@ -384,8 +397,16 @@ export default function TaskRoom() {
                     </>
                   )}
                   
-                  <div className="pt-4">
-                    <p className="text-[9px] font-black text-[#1a1f36]/30 uppercase tracking-[0.4em] animate-pulse">Regresando a la sala de tareas...</p>
+                  <div className="pt-8">
+                    <button
+                      onClick={finishAndGoBack}
+                      className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all ${
+                        isCorrect ? 'bg-emerald-500 text-white' : 'bg-[#1a1f36] text-white'
+                      }`}
+                    >
+                      Continuar
+                    </button>
+                    <p className="mt-4 text-[9px] font-black text-[#1a1f36]/30 uppercase tracking-[0.4em]">Finalizando sesión de tarea...</p>
                   </div>
                 </section>
               )}

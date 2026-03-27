@@ -41,8 +41,9 @@ function PrivateRoute({ children, adminOnly }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Rutas Públicas */}
       <Route path="/login" element={<Login />} />
-      <Route path="/registro" element={<Register />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/admin" element={<PrivateRoute adminOnly><AdminLayout /></PrivateRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="usuarios" element={<AdminUsuarios />} />
@@ -57,6 +58,7 @@ function AppRoutes() {
       </Route>
       <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
       <Route path="/recompensas" element={<PrivateRoute><Recompensas /></PrivateRoute>} />
+      {/* Rutas Privadas */}
       <Route path="/tareas" element={<PrivateRoute><TaskRoom /></PrivateRoute>} />
       <Route path="/usuario" element={<PrivateRoute><Profile /></PrivateRoute>} />
       <Route path="/equipo" element={<PrivateRoute><Team /></PrivateRoute>} />

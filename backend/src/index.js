@@ -74,14 +74,18 @@ const videoHeaderMiddleware = (req, res, next) => {
 // Servir archivos estáticos del frontend y carpetas de medios
 const publicImagPath = path.join(__dirname, '../../frontend/public/imag');
 const publicVideoPath = path.join(__dirname, '../../frontend/public/video');
+const publicApkPath = path.join(__dirname, '../../frontend/public');
 
 console.log(`[SERVER] Sirviendo imágenes desde: ${publicImagPath}`);
 console.log(`[SERVER] Sirviendo videos desde: ${publicVideoPath}`);
+console.log(`[SERVER] Sirviendo APK desde: ${publicApkPath}`);
 
 app.use('/imag', express.static(publicImagPath));
 // Unificar fuente de videos a la carpeta de medios compartida
 app.use('/video', videoHeaderMiddleware, express.static(publicVideoPath));
 app.use('/videos', videoHeaderMiddleware, express.static(publicVideoPath));
+// Permitir descarga del APK
+app.use('/', express.static(publicApkPath));
 console.log('[SERVER] Rutas estáticas configuradas.');
 
 app.get('/', (req, res) => {

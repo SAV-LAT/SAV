@@ -49,6 +49,17 @@ async function syncV4() {
       comentario_ingles: task.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.'
     };
 
+    // Validar que el video existe localmente antes de sincronizar
+    const videoFileName = task.video_url.split('/').pop();
+    const videoPath = path.join(__dirname, '../video', videoFileName);
+    const videoPathAlt = path.join(__dirname, '../frontend/public/video', videoFileName);
+    
+    const fs = require('fs');
+    if (!fs.existsSync(videoPath) && !fs.existsSync(videoPathAlt)) {
+      console.warn(`⚠️ Aviso: El video para "${task.nombre}" (${videoFileName}) no se encontró en la carpeta video/.`);
+      // Opcional: podrías decidir no insertar la tarea si el video no existe
+    }
+
     let { error: errIns } = await supabase.from('tareas').upsert(taskData, { onConflict: 'nombre,nivel_id' });
     
     // Fallback si la columna comentario_ingles no existe aún

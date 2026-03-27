@@ -33,14 +33,43 @@ export default function Profile() {
     const fetchStats = () => api.users.stats().then(setStats).catch(() => {});
     fetchStats();
 
-    // Suscripción Realtime para estadísticas basadas en movimientos o usuario
+    // Suscripción Realtime para estadísticas y saldo basado en la tabla usuarios
     if (user?.id) {
-      const channel = supabase.channel(`stats:usuario_id=eq.${user.id}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'movimientos_saldo', filter: `usuario_id=eq.${user.id}` }, () => {
-          fetchStats();
-        })
+      console.log(`[Realtime] Suscribiendo a cambios para estadísticas de usuario: ${user.id}`);
+      
+      const channel = supabase.channel(`profile_realtime:${user.id}`)
+        .on(
+          'postgres_changes', 
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'usuarios', 
+            filter: `id=eq.${user.id}` 
+          }, 
+          (payload) => {
+            console.log('[Realtime] Datos de usuario actualizados, recargando estadísticas...');
+            // Actualizar estadísticas inmediatamente al detectar cambios en el usuario
+            fetchStats();
+          }
+        )
+        .on(
+          'postgres_changes', 
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'movimientos_saldo', 
+            filter: `usuario_id=eq.${user.id}` 
+          }, 
+          () => {
+            console.log('[Realtime] Nuevo movimiento detectado, recargando estadísticas...');
+            fetchStats();
+          }
+        )
         .subscribe();
-      return () => supabase.removeChannel(channel);
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user?.id]);
 

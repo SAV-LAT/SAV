@@ -184,6 +184,34 @@ export function AuthProvider({ children }) {
     };
   }, [user?.id, loadUser]);
 
+  // Efecto para escuchar cambios en tiempo real (Saldo y Perfil)
+  useEffect(() => {
+    if (user?.id) {
+      console.log(`[AuthRealtime] Suscribiendo a cambios para el usuario: ${user.id}`);
+      
+      const channel = supabase.channel(`user_changes:${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'usuarios',
+            filter: `id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('[AuthRealtime] Datos de usuario actualizados en DB:', payload.new);
+            // Actualizar el estado local con los nuevos datos (saldo, nivel, etc)
+            setUser(prev => ({ ...prev, ...payload.new }));
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user?.id]);
+
   const login = useCallback(async (telefono, password) => {
     const deviceId = getDeviceId();
     const { user: u, token } = await api.auth.login(telefono, password, deviceId);

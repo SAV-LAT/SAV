@@ -64,7 +64,34 @@ export default function TaskRoom() {
     }
   }, [user?.id]);
 
-  // Lógica del Temporizador de 10s
+  // Efecto para Realtime (Saldo y Estadísticas)
+  useEffect(() => {
+    if (user?.id) {
+      const channel = supabase.channel(`taskroom_realtime:${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'usuarios', filter: `id=eq.${user.id}` },
+          () => {
+            console.log('[Realtime] Saldo actualizado, refrescando datos...');
+            refreshUser();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'movimientos_saldo', filter: `usuario_id=eq.${user.id}` },
+          () => {
+            console.log('[Realtime] Nuevo movimiento de ganancia, refrescando...');
+            fetchTasks();
+          }
+        )
+        .subscribe();
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user?.id]);
+
+  // Efecto para el temporizador de la encuesta
   useEffect(() => {
     let interval;
     if (activeTask && !surveyVisible && timer > 0) {

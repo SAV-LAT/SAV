@@ -100,9 +100,24 @@ export default function Dashboard() {
   };
 
   const onInstallApp = async () => {
+    // Si ya está instalado o estamos en modo nativo
     if (isInstalled) {
-      alert('¡SAV ya está instalado en tu pantalla de inicio!');
+      alert('¡SAV ya está instalado en tu dispositivo!');
       return;
+    }
+
+    // Intentar descarga del APK real si está disponible
+    try {
+      const apkUrl = '/SAV_v1.0.0.apk'; // Ruta al APK alojado en public/
+      const link = document.createElement('a');
+      link.href = apkUrl;
+      link.download = 'SAV_Plataforma.apk';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    } catch (e) {
+      console.warn('Fallo descarga directa APK, intentando PWA:', e);
     }
 
     if (installPrompt) {

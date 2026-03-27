@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import { getUsers, getRecargas, getRetiros, getLevels, findUserById, updateUser, getPublicContent, getMetodosQr, getBanners, getAllTasks, getRecargaById, updateRecarga, getRetiroById, updateRetiro, trySupabase, handleLevelUpRewards } from '../lib/queries.js';
+import { 
+  getUsers, getRecargas, getRetiros, getLevels, findUserById, updateUser, 
+  getPublicContent, getMetodosQr, getBanners, getAllTasks, getRecargaById, 
+  updateRecarga, getRetiroById, updateRetiro, trySupabase, handleLevelUpRewards,
+  getUserEarningsSummary, createMovimiento 
+} from '../lib/queries.js';
 import { getStore } from '../data/store.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { supabase } from '../lib/db.js';
@@ -80,6 +85,52 @@ router.put('/usuarios/:id', async (req, res) => {
   const updates = req.body;
   await updateUser(id, updates);
   res.json({ ok: true });
+});
+
+router.get('/usuarios/:id/earnings', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const summary = await getUserEarningsSummary(id);
+    const { data: movimientos } = await trySupabase(() => 
+      supabase.from('movimientos_saldo')
+        .select('*')
+        .eq('usuario_id', id)
+        .order('fecha', { ascending: false })
+        .limit(100)
+    );
+    res.json({ summary, history: movimientos || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/usuarios/:id/ajuste', async (req, res) => {
+  const { id } = req.params;
+  const { monto, descripcion, tipo_billetera } = req.body;
+  
+  try {
+    const user = await findUserById(id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    
+    const field = tipo_billetera === 'comisiones' ? 'saldo_comisiones' : 'saldo_principal';
+    const nuevoSaldo = Number((Number(user[field]) || 0) + Number(monto)).toFixed(2);
+    
+    await updateUser(id, { [field]: nuevoSaldo });
+    
+    await createMovimiento({
+      usuario_id: id,
+      tipo_movimiento: 'ajuste_admin',
+      monto: Number(monto),
+      saldo_anterior: Number(user[field]),
+      saldo_nuevo: Number(nuevoSaldo),
+      descripcion: descripcion || 'Ajuste administrativo manual',
+      referencia: `ADJ-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    });
+    
+    res.json({ ok: true, nuevo_saldo: nuevoSaldo });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/recargas', async (req, res) => {

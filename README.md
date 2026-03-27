@@ -41,30 +41,23 @@ npm run dev
 
 La aplicación estará en `http://localhost:5173`
 
-### 3. Base de datos (opcional - Supabase)
+### 3. Base de datos (Supabase)
 
-Para producción, configura Supabase:
+Este proyecto requiere una conexión activa a Supabase. El **Modo Demo (memoria) ha sido desactivado** para garantizar la consistencia de datos en producción.
 
 1. Crea un proyecto en [Supabase](https://supabase.com)
-2. Ejecuta los scripts en `supabase/migrations/` en el SQL Editor
+2. Ejecuta los scripts en `supabase/migrations/` en el SQL Editor (del 001 al 005)
 3. Añade en `backend/.env`:
    - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_KEY`
+   - `SUPABASE_SERVICE_KEY` (Solo en el servidor)
+   - `SUPABASE_ANON_KEY` (Para el cliente frontend)
 
-**Modo demo:** El backend funciona con almacenamiento en memoria y datos de ejemplo sin configurar Supabase.
+## Credenciales de Acceso
 
-## Credenciales de prueba
+Las credenciales deben ser gestionadas de forma privada. Por seguridad, las contraseñas predeterminadas han sido removidas de este documento.
 
-### Usuario común
-- **Teléfono:** +59163907641
-- **Contraseña:** 123456
-
-### Administrador
-- **Teléfono:** +59170000000
-- **Contraseña:** admin123
-
-### Código de invitación (para registro)
-- `VUSBV2GTX` o `ADMIN001`
+### Código de invitación
+- Contactar con un administrador o usuario VIP para obtener un código válido.
 
 ## Estructura
 

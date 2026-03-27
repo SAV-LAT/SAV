@@ -102,6 +102,7 @@ export const api = {
     me: () => request('/users/me'),
     update: (data) => request('/users/me', { method: 'PUT', body: JSON.stringify(data) }),
     stats: () => request('/users/stats'),
+    earnings: () => request('/users/earnings'),
     team: () => request('/users/team'),
     tarjetas: () => request('/users/tarjetas'),
     addTarjeta: (data) => request('/users/tarjetas', { method: 'POST', body: JSON.stringify(data) }),
@@ -140,6 +141,8 @@ export const api = {
   admin: {
     dashboard: () => request('/admin/dashboard'),
     usuarios: () => request('/admin/usuarios'),
+    usuarioEarnings: (id) => request(`/admin/usuarios/${id}/earnings`),
+    ajusteUsuario: (id, data) => request(`/admin/usuarios/${id}/ajuste`, { method: 'POST', body: JSON.stringify(data) }),
     updateUsuario: (id, updates) => request(`/admin/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(updates) }),
     changePassword: (id, data) => request(`/admin/usuarios/${id}/password`, { method: 'POST', body: JSON.stringify(data) }),
     recargas: () => request('/admin/recargas'),

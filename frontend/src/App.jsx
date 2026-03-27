@@ -9,6 +9,7 @@ import Withdrawal from './pages/Withdrawal.jsx';
 import Recharge from './pages/Recharge.jsx';
 import VIP from './pages/VIP.jsx';
 import Ganancias from './pages/Ganancias.jsx';
+import Movimientos from './pages/Movimientos.jsx';
 import NoticiasConferencia from './pages/NoticiasConferencia.jsx';
 import Team from './pages/Team.jsx';
 import Invite from './pages/Invite.jsx';
@@ -65,6 +66,7 @@ function AppRoutes() {
       <Route path="/invitar" element={<PrivateRoute><Invite /></PrivateRoute>} />
       <Route path="/vip" element={<PrivateRoute><VIP /></PrivateRoute>} />
       <Route path="/ganancias" element={<PrivateRoute><Ganancias /></PrivateRoute>} />
+      <Route path="/movimientos" element={<PrivateRoute><Movimientos /></PrivateRoute>} />
       <Route path="/noticias-conferencia" element={<PrivateRoute><NoticiasConferencia /></PrivateRoute>} />
       <Route path="/retiro" element={<PrivateRoute><Withdrawal /></PrivateRoute>} />
       <Route path="/recargar" element={<PrivateRoute><Recharge /></PrivateRoute>} />

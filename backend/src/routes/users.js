@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { findUserById, getLevels, updateUser, getTaskActivity, getTarjetasByUser, createTarjeta, deleteTarjeta, getUsers, trySupabase } from '../lib/queries.js';
+import { 
+  findUserById, getLevels, updateUser, getTaskActivity, getTarjetasByUser, 
+  createTarjeta, deleteTarjeta, getUsers, trySupabase, getUserEarningsSummary 
+} from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
 import { getStore } from '../data/store.js';
 import { supabase } from '../lib/db.js';
@@ -116,105 +119,48 @@ router.post('/change-fund-password', authenticate, async (req, res) => {
 
 router.get('/stats', authenticate, async (req, res) => {
   try {
-    const user = await findUserById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const summary = await getUserEarningsSummary(req.user.id);
+    if (!summary) return res.status(404).json({ error: 'No se pudo calcular el resumen' });
     
-    // Obtener toda la actividad relacionada con ingresos
-    const activity = await getTaskActivity(user.id);
-    
-    // Helper para manejar fechas en la zona horaria de Bolivia (UTC-4)
-    const getBoliviaDate = (dateInput) => {
-      try {
-        const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
-        if (isNaN(date.getTime())) return null;
-        
-        // Convertir a string de Bolivia y luego volver a Date para obtener solo Año-Mes-Día
-        const boliviaString = date.toLocaleString('en-US', { timeZone: 'America/La_Paz' });
-        const d = new Date(boliviaString);
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      } catch (e) {
-        return null;
-      }
-    };
-
-    const now = new Date();
-    const startOfToday = getBoliviaDate(now);
-    if (!startOfToday) throw new Error('Error al obtener la fecha actual');
-    
-    // Inicio de ayer
-    const startOfYesterday = new Date(startOfToday);
-    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-    
-    // Inicio de la semana (Lunes como primer día)
-    const startOfWeek = new Date(startOfToday);
-    const day = startOfToday.getDay(); // 0 (Dom) a 6 (Sab)
-    const diff = startOfToday.getDate() - (day === 0 ? 6 : day - 1); // Ajustar a Lunes
-    startOfWeek.setDate(diff);
-    
-    // Inicio del mes
-    const startOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
-
-    const filterByDate = (list, start, end = null) => {
-      if (!list || !start) return [];
-      const startTime = start.getTime();
-      const endTime = end ? end.getTime() : null;
-      
-      return list.filter(item => {
-        if (!item.created_at) return false;
-        const boliviaItemDate = getBoliviaDate(item.created_at);
-        if (!boliviaItemDate) return false;
-        
-        const itemTime = boliviaItemDate.getTime();
-        if (endTime) return itemTime >= startTime && itemTime < endTime;
-        return itemTime >= startTime;
-      });
-    };
-
-    const sumMonto = (list) => {
-      if (!list) return 0;
-      return list.reduce((total, item) => {
-        // Para actividad_tareas usamos recompensa_otorgada o recompensa
-        return total + (Number(item.recompensa_otorgada) || Number(item.recompensa) || 0);
-      }, 0);
-    };
-
-    // 1. Tareas exitosas
-    const successfulTasks = activity.filter(a => a.respuesta_correcta === true);
-    
-    // Filtrar por periodos para TAREAS
-    const hoyTasks = filterByDate(successfulTasks, startOfToday);
-    const ayerTasks = filterByDate(successfulTasks, startOfYesterday, startOfToday);
-    const semanaTasks = filterByDate(successfulTasks, startOfWeek);
-    const mesTasks = filterByDate(successfulTasks, startOfMonth);
-
-    // Redondear a 2 decimales
-    const round = (val) => Math.round((val + Number.EPSILON) * 100) / 100;
-
-    // Los ingresos ahora se leen directamente de las nuevas columnas de la base de datos (Persistencia definitiva)
-    const ingresos_hoy = Number(user.ganancias_hoy) || 0;
-    const ingresos_ayer = Number(user.ganancias_ayer) || 0;
-    const ingresos_semana = Number(user.ganancias_semana) || 0;
-    const ingresos_mes = Number(user.ganancias_mes) || 0;
-    const ingresos_totales = Number(user.ganancias_totales) || 0;
-
-    // Otros datos adicionales de saldo
-    const comisionesSubordinados = Number(user.saldo_comisiones) || 0;
-    const recompensaInvitacion = Number(user.recompensa_invitacion || 0);
-
     res.json({
-      ingresos_ayer: round(ingresos_ayer),
-      ingresos_hoy: round(ingresos_hoy),
-      ingresos_semana: round(ingresos_semana),
-      ingresos_mes: round(ingresos_mes),
-      ingresos_totales: round(ingresos_totales),
-      comision_subordinados: round(comisionesSubordinados),
-      recompensa_invitacion: round(recompensaInvitacion),
-      total_completadas: successfulTasks.length,
+      ingresos_ayer: summary.ayer,
+      ingresos_hoy: summary.hoy,
+      ingresos_semana: summary.semana,
+      ingresos_mes: summary.mes,
+      ingresos_totales: summary.total,
+      comision_subordinados: summary.saldo_comisiones,
+      recompensa_invitacion: 0, // Ajustar si es necesario
+      total_completadas: summary.tareas_completadas,
       pasante_limit_reached: false,
     });
   } catch (err) {
     console.error('[Stats] Error crítico:', err);
     res.status(500).json({ error: 'Error al calcular estadísticas' });
+  }
+});
+
+router.get('/earnings', authenticate, async (req, res) => {
+  try {
+    const summary = await getUserEarningsSummary(req.user.id);
+    
+    // Obtener historial de movimientos
+    const { data: movimientos, error } = await trySupabase(() => 
+      supabase.from('movimientos_saldo')
+        .select('*')
+        .eq('usuario_id', req.user.id)
+        .order('fecha', { ascending: false })
+        .limit(50)
+    );
+    
+    if (error) throw error;
+    
+    res.json({
+      summary,
+      history: movimientos || []
+    });
+  } catch (err) {
+    console.error('[Earnings] Error:', err);
+    res.status(500).json({ error: 'Error al obtener historial de ganancias' });
   }
 });
 

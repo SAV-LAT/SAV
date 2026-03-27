@@ -30,13 +30,18 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchStats = () => api.users.stats().then(setStats).catch(() => {});
-    
     fetchStats();
-    // Actualización automática cada 5 segundos para mantener los "Ingresos de Hoy" frescos
-    const interval = setInterval(fetchStats, 5000);
-    
-    return () => clearInterval(interval);
-  }, []);
+
+    // Suscripción Realtime para estadísticas basadas en movimientos o usuario
+    if (user?.id) {
+      const channel = supabase.channel(`stats:usuario_id=eq.${user.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'movimientos_saldo', filter: `usuario_id=eq.${user.id}` }, () => {
+          fetchStats();
+        })
+        .subscribe();
+      return () => supabase.removeChannel(channel);
+    }
+  }, [user?.id]);
 
   const handleCopy = () => {
     if (!user?.codigo_invitacion) return;
@@ -49,8 +54,8 @@ export default function Profile() {
     { to: '/vip', icon: TrendingUp, label: 'Subir de Nivel VIP', color: 'bg-sav-accent', isHot: true },
     { to: '/invitar', icon: UserPlus, label: 'Invitar amigos', color: 'bg-orange-500' },
     { to: '/equipo', icon: Users, label: 'Informe del equipo', color: 'bg-blue-500' },
-    { to: '/registro-facturacion', icon: FileText, label: 'Registro de facturación', color: 'bg-emerald-500' },
-    { to: '/registro-tareas', icon: ClipboardList, label: 'Registro de tareas', color: 'bg-purple-500' },
+    { to: '/movimientos', icon: Receipt, label: 'Movimientos financieros', color: 'bg-emerald-500' },
+    { to: '/ganancias', icon: Trophy, label: 'Historial de ganancias', color: 'bg-purple-500' },
     { to: '/recompensas', icon: Gift, label: 'Premios y Recompensas', color: 'bg-rose-500' },
     { to: '/seguridad', icon: ShieldCheck, label: 'Seguridad de la cuenta', color: 'bg-amber-500' },
     { to: '/vincular-tarjeta', icon: CreditCard, label: 'Vincular tarjeta bancaria', color: 'bg-cyan-500' },

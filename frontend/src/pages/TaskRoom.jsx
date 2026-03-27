@@ -51,7 +51,17 @@ export default function TaskRoom() {
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+
+    // Suscripción Realtime para actualizar la lista si cambia algo (opcional pero bueno)
+    if (user?.id) {
+      const channel = supabase.channel(`public:actividad_tareas:usuario_id=eq.${user.id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actividad_tareas', filter: `usuario_id=eq.${user.id}` }, () => {
+          fetchTasks();
+        })
+        .subscribe();
+      return () => supabase.removeChannel(channel);
+    }
+  }, [user?.id]);
 
   // Lógica del Temporizador de 10s
   useEffect(() => {
@@ -259,11 +269,16 @@ export default function TaskRoom() {
                     <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1a1f36] to-[#2a2f46] flex items-center justify-center shrink-0 shadow-lg shadow-[#1a1f36]/20">
                       <Sparkles className="text-amber-400" size={28} />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Campaña Publicitaria</h3>
                       <p className="text-sm font-black text-[#1a1f36] uppercase tracking-tight">{activeTask.nombre}</p>
+                      {activeTask.descripcion && (
+                        <p className="text-[9px] text-gray-400 font-medium italic mt-1 leading-relaxed">
+                          {activeTask.descripcion}
+                        </p>
+                      )}
                     </div>
-                    <div className="ml-auto text-right">
+                    <div className="text-right shrink-0">
                       <span className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Recompensa</span>
                       <span className="text-sm font-black text-emerald-500">+{activeTask.recompensa} BOB</span>
                     </div>

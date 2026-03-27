@@ -132,17 +132,29 @@ export function AuthProvider({ children }) {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'usuarios',
           filter: `id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('[Realtime] Cambio detectado en perfil de usuario:', payload.new);
+          console.log('[Realtime] Perfil actualizado:', payload.new);
           // Actualizamos el usuario localmente con los nuevos datos
-          const updatedUser = { ...user, ...payload.new };
-          setUser(updatedUser);
-          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setUser(prev => ({
+            ...prev,
+            ...payload.new
+          }));
+          
+          // Actualizar localStorage también
+          const savedUser = localStorage.getItem('user');
+          if (savedUser) {
+            try {
+              const parsed = JSON.parse(savedUser);
+              localStorage.setItem('user', JSON.stringify({ ...parsed, ...payload.new }));
+            } catch (e) {
+              // ignore
+            }
+          }
         }
       )
       .subscribe();
@@ -170,7 +182,7 @@ export function AuthProvider({ children }) {
       supabase.removeChannel(userChannel);
       supabase.removeChannel(activityChannel);
     };
-  }, [user?.id, loadUser]); // Depende del ID para re-suscribir si cambia el usuario
+  }, [user?.id, loadUser]);
 
   const login = useCallback(async (telefono, password) => {
     const deviceId = getDeviceId();

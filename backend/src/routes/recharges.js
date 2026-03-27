@@ -15,8 +15,12 @@ router.get('/metodos', async (req, res) => {
 });
 
 router.get('/', authenticate, async (req, res) => {
-  const list = await getRecargasByUser(req.user.id);
-  res.json(list);
+  try {
+    const list = await getRecargasByUser(req.user.id);
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener tus recargas' });
+  }
 });
 
 router.post('/', authenticate, async (req, res) => {

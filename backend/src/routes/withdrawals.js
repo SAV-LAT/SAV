@@ -16,8 +16,12 @@ router.get('/montos', (req, res) => {
 });
 
 router.get('/', authenticate, async (req, res) => {
-  const list = await getRetirosByUser(req.user.id);
-  res.json(list);
+  try {
+    const list = await getRetirosByUser(req.user.id);
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener tus retiros' });
+  }
 });
 
 router.post('/', authenticate, async (req, res) => {

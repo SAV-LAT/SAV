@@ -23,7 +23,7 @@ router.get('/', authenticate, async (req, res) => {
     const levels = await getLevels();
     const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];
     
-    const allTasks = await getTasks(level.id);
+    // Obtener actividad REAL del usuario (auditada por movimientos_saldo si es posible, o actividad_tareas)
     const activity = await getTaskActivity(user.id);
     
     // Helper para fechas en zona horaria Bolivia
@@ -33,7 +33,7 @@ router.get('/', authenticate, async (req, res) => {
     
     const todayStr = getBoliviaDateString(new Date());
     
-    // Contar intentos de hoy (tanto aciertos como fallos)
+    // Contar intentos de hoy (solo los que coincidan con la fecha de hoy en Bolivia)
     const todayActivity = activity.filter(a => getBoliviaDateString(a.created_at) === todayStr);
     const todayCompletedCount = todayActivity.length;
 
@@ -68,6 +68,9 @@ router.get('/', authenticate, async (req, res) => {
     if (remaining <= 0) {
       mensaje = 'Has completado tu cupo diario de tareas. ¡Vuelve mañana!';
     } else {
+      // Obtener todas las tareas del nivel actual
+      const allTasks = await getTasks(level.id);
+      
       // Filtrar tareas que NO se han intentado hoy (ni bien ni mal)
       const attemptedTaskIdsToday = new Set(todayActivity.map(a => String(a.tarea_id)));
       const pool = allTasks.filter(t => !attemptedTaskIdsToday.has(String(t.id)));
@@ -166,19 +169,10 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     const levels = await getLevels();
     const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];
 
-    if (esCorrectaReal) {
-      // PAGO A ACTIVOS (saldo_principal)
-      await updateUser(user.id, {
-        saldo_principal: (Number(user.saldo_principal) || 0) + recompensa,
-      });
-      
-      // Registrar en estadísticas persistentes
-      await addUserEarnings(user.id, recompensa);
-    }
-
-    // Registrar actividad
+    // Registrar actividad PRIMERO para que cuente el intento incluso si falla
+    const activityId = uuidv4();
     await createTaskActivity({
-      id: uuidv4(),
+      id: activityId,
       usuario_id: user.id,
       tarea_id: task.id,
       respuesta_correcta: esCorrectaReal,
@@ -186,6 +180,20 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       nivel_id: level.id,
       created_at: new Date().toISOString(),
     });
+
+    if (esCorrectaReal) {
+      // PAGO A ACTIVOS (saldo_principal)
+      await updateUser(user.id, {
+        saldo_principal: (Number(user.saldo_principal) || 0) + recompensa,
+      });
+      
+      // Registrar en estadísticas persistentes con el nuevo sistema de eventos
+      await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
+      
+      // Distribuir comisiones a la red (Upline)
+      const { distributeCommissions } = await import('../lib/queries.js');
+      await distributeCommissions(user.id, recompensa);
+    }
 
     res.json({
       success: true,

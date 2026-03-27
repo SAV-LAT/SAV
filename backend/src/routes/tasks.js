@@ -84,16 +84,25 @@ router.get('/', authenticate, async (req, res) => {
       nivel_id: level.id,
       tareas_restantes: remaining,
       tareas_completadas: todayCompletedCount,
-      tareas: availableTasks.map(t => ({
-        id: t.id,
-        nombre: t.nombre,
-        recompensa: t.recompensa,
-        video_url: t.video_url,
-        descripcion: t.descripcion,
-        pregunta: t.pregunta,
-        opciones: t.opciones,
-        respuesta_correcta: t.respuesta_correcta // Opcional: podrías no enviarla si quieres validación 100% server-side, pero el usuario la pide para optimizar
-      })),
+      tareas: availableTasks.map(t => {
+        // Validación básica de integridad
+        const hasQuestion = !!t.pregunta;
+        const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0;
+        const hasAnswer = !!t.respuesta_correcta;
+        const hasVideo = !!t.video_url;
+
+        return {
+          id: t.id,
+          nombre: t.nombre,
+          recompensa: t.recompensa,
+          video_url: t.video_url,
+          descripcion: t.descripcion,
+          pregunta: t.pregunta,
+          opciones: t.opciones,
+          respuesta_correcta: t.respuesta_correcta,
+          esta_incompleta: !hasQuestion || !hasOptions || !hasAnswer || !hasVideo
+        };
+      }),
       mensaje
     });
   } catch (err) {
@@ -172,15 +181,24 @@ router.post('/:id/responder', authenticate, async (req, res) => {
 
     const respuestaUsuario = normalizar(respuesta);
     const respuestaCorrecta = normalizar(task.respuesta_correcta);
-    const esCorrectaReal = respuestaUsuario === respuestaCorrecta;
-    const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
+    
+    // Validación de seguridad: Asegurar que la respuesta_correcta coincida con una de las opciones normalizadas
+    const opcionesNormalizadas = (Array.isArray(task.opciones) ? task.opciones : []).map(opt => normalizar(opt));
+    const esCorrectaEnOpciones = opcionesNormalizadas.includes(respuestaCorrecta);
 
     console.log(`[Tasks v4] Validación de tarea ${task.id}:`);
     console.log(`  - Usuario: ${user.nombre_usuario} (${user.id})`);
     console.log(`  - Respuesta enviada: "${respuesta}" (Normalizada: "${respuestaUsuario}")`);
     console.log(`  - Respuesta esperada: "${task.respuesta_correcta}" (Normalizada: "${respuestaCorrecta}")`);
-    console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTA ✅' : 'INCORRECTA ❌'}`);
+    console.log(`  - ¿Respuesta correcta está en opciones?: ${esCorrectaEnOpciones ? 'SÍ' : 'NO ⚠️'}`);
     
+    if (!esCorrectaEnOpciones) {
+      console.error(`[Tasks v4] ERROR DE CONFIGURACIÓN: La respuesta correcta "${task.respuesta_correcta}" no coincide con ninguna de las opciones: ${JSON.stringify(task.opciones)}`);
+    }
+
+    const esCorrectaReal = respuestaUsuario === respuestaCorrecta;
+    const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
+
     const levels = await getLevels();
     const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];
 

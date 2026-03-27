@@ -105,9 +105,14 @@ export default function TaskRoom() {
       return;
     }
 
-    if (!task.pregunta || !task.opciones || !Array.isArray(task.opciones) || task.opciones.length === 0) {
-      console.error('[TaskRoom] Error: La tarea no tiene preguntas o opciones configuradas.');
-      alert("Esta tarea no tiene preguntas configuradas correctamente. Por favor, intenta con otra o contacta al soporte.");
+    if (!task.pregunta || !task.opciones || !Array.isArray(task.opciones) || task.opciones.length === 0 || !task.video_url) {
+      console.error('[TaskRoom] Error: Tarea incompleta detectada.', {
+        id: task.id,
+        hasQuestion: !!task.pregunta,
+        hasOptions: !!(task.opciones && task.opciones.length > 0),
+        hasVideo: !!task.video_url
+      });
+      alert(`Error técnico: La tarea (ID: ${task.id.substring(0, 8)}) no está configurada correctamente. Por favor, intenta con otra o contacta al soporte.`);
       return;
     }
 
@@ -312,15 +317,21 @@ export default function TaskRoom() {
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1a1f36] to-[#2a2f46] flex items-center justify-center shrink-0 shadow-lg shadow-[#1a1f36]/20">
                 <Sparkles className="text-amber-400" size={28} />
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Campaña Publicitaria</h3>
-                <p className="text-sm font-black text-[#1a1f36] uppercase tracking-tight truncate">{activeTask.nombre}</p>
-                {activeTask.descripcion && (
-                  <p className="text-[9px] text-gray-400 font-medium italic mt-1 leading-relaxed line-clamp-2">
-                    {activeTask.descripcion}
-                  </p>
-                )}
-              </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Campaña Publicitaria</h3>
+                      <p className="text-sm font-black text-[#1a1f36] uppercase tracking-tight truncate">{activeTask.nombre}</p>
+                      {activeTask.descripcion && (
+                        <div className="mt-1 space-y-1">
+                          <p className="text-[10px] text-[#1a1f36] font-bold leading-relaxed line-clamp-2">
+                            {activeTask.descripcion}
+                          </p>
+                          {/* Comentario en inglés (si es diferente a la descripción principal) */}
+                          <p className="text-[9px] text-gray-400 font-medium italic leading-relaxed">
+                            Verification: Watch the video carefully to answer correctly.
+                          </p>
+                        </div>
+                      )}
+                    </div>
               <div className="text-right shrink-0">
                 <span className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Recompensa</span>
                 <span className="text-sm font-black text-emerald-500">+{activeTask.recompensa} BOB</span>

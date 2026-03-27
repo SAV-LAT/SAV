@@ -349,46 +349,73 @@ export default function Recompensas() {
             </div>
           </div>
 
-          {/* Winners History */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-2">
-                <History size={18} className="text-[#1a1f36]" />
-                <h2 className="text-xs font-black text-[#1a1f36] uppercase tracking-[0.2em]">Ganadores Recientes</h2>
-              </div>
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">En Vivo</span>
-            </div>
+          {/* Winners History (Estilo Ultra Llamativo) */}
+          <div className="relative group px-2">
+            {/* Efecto de resplandor de fondo */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+            
+            <div className="relative bg-white rounded-[2.2rem] p-7 shadow-2xl border border-emerald-50 overflow-hidden">
+              {/* Adornos de fondo */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-50 rounded-full -ml-12 -mb-12 blur-2xl opacity-30" />
 
-            <div className="space-y-3">
-              {historial.length > 0 ? historial.slice(0, 5).map((win, i) => (
-                <div 
-                  key={win.id}
-                  className="bg-white rounded-2xl p-4 border border-gray-50 shadow-sm flex items-center justify-between animate-fade-in"
-                  style={{ animationDelay: `${i * 100}ms` }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
-                      <Trophy size={18} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-[#1a1f36] uppercase tracking-tight">
-                        {win.usuario?.nombre_usuario || 'Usuario'}
-                      </p>
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
-                        {new Date(win.created_at).toLocaleTimeString()}
-                      </p>
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-6 bg-gradient-to-b from-emerald-400 to-teal-600 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                  <div>
+                    <h3 className="text-sm font-black text-[#1a1f36] uppercase tracking-[0.25em] leading-none mb-1">Ganadores en Vivo</h3>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                      <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Actividad en tiempo real</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-emerald-500">+{win.monto} BOB</p>
-                    <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest">Premio Ruleta</p>
+                </div>
+                <div className="px-3 py-1.5 rounded-xl bg-[#1a1f36] text-white text-[8px] font-black uppercase tracking-[0.2em] shadow-lg">
+                  LIVE FEED
+                </div>
+              </div>
+
+              <div className="space-y-4 relative z-10">
+                {historial.length > 0 ? historial.slice(0, 5).map((win, i) => (
+                  <div 
+                    key={win.id}
+                    className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all duration-300 animate-fade-in group/item"
+                    style={{ animationDelay: `${i * 150}ms` }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-500 border border-emerald-50 group-hover/item:scale-110 transition-transform duration-500">
+                        <Trophy size={20} strokeWidth={2.5} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-[#1a1f36] tracking-tighter uppercase mb-0.5">
+                          {win.usuario?.nombre_usuario?.slice(0, 3)}***{win.usuario?.nombre_usuario?.slice(-2)}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <History size={10} className="text-gray-400" />
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                            {new Date(win.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right flex flex-col items-end">
+                      <div className="flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 mb-1">
+                        <Sparkles size={12} className="text-emerald-500" />
+                        <span className="text-sm font-black text-emerald-600 tracking-tight">+{win.monto}</span>
+                        <span className="text-[8px] font-black text-emerald-400">BOB</span>
+                      </div>
+                      <span className="text-[7px] font-black text-gray-300 uppercase tracking-[0.2em]">Puntaje Obtenido</span>
+                    </div>
                   </div>
-                </div>
-              )) : (
-                <div className="text-center py-10 bg-white rounded-[2rem] border border-dashed border-gray-200">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Aún no hay ganadores hoy</p>
-                </div>
-              )}
+                )) : (
+                  <div className="text-center py-12 opacity-40">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-gray-200">
+                      <Trophy size={24} className="text-gray-300" />
+                    </div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Esperando nuevos ganadores...</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

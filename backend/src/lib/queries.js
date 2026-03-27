@@ -85,16 +85,15 @@ export async function updateUser(id, updates) {
 export async function getLevels() {
   const { data, fallback } = await trySupabase(() => supabase.from('niveles').select('*').order('orden', { ascending: true }));
   
-  // Si tenemos datos de la DB, los mapeamos con el estado de bloqueo manual y eliminamos duplicados
   if (!fallback && data && data.length > 0) {
     const uniqueLevels = [];
     const codes = new Set();
 
     for (const dbLevel of data) {
-      const code = String(dbLevel.codigo || dbLevel.nombre).toLowerCase();
+      const code = String(dbLevel.codigo).toLowerCase();
       if (!codes.has(code)) {
         codes.add(code);
-        const seedLevel = seedLevels.find(s => String(s.codigo || s.nombre).toLowerCase() === code);
+        const seedLevel = seedLevels.find(s => String(s.codigo).toLowerCase() === code);
         uniqueLevels.push({
           ...dbLevel,
           activo: seedLevel ? (seedLevel.activo !== false) : (dbLevel.activo !== false)
@@ -104,7 +103,6 @@ export async function getLevels() {
     return uniqueLevels;
   }
   
-  console.log('[Queries] getLevels fallback to seedLevels');
   return seedLevels;
 }
 

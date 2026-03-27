@@ -19,17 +19,7 @@ export default function VIP() {
 
   // Generar la estructura de comisiones basada en los niveles reales de la DB (Solo S1-S9)
   const commissionStructure = niveles
-    .filter(n => {
-      const code = String(n.codigo || n.nombre).toLowerCase();
-      return code !== 'pasante' && code !== 'internar';
-    })
-    .reduce((acc, curr) => {
-      const code = String(curr.codigo || curr.nombre).toLowerCase();
-      if (!acc.some(n => String(n.codigo || n.nombre).toLowerCase() === code)) {
-        acc.push(curr);
-      }
-      return acc;
-    }, [])
+    .filter(n => n.codigo !== 'pasante' && n.codigo !== 'internar')
     .sort((a, b) => (a.orden || 0) - (b.orden || 0))
     .map(n => {
       const inv = n.deposito || n.costo || 0;
@@ -95,15 +85,7 @@ export default function VIP() {
             <h3 className="text-xs font-black text-[#1a1f36] uppercase tracking-[0.2em]">Niveles de Inversión</h3>
           </div>
 
-          {niveles
-            .reduce((acc, curr) => {
-              const code = String(curr.codigo || curr.nombre).toLowerCase();
-              if (!acc.some(n => String(n.codigo || n.nombre).toLowerCase() === code)) {
-                acc.push(curr);
-              }
-              return acc;
-            }, [])
-            .map((nivel) => {
+          {niveles.map((nivel) => {
             const esActual = nivel.id === user?.nivel_id;
             const esSuperior = esNivelSuperior(nivel);
             const estaBloqueadoAdmin = nivel.activo === false;

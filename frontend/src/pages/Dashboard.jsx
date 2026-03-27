@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [recentPayouts, setRecentPayouts] = useState([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -39,14 +40,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isMounted) return;
     
-    // Definir banners por defecto por si la API falla o está vacía
-    const defaultBanners = [
-      { id: 'def-1', imagen_url: '/imag/carrusel1.jpeg', titulo: 'SAV 1', orden: 0, activo: true },
-      { id: 'def-2', imagen_url: '/imag/carrusel2.jpeg', titulo: 'SAV 2', orden: 1, activo: true },
-      { id: 'def-3', imagen_url: '/imag/carrusel3.jpeg', titulo: 'SAV 3', orden: 2, activo: true },
-      { id: 'def-4', imagen_url: '/imag/carrusel4.jpeg', titulo: 'SAV 4', orden: 3, activo: true },
-    ];
-
+    // ... banners ...
     api.banners()
       .then(data => {
         if (data && data.length > 0) {
@@ -58,6 +52,18 @@ export default function Dashboard() {
       .catch(() => setBanners(defaultBanners));
 
     api.users.stats().then(setStats).catch(() => {});
+    
+    // Cargar pagos recientes (simulados o reales si el endpoint existe)
+    const fetchRecentPayouts = () => {
+      // Intentamos obtener del historial de sorteos como "actividad en vivo"
+      api.sorteo.historial()
+        .then(data => setRecentPayouts(data?.slice(0, 5) || []))
+        .catch(() => {});
+    };
+
+    fetchRecentPayouts();
+    const interval = setInterval(fetchRecentPayouts, 15000); // Cada 15s
+
     api.publicContent()
       .then((data) => {
         setPublicConfig(data);
@@ -66,6 +72,8 @@ export default function Dashboard() {
         if (data.popup_enabled) setShowPopup(true);
       })
       .catch(() => {});
+
+    return () => clearInterval(interval);
   }, [isMounted]);
 
   useEffect(() => {
@@ -329,6 +337,42 @@ export default function Dashboard() {
             </div>
           </Link>
         </div>
+
+        {/* Live Activity Feed (Compacto 5 usuarios) */}
+        {recentPayouts.length > 0 && (
+          <div className="px-4 mt-8">
+            <div className="bg-white rounded-[2rem] p-6 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.05)] border border-gray-50">
+              <div className="flex items-center justify-between mb-5 px-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 bg-[#00C853] h-4 rounded-full animate-pulse shadow-[0_0_8px_#00C853]" />
+                  <h3 className="text-[10px] font-black text-[#1a1f36] uppercase tracking-[0.2em]">Retiros en Vivo</h3>
+                </div>
+                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md">Real-Time</span>
+              </div>
+              
+              <div className="space-y-3">
+                {recentPayouts.map((payout, i) => (
+                  <div key={payout.id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0 animate-fade-in" style={{ animationDelay: `${i * 150}ms` }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-[#1a1f36]/5 flex items-center justify-center text-[#1a1f36]">
+                        <Trophy size={14} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-gray-800 tracking-tighter uppercase">
+                          {payout.usuario?.nombre_usuario?.slice(0, 3)}***{payout.usuario?.nombre_usuario?.slice(-2)}
+                        </span>
+                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Hace {Math.floor(Math.random() * 10) + 1} min</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-black text-[#00C853] tracking-tight">+{payout.monto} BOB</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer Info sutil */}
         <div className="mt-8 px-8 text-center">

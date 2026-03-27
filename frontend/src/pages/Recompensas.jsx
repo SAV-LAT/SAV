@@ -31,22 +31,32 @@ export default function Recompensas() {
   const wheelRef = useRef(null);
 
   useEffect(() => {
-    Promise.all([
-      api.sorteo.premios(),
-      api.sorteo.historial(),
-      api.sorteo.config(),
-      api.users.team()
-    ]).then(([p, h, c, t]) => {
-      console.log('Premios recibidos:', p); // Debug para ver los premios en consola
-      setPremios(p || []);
-      setHistorial(h || []);
-      setConfig(c);
-      setTeamStats(t);
-      setLoading(false);
-    }).catch(err => {
-      console.error('Error cargando datos de ruleta:', err);
-      setLoading(false);
-    });
+    const loadData = () => {
+      Promise.all([
+        api.sorteo.premios(),
+        api.sorteo.historial(),
+        api.sorteo.config(),
+        api.users.team()
+      ]).then(([p, h, c, t]) => {
+        setPremios(p || []);
+        setHistorial(h || []);
+        setConfig(c);
+        setTeamStats(t);
+        setLoading(false);
+      }).catch(err => {
+        console.error('Error cargando datos de ruleta:', err);
+        setLoading(false);
+      });
+    };
+
+    loadData();
+
+    // Actualización en tiempo real de ganadores cada 15 segundos
+    const interval = setInterval(() => {
+      api.sorteo.historial().then(setHistorial).catch(() => {});
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const spinWheel = async () => {
@@ -350,7 +360,7 @@ export default function Recompensas() {
             </div>
 
             <div className="space-y-3">
-              {historial.length > 0 ? historial.map((win, i) => (
+              {historial.length > 0 ? historial.slice(0, 5).map((win, i) => (
                 <div 
                   key={win.id}
                   className="bg-white rounded-2xl p-4 border border-gray-50 shadow-sm flex items-center justify-between animate-fade-in"

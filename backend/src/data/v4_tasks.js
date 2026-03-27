@@ -96,7 +96,7 @@ export const v4_tasks = [
   {
     nombre: 'Lamborghini Power',
     nivel_codigo: 'S2',
-    recompensa: 1.80,
+    recompensa: 3.22,
     video_url: '/video/lamborghini1.mp4',
     descripcion: 'Italian excellence and extreme performance. Lamborghini supercars redefine the boundaries of speed.',
     pregunta: 'Which Italian supercar brand is featured in this high-speed video?',
@@ -106,7 +106,7 @@ export const v4_tasks = [
   {
     nombre: 'Dior Couture',
     nivel_codigo: 'S2',
-    recompensa: 1.80,
+    recompensa: 3.22,
     video_url: '/video/dior1.mp4',
     descripcion: 'Step into the realm of Christian Dior, where fashion becomes art and beauty is a lifestyle.',
     pregunta: 'Which fashion house is presenting its latest collection?',
@@ -116,7 +116,7 @@ export const v4_tasks = [
   {
     nombre: 'Gucci Vision',
     nivel_codigo: 'S2',
-    recompensa: 1.80,
+    recompensa: 3.22,
     video_url: '/video/gucci1.mp4',
     descripcion: 'Eclectic, contemporary, romantic—Gucci products represent the pinnacle of Italian craftsmanship.',
     pregunta: 'Which iconic Italian brand is showcasing its creative vision?',
@@ -126,7 +126,7 @@ export const v4_tasks = [
   {
     nombre: 'Tesla Energy',
     nivel_codigo: 'S2',
-    recompensa: 1.80,
+    recompensa: 3.22,
     video_url: '/video/tesla2.mp4',
     descripcion: 'Revolutionizing the way we power our world with sustainable and clean energy solutions.',
     pregunta: 'Which company is leading the sustainable energy revolution?',

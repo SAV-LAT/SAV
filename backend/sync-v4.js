@@ -1,7 +1,14 @@
 
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { v4_tasks } from './src/data/v4_tasks.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
@@ -54,7 +61,6 @@ async function syncV4() {
     const videoPath = path.join(__dirname, '../video', videoFileName);
     const videoPathAlt = path.join(__dirname, '../frontend/public/video', videoFileName);
     
-    const fs = require('fs');
     if (!fs.existsSync(videoPath) && !fs.existsSync(videoPathAlt)) {
       console.warn(`⚠️ Aviso: El video para "${task.nombre}" (${videoFileName}) no se encontró en la carpeta video/.`);
       // Opcional: podrías decidir no insertar la tarea si el video no existe

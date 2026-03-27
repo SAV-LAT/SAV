@@ -30,25 +30,33 @@ export default function Profile() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const fetchStats = () => api.users.stats().then(setStats).catch(() => {});
+    const fetchStats = () => {
+      console.log('[Profile] Cargando estadísticas...');
+      api.users.stats()
+        .then(data => {
+          console.log('[Profile] Estadísticas recibidas:', data);
+          setStats(data);
+        })
+        .catch(err => console.error('[Profile] Error cargando stats:', err));
+    };
+    
     fetchStats();
 
     // Suscripción Realtime para estadísticas y saldo basado en la tabla usuarios
     if (user?.id) {
       console.log(`[Realtime] Suscribiendo a cambios para estadísticas de usuario: ${user.id}`);
       
-      const channel = supabase.channel(`profile_realtime:${user.id}`)
+      const channel = supabase.channel(`profile_realtime_${user.id}`)
         .on(
           'postgres_changes', 
           { 
-            event: 'UPDATE', 
+            event: '*', 
             schema: 'public', 
             table: 'usuarios', 
             filter: `id=eq.${user.id}` 
           }, 
           (payload) => {
-            console.log('[Realtime] Datos de usuario actualizados, recargando estadísticas...');
-            // Actualizar estadísticas inmediatamente al detectar cambios en el usuario
+            console.log('[Realtime] Cambio en tabla usuarios detectado:', payload.eventType);
             fetchStats();
           }
         )
@@ -60,14 +68,17 @@ export default function Profile() {
             table: 'movimientos_saldo', 
             filter: `usuario_id=eq.${user.id}` 
           }, 
-          () => {
-            console.log('[Realtime] Nuevo movimiento detectado, recargando estadísticas...');
+          (payload) => {
+            console.log('[Realtime] Nuevo movimiento detectado:', payload.new.tipo_movimiento);
             fetchStats();
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`[Realtime] Estado de suscripción: ${status}`);
+        });
         
       return () => {
+        console.log('[Realtime] Desuscribiendo canal profile...');
         supabase.removeChannel(channel);
       };
     }

@@ -21,7 +21,19 @@ router.get('/', authenticate, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     const levels = await getLevels();
-    const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];
+    const level = levels.find(l => 
+      String(l.id) === String(user.nivel_id) || 
+      String(l.codigo).toUpperCase() === String(user.nivel_id).toUpperCase() ||
+      String(l.nombre).toUpperCase() === String(user.nivel_id).toUpperCase()
+    );
+    
+    if (!level) {
+      console.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id}: ${user.nivel_id}`);
+      return res.status(400).json({ 
+        error: 'Tu cuenta tiene un nivel inválido o no configurado. Contacta a soporte.',
+        nivel_id: user.nivel_id 
+      });
+    }
     
     // Obtener actividad REAL del usuario (auditada por movimientos_saldo si es posible, o actividad_tareas)
     const activity = await getTaskActivity(user.id);
@@ -226,7 +238,16 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
 
     const levels = await getLevels();
-    const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0] || { id: user.nivel_id };
+    const level = levels.find(l => 
+      String(l.id) === String(user.nivel_id) || 
+      String(l.codigo).toUpperCase() === String(user.nivel_id).toUpperCase() ||
+      String(l.nombre).toUpperCase() === String(user.nivel_id).toUpperCase()
+    );
+    
+    if (!level) {
+      console.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id} al responder: ${user.nivel_id}`);
+      throw new Error('Nivel de usuario no válido');
+    }
 
     // Registrar actividad PRIMERO
     try {

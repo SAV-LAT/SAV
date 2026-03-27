@@ -89,7 +89,10 @@ router.get('/', authenticate, async (req, res) => {
         nombre: t.nombre,
         recompensa: t.recompensa,
         video_url: t.video_url,
-        descripcion: t.descripcion
+        descripcion: t.descripcion,
+        pregunta: t.pregunta,
+        opciones: t.opciones,
+        respuesta_correcta: t.respuesta_correcta // Opcional: podrías no enviarla si quieres validación 100% server-side, pero el usuario la pide para optimizar
       })),
       mensaje
     });
@@ -157,11 +160,12 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Ya intentaste esta tarea hoy' });
     }
 
-    // Normalización para validación (quitar tildes, mayúsculas, espacios)
+    // Normalización para validación (quitar tildes, mayúsculas, espacios, puntuación)
     const normalizar = (str) => {
       if (!str) return '';
       return String(str)
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar tildes
+        .replace(/[^\w\s]/gi, '') // Quitar puntuación (como ' en McDonald's)
         .toUpperCase()
         .trim();
     };

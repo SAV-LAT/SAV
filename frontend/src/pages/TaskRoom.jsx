@@ -76,29 +76,21 @@ export default function TaskRoom() {
   }, [activeTask, surveyVisible, timer]);
 
   // Manejo de Inicio de Tarea
-  const startTask = async (task) => {
+  const startTask = (task) => {
     if (data.tareas_restantes <= 0) {
       alert("Has alcanzado tu límite diario de tareas.");
       return;
     }
-    setLoading(true);
-    try {
-      const fullTask = await api.tasks.get(task.id);
-      setActiveTask(fullTask);
-      setTimer(10);
-      setSurveyVisible(false);
-      setSelectedOption('');
-      setIsCorrect(false);
-      setVideoFinished(false);
-      setErrorMessage('');
-      setShowResult(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
-      console.error("Error al abrir tarea:", err);
-      alert("Error al cargar el detalle de la tarea.");
-    } finally {
-      setLoading(false);
-    }
+    // Ya tenemos toda la data de la tarea en la lista, no necesitamos api.tasks.get(task.id)
+    setActiveTask(task);
+    setTimer(10);
+    setSurveyVisible(false);
+    setSelectedOption('');
+    setIsCorrect(false);
+    setVideoFinished(false);
+    setErrorMessage('');
+    setShowResult(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Manejo de Confirmación de Encuesta
@@ -376,7 +368,7 @@ export default function TaskRoom() {
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] mb-10">Recompensa acreditada al instante</p>
                       
                       <div className="bg-emerald-50 py-8 px-10 rounded-[2.5rem] border border-emerald-100 inline-flex flex-col items-center gap-2 mb-10 shadow-inner">
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Ganancia Obtenida</span>
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Respuesta: {selectedOption}</span>
                         <div className="flex items-center gap-3">
                           <span className="text-5xl font-black text-[#1a1f36] tracking-tighter">+{activeTask.recompensa}</span>
                           <span className="text-sm font-black text-[#1a1f36]/40 uppercase tracking-widest">BOB</span>
@@ -390,7 +382,10 @@ export default function TaskRoom() {
                         <X className="text-white" size={48} strokeWidth={4} />
                       </div>
                       <h3 className="font-black text-[#1a1f36] text-3xl uppercase mb-3 tracking-tighter">FALLASTE</h3>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] mb-10">{errorMessage}</p>
+                      <div className="space-y-2 mb-8">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Tu respuesta: <span className="text-rose-500">{selectedOption}</span></p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Correcta: <span className="text-emerald-500">{activeTask.respuesta_correcta}</span></p>
+                      </div>
                       <div className="bg-rose-50 py-6 px-10 rounded-[2.5rem] border border-rose-100 inline-flex items-center gap-4 mb-10">
                         <span className="text-xl font-black text-rose-600 tracking-tighter">0.00 BOB</span>
                       </div>

@@ -77,10 +77,25 @@ export default function TaskRoom() {
 
   // Manejo de Inicio de Tarea
   const startTask = (task) => {
+    console.log('[TaskRoom] Iniciando tarea:', task.id);
+    console.log('[TaskRoom] Datos de la tarea:', {
+      nombre: task.nombre,
+      pregunta: task.pregunta,
+      opciones: task.opciones,
+      hasOptions: !!(task.opciones && task.opciones.length > 0)
+    });
+
     if (data.tareas_restantes <= 0) {
       alert("Has alcanzado tu límite diario de tareas.");
       return;
     }
+
+    if (!task.pregunta || !task.opciones || !Array.isArray(task.opciones) || task.opciones.length === 0) {
+      console.error('[TaskRoom] Error: La tarea no tiene preguntas o opciones configuradas.');
+      alert("Esta tarea no tiene preguntas configuradas correctamente. Por favor, intenta con otra o contacta al soporte.");
+      return;
+    }
+
     // Ya tenemos toda la data de la tarea en la lista, no necesitamos api.tasks.get(task.id)
     setActiveTask(task);
     setTimer(10);

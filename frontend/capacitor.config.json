@@ -3,9 +3,9 @@
   "appName": "SAV",
   "webDir": "dist",
   "server": {
-    "url": "https://sav-g9xx.vercel.app",
+    "url": "https://sav-lat.vercel.app",
     "allowNavigation": [
-      "sav-g9xx.vercel.app",
+      "sav-lat.vercel.app",
       "sav-zhyg.onrender.com",
       "*.supabase.co",
       "github.com"

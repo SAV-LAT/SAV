@@ -26,47 +26,61 @@ router.get('/', authenticate, async (req, res) => {
     const allTasks = await getTasks(level.id);
     const activity = await getTaskActivity(user.id);
     
-    // Helper para fechas
+    // Helper para fechas en zona horaria Bolivia
     const getBoliviaDateString = (date) => {
-      return new Date(date).toLocaleDateString('en-US', { timeZone: 'America/La_Paz' });
+      return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }); // YYYY-MM-DD
     };
+    
     const todayStr = getBoliviaDateString(new Date());
-    const todayCompletedActivity = activity.filter(a => 
-      getBoliviaDateString(a.created_at) === todayStr && a.respuesta_correcta === true
-    );
+    
+    // Contar intentos de hoy (tanto aciertos como fallos)
+    const todayActivity = activity.filter(a => getBoliviaDateString(a.created_at) === todayStr);
+    const todayCompletedCount = todayActivity.length;
 
-    // Límite de 3 días para pasantes
-    const isPasante = String(level.id) === 'l1' || String(level.codigo) === 'pasante';
+    // Lógica especial para Pasante: 3 días desde el REGISTRO
+    const isPasante = String(level.codigo).toLowerCase() === 'pasante';
     if (isPasante) {
-      const successfulActivities = activity.filter(a => a.respuesta_correcta === true);
-      const uniqueDays = new Set(successfulActivities.map(a => getBoliviaDateString(a.created_at)));
-      if (uniqueDays.size >= 3 && !uniqueDays.has(todayStr)) {
-        return res.json({
-          nivel: level.nombre,
-          tareas_restantes: 0,
-          tareas_completadas: todayCompletedActivity.length,
-          tareas: [],
-          mensaje: 'Tus 3 días de prueba han terminado. Sube de nivel.'
-        });
+      const fechaRegistro = user.created_at || user.fecha_registro;
+      if (fechaRegistro) {
+        const regDate = new Date(fechaRegistro);
+        const diffTime = Math.abs(now - regDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 3) {
+          return res.json({
+            nivel: level.nombre,
+            tareas_restantes: 0,
+            tareas_completadas: todayCompletedCount,
+            tareas: [],
+            bloqueado: true,
+            mensaje: 'Tu periodo de tareas como Pasante ha finalizado. Debes subir de nivel para continuar.'
+          });
+        }
       }
     }
 
-    const completedTaskIdsToday = new Set(todayCompletedActivity.map(a => String(a.tarea_id)));
-    const availableTasks = allTasks.filter(t => !completedTaskIdsToday.has(String(t.id)));
-    
-    const numTareasDiarias = Number(level.tareas_diarias) || 0;
-    const remaining = Math.max(0, numTareasDiarias - todayCompletedActivity.length);
+    const numTareasDiarias = Number(level.num_tareas_diarias || level.tareas_diarias) || 0;
+    const remaining = Math.max(0, numTareasDiarias - todayCompletedCount);
     
     let mensaje = null;
-    if (remaining <= 0 && numTareasDiarias > 0) {
-      mensaje = 'Has completado todas tus tareas de hoy.';
+    let availableTasks = [];
+
+    if (remaining <= 0) {
+      mensaje = 'Has completado tu cupo diario de tareas. ¡Vuelve mañana!';
+    } else {
+      // Filtrar tareas que NO se han intentado hoy (ni bien ni mal)
+      const attemptedTaskIdsToday = new Set(todayActivity.map(a => String(a.tarea_id)));
+      const pool = allTasks.filter(t => !attemptedTaskIdsToday.has(String(t.id)));
+      
+      // Selección aleatoria
+      availableTasks = pool.sort(() => 0.5 - Math.random()).slice(0, remaining);
     }
 
     res.json({
       nivel: level.nombre,
       nivel_id: level.id,
       tareas_restantes: remaining,
-      tareas_completadas: todayCompletedActivity.length,
+      tareas_completadas: todayCompletedCount,
       tareas: availableTasks.map(t => ({
         id: t.id,
         nombre: t.nombre,
@@ -131,14 +145,13 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     };
     const todayStr = getBoliviaDateString(new Date());
 
-    const yaCompletadaExitosamente = activity.some(
+    const yaIntentadaHoy = activity.some(
       a => String(a.tarea_id) === String(task.id) && 
-           getBoliviaDateString(a.created_at) === todayStr && 
-           a.respuesta_correcta === true
+           getBoliviaDateString(a.created_at) === todayStr
     );
     
-    if (yaCompletadaExitosamente) {
-      return res.status(400).json({ error: 'Ya completaste esta tarea con éxito hoy' });
+    if (yaIntentadaHoy) {
+      return res.status(400).json({ error: 'Ya intentaste esta tarea hoy' });
     }
 
     // Normalización para validación
@@ -150,6 +163,9 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     const esCorrectaReal = normalizar(respuesta) === normalizar(task.respuesta_correcta);
     const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
     
+    const levels = await getLevels();
+    const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];
+
     if (esCorrectaReal) {
       // PAGO A ACTIVOS (saldo_principal)
       await updateUser(user.id, {
@@ -167,6 +183,7 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       tarea_id: task.id,
       respuesta_correcta: esCorrectaReal,
       recompensa_otorgada: recompensa,
+      nivel_id: level.id,
       created_at: new Date().toISOString(),
     });
 

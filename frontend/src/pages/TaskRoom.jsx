@@ -157,6 +157,48 @@ export default function TaskRoom() {
     );
   }
 
+  // --- VISTA BLOQUEADO (PASANTE 3 DÍAS) ---
+  if (data?.bloqueado) {
+    return (
+      <Layout>
+        <Header title="SALA DE TAREAS" />
+        <div className="p-8 text-center space-y-8 flex flex-col items-center justify-center min-h-[70vh]">
+          <div className="relative">
+            <div className="absolute -inset-4 bg-rose-500/20 rounded-full blur-2xl animate-pulse" />
+            <div className="relative w-32 h-32 bg-white text-rose-500 rounded-[3rem] flex items-center justify-center shadow-2xl border-4 border-rose-50">
+              <ShieldCheck size={64} strokeWidth={1.5} />
+            </div>
+          </div>
+          
+          <div className="space-y-4 max-w-xs mx-auto">
+            <h2 className="text-3xl font-black text-[#1a1f36] uppercase tracking-tighter leading-none">Periodo Finalizado</h2>
+            <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.2em] leading-relaxed">
+              {data.mensaje}
+            </p>
+          </div>
+
+          <div className="w-full max-w-[280px] bg-[#1a1f36] p-8 rounded-[2.5rem] shadow-2xl border border-white/5 space-y-6">
+            <div className="flex items-center gap-4 text-left">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <span className="block text-[8px] font-black text-white/40 uppercase tracking-widest">Beneficio VIP</span>
+                <span className="block text-xs font-bold text-white">Tareas ilimitadas por un año</span>
+              </div>
+            </div>
+            <Link 
+              to="/vip" 
+              className="block w-full py-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+            >
+              Mejorar a S1 ahora
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   // --- VISTA DE EJECUCIÓN (MODERNA Y FLUIDA) ---
   if (activeTask) {
     const options = activeTask.opciones || [];

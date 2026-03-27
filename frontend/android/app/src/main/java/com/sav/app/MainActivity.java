@@ -27,13 +27,12 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout errorLayout;
     private TextView errorText;
     
-    // --- CAMBIAR URL AQUÍ ---
+    // --- URL SAV ---
     private final String TARGET_URL = "https://sav-lat.vercel.app";
-    // ------------------------
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Splash Screen nativo
+        // Splash Screen nativo de Android
         SplashScreen.installSplashScreen(this);
         
         super.onCreate(savedInstanceState);
@@ -57,10 +56,8 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setSupportZoom(false);
-        settings.setBuiltInZoomControls(false);
         
-        // Optimización para carga rápida
+        // Optimización de WebView
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
         settings.setEnableSmoothTransition(true);
 
@@ -89,14 +86,23 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
                 
-                // Permitir navegación interna para nuestro dominio y servicios esenciales
-                if (url.contains("sav-lat.vercel.app") || 
-                    url.contains("supabase.co") || 
-                    url.contains("onrender.com")) {
-                    return false; // Cargar en el WebView
+                // Abrir enlaces de WhatsApp, Telegram, etc. externamente
+                if (url.startsWith("tel:") || url.startsWith("whatsapp:") || url.startsWith("mailto:") || url.startsWith("tg:")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent);
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }
+                
+                // Navegación interna para SAV
+                if (url.contains("sav-lat.vercel.app") || url.contains("supabase.co") || url.contains("onrender.com")) {
+                    return false; 
                 }
 
-                // Abrir enlaces externos (WhatsApp, Telegram, etc.) en el navegador o app correspondiente
+                // Otros enlaces externos en el navegador
                 try {
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                     startActivity(intent);
@@ -115,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
                 if (webView.canGoBack()) {
                     webView.goBack();
                 } else {
-                    finish(); // Salir de la app si no hay más historial
+                    finish(); 
                 }
             }
         });
@@ -125,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
         if (isNetworkAvailable()) {
             webView.loadUrl(TARGET_URL);
         } else {
-            showError("No hay conexión a internet.");
+            showError("Sin conexión a internet.");
         }
     }
 

@@ -154,15 +154,18 @@ export default function TaskRoom() {
     } catch (err) {
       console.error('[TaskRoom] Error en onConfirmResponse:', err);
       // DIFERENCIAR ERROR DE RED/SERVIDOR DE RESPUESTA INCORRECTA
-      setIsCorrect(false); 
-      if (err.status === 500 || err.message?.includes('500')) {
-        setErrorMessage('Error interno del servidor al procesar la tarea. Inténtalo de nuevo.');
+      if (err.status === 500 || err.message?.includes('500') || err.message?.includes('servidor')) {
+        setErrorMessage('Error interno del servidor al procesar la tarea. Por favor, intenta de nuevo más tarde.');
+        setIsCorrect(false);
+        setShowResult(true);
       } else if (err.status === 400) {
         setErrorMessage(err.message || 'Petición inválida.');
+        setIsCorrect(false);
+        setShowResult(true);
       } else {
-        setErrorMessage('No se pudo conectar con el servidor. Revisa tu conexión.');
+        // Otros errores (red, timeout, etc.)
+        alert(err.message || 'Error de conexión con el servidor.');
       }
-      setShowResult(true);
     } finally {
       setIsSubmitting(false);
     }

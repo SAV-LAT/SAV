@@ -197,39 +197,41 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Ya intentaste esta tarea hoy' });
     }
 
-    // --- LÓGICA DE VALIDACIÓN EXACTA REFORZADA ---
-    const selectedValue = String(respuesta || '').trim();
-    const correctValue = String(task.respuesta_correcta || '').trim();
-    
-    // Normalización avanzada: quita tildes, comillas variantes, apóstrofes y caracteres invisibles
+    // --- LÓGICA DE VALIDACIÓN ULTRA-REFORZADA ---
     const normalizeStr = (s) => {
       if (!s) return '';
       return s
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Quitar tildes
-        .replace(/['’‘´`]/g, "'")        // Unificar todo tipo de comillas/apóstrofes a '
+        .replace(/[\u0300-\u036f]/g, "") // Quitar tildes y diacríticos
+        // Unificar todo tipo de comillas, apóstrofes y variantes de puntuación
+        .replace(/['’‘´`\u00B4\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
         .replace(/[\u200B-\u200D\uFEFF]/g, "") // Quitar caracteres invisibles
-        .replace(/\s+/g, " ")           // Unificar espacios múltiples a uno solo
+        // MANTENER espacios para evitar falsos positivos en frases
+        .replace(/[^a-zA-Z0-9' ]/g, "") 
+        .replace(/\s+/g, " ") // Unificar múltiples espacios
         .trim()
         .toUpperCase();
     };
 
-    const esCorrectaReal = normalizeStr(selectedValue) === normalizeStr(correctValue);
+    const valUser = normalizeStr(respuesta);
+    const valCorrect = normalizeStr(task.respuesta_correcta);
+    const esCorrectaReal = valUser === valCorrect && valCorrect !== '';
     const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
 
     console.log(`\n[VALIDACIÓN PASO A PASO]`);
     console.log(`  - Task ID: ${task.id}`);
     console.log(`  - User ID: ${user.id} (${user.nombre_usuario})`);
-    console.log(`  - Recibido: "${respuesta}" -> Normalizado: "${normalizeStr(selectedValue)}"`);
-    console.log(`  - Esperado: "${task.respuesta_correcta}" -> Normalizado: "${normalizeStr(correctValue)}"`);
+    console.log(`  - Recibido Original: "${respuesta}" -> Normalizado: "${valUser}"`);
+    console.log(`  - Esperado Original: "${task.respuesta_correcta}" -> Normalizado: "${valCorrect}"`);
     console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
 
     const levels = await getLevels();
-    const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];
+    const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0] || { id: user.nivel_id };
 
     // Registrar actividad PRIMERO
     try {
       const activityId = uuidv4();
+      console.log(`  - [STEP] Intentando registrar actividad...`);
       await createTaskActivity({
         id: activityId,
         usuario_id: user.id,
@@ -244,36 +246,43 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       if (esCorrectaReal) {
         // Actualizar saldo usuario
         try {
+          console.log(`  - [STEP] Intentando actualizar saldo principal...`);
           await updateUser(user.id, {
             saldo_principal: (Number(user.saldo_principal) || 0) + recompensa,
           });
           console.log(`  - [OK] updateUser (saldo_principal) actualizado.`);
         } catch (e) {
           console.error(`  - [ERROR] updateUser falló:`, e.message);
-          throw e;
+          throw new Error(`Fallo al actualizar saldo: ${e.message}`);
         }
         
         // Registrar ganancias
         try {
+          console.log(`  - [STEP] Intentando registrar ganancias (Accounting)...`);
           await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
           console.log(`  - [OK] addUserEarnings registrado.`);
         } catch (e) {
           console.error(`  - [ERROR] addUserEarnings falló:`, e.message);
-          throw e;
+          throw new Error(`Fallo al registrar ganancias: ${e.message}`);
         }
         
         // Comisiones
         try {
+          console.log(`  - [STEP] Intentando distribuir comisiones...`);
           await distributeCommissions(user.id, recompensa);
           console.log(`  - [OK] distributeCommissions procesado.`);
         } catch (e) {
-          console.error(`  - [ERROR] distributeCommissions falló:`, e.message);
-          // No lanzamos error aquí para no romper el flujo principal si las comisiones fallan
+          console.error(`  - [ERROR] distributeCommissions falló (No crítico):`, e.message);
         }
       }
     } catch (e) {
-      console.error(`  - [CRÍTICO] Fallo en el proceso de guardado:`, e.message);
-      throw e;
+      console.error(`  - [CRÍTICO] Fallo en el proceso de guardado de la tarea ${task.id}:`, e.message);
+      res.status(500).json({ 
+        error: 'Error interno al procesar la respuesta', 
+        message: e.message,
+        step: 'save_process'
+      });
+      return;
     }
 
     res.json({

@@ -192,18 +192,21 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     const correctValue = String(task.respuesta_correcta || '').trim();
     
     // Comparación directa (Case Insensitive para evitar fallos tontos, pero exacta en contenido)
-    const esCorrectaReal = selectedValue.toUpperCase() === correctValue.toUpperCase();
+    // Usamos normalize para eliminar caracteres invisibles o acentos que puedan romper la igualdad visual
+    const normalizeStr = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    const esCorrectaReal = normalizeStr(selectedValue) === normalizeStr(correctValue);
     const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
 
     console.log(`\n[VALIDACIÓN] Tarea: ${task.id} (${task.nombre})`);
     console.log(`  - Usuario: ${user.nombre_usuario}`);
-    console.log(`  - Seleccionado: "${selectedValue}"`);
-    console.log(`  - Esperado: "${correctValue}"`);
+    console.log(`  - Seleccionado Original: "${respuesta}"`);
+    console.log(`  - Seleccionado Clean: "${selectedValue}"`);
+    console.log(`  - Esperado Clean: "${correctValue}"`);
     console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
     console.log(`  - Opciones Disponibles: ${JSON.stringify(task.opciones)}`);
     
     // Alerta de configuración si la respuesta correcta no está en las opciones
-    if (!task.opciones?.some(o => String(o).trim().toUpperCase() === correctValue.toUpperCase())) {
+    if (!task.opciones?.some(o => normalizeStr(String(o).trim()) === normalizeStr(correctValue))) {
       console.error(`[ALERTA CONFIG] Tarea ${task.id} tiene una respuesta correcta que no figura en sus opciones.`);
     }
 

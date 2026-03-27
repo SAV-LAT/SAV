@@ -152,7 +152,12 @@ export default function TaskRoom() {
         setErrorMessage('La respuesta seleccionada no coincide con el registro.');
       }
     } catch (err) {
-      setErrorMessage(err.message || 'Error al validar la respuesta.');
+      console.error('[TaskRoom] Error en onConfirmResponse:', err);
+      if (err.status === 500) {
+        setErrorMessage('Error interno al validar la tarea (Servidor). Inténtalo de nuevo.');
+      } else {
+        setErrorMessage(err.message || 'Error al validar la respuesta.');
+      }
       setShowResult(true);
       setIsCorrect(false);
     } finally {

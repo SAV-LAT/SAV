@@ -149,7 +149,7 @@ export default function Login() {
             ¿No tienes una cuenta?
           </p>
           <Link 
-            to="/registro" 
+            to="/register" 
             className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest text-[10px] border border-white/10 hover:bg-white/10 transition-all overflow-hidden"
           >
             <span className="relative z-10">Registrarme Ahora</span>

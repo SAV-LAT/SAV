@@ -33,7 +33,12 @@ import AdminRecompensas from './pages/admin/AdminRecompensas.jsx';
 
 function PrivateRoute({ children, adminOnly }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 space-y-4">
+      <div className="w-12 h-12 border-4 border-[#1a1f36] border-t-emerald-500 rounded-full animate-spin"></div>
+      <p className="text-[#1a1f36] font-black uppercase tracking-widest text-[10px] animate-pulse">Iniciando sesión segura...</p>
+    </div>
+  );
   if (!user) return <Navigate to="/login" replace />;
   if (adminOnly && user.rol !== 'admin') return <Navigate to="/" replace />;
   return children;

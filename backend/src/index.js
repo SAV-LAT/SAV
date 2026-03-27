@@ -77,7 +77,23 @@ app.use('/video', videoHeaderMiddleware, express.static(path.join(__dirname, '..
 app.use('/videos', videoHeaderMiddleware, express.static(path.join(__dirname, '../../frontend/public/video')));
 console.log('[SERVER] Rutas estáticas configuradas.');
 
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'SAV API is running!',
+    version: '3.0.1',
+    status: 'online',
+    timestamp: new Date().toISOString()
+  });
+});
+
 console.log('[SERVER] Configurando rutas de API...');
+app.get('/api', (req, res) => {
+  res.json({ 
+    ok: true, 
+    message: 'Welcome to SAV API',
+    endpoints: ['/api/health', '/api/auth', '/api/users', '/api/tasks']
+  });
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);

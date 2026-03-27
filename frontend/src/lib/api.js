@@ -1,6 +1,10 @@
-// Forzar la URL de la API de Render si no está definida en el entorno
-const VITE_API_URL = import.meta.env.VITE_API_URL || 'https://sav-zhyg.onrender.com/api';
+// Detectar si estamos en producción (Vercel) para usar rutas relativas y aprovechar vercel.json
+const isProd = import.meta.env.PROD;
+const VITE_API_URL = import.meta.env.VITE_API_URL || (isProd ? '/api' : 'http://localhost:4000/api');
 const API = VITE_API_URL;
+
+// Dominio base del backend para medios (videos/imágenes)
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://sav-zhyg.onrender.com';
 
 function getToken() {
   return localStorage.getItem('token');
@@ -89,9 +93,8 @@ export const api = {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    // Usamos el dominio de Render para los archivos estáticos
-    const renderUrl = 'https://sav-zhyg.onrender.com';
-    return renderUrl + normalizedPath;
+    // Usamos el dominio base del backend configurado
+    return BACKEND_URL + normalizedPath;
   },
   post: (url, data) => request(url, { method: 'POST', body: JSON.stringify(data) }),
   auth: {

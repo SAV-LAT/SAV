@@ -1,16 +1,16 @@
-# React + Vite
+# SAV (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación cliente de SAV construida con React, Vite y Tailwind CSS. Incluye soporte para App Android nativa mediante Capacitor.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `npm run dev`: Inicia el servidor de desarrollo.
+- `npm run build`: Genera la versión de producción en la carpeta `dist`.
+- `npx cap sync android`: Sincroniza los cambios web con el proyecto de Android.
+- `npx cap open android`: Abre el proyecto en Android Studio.
 
-## React Compiler
+## Configuración de App Android
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+La aplicación está configurada como un contenedor remoto (WebView) que carga la URL de producción. Esto permite que la App se actualice automáticamente sin necesidad de que el usuario descargue un nuevo APK para cambios visuales o de lógica.
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+El archivo de configuración principal es `capacitor.config.json`.

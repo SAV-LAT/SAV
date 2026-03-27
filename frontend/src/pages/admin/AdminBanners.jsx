@@ -60,10 +60,12 @@ export default function AdminBanners() {
   if (loading) return <div className="p-8 text-gray-500 font-black uppercase tracking-widest text-[10px] text-center">Cargando banners...</div>;
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Gestión de Banners</h1>
-        <p className="text-gray-500 font-medium uppercase tracking-widest text-[10px] mt-1">Imágenes del carrusel principal (Home)</p>
+    <div className="p-8 max-w-5xl mx-auto pb-24">
+      <div className="flex items-center justify-between mb-10">
+        <div>
+          <h1 className="text-3xl font-black text-[#1a1f36] uppercase tracking-tighter">SAV Banners</h1>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] mt-1">Gestión Visual de la Home</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 mb-8">

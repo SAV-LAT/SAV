@@ -1,6 +1,6 @@
-# SAV - Proyecto (Updated v1.6.1)
+# SAV (v4.1.0)
 
-Plataforma web responsive con sistema de tareas por video, niveles, retiros, recargas y panel administrativo.
+Plataforma profesional de Activos Virtuales con sistema de tareas por video, niveles VIP, gestión financiera y panel administrativo en tiempo real.
 
 ## Requisitos
 
@@ -46,45 +46,32 @@ La aplicación estará en `http://localhost:5173`
 Este proyecto requiere una conexión activa a Supabase. El **Modo Demo (memoria) ha sido desactivado** para garantizar la consistencia de datos en producción.
 
 1. Crea un proyecto en [Supabase](https://supabase.com)
-2. Ejecuta los scripts en `supabase/migrations/` en el SQL Editor (del 001 al 005)
+2. Ejecuta los scripts en `supabase/migrations/` en el SQL Editor (del 001 al 006)
 3. Añade en `backend/.env`:
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_KEY` (Solo en el servidor)
    - `SUPABASE_ANON_KEY` (Para el cliente frontend)
 
-## Credenciales de Acceso
-
-Las credenciales deben ser gestionadas de forma privada. Por seguridad, las contraseñas predeterminadas han sido removidas de este documento.
-
-### Código de invitación
-- Contactar con un administrador o usuario VIP para obtener un código válido.
-
 ## Estructura
 
 ```
-sav proyecto/
+sav/
 ├── backend/          # API Node.js + Express
-├── frontend/         # React + Vite + Tailwind
+├── frontend/         # React + Vite + Tailwind (App Android Capacitor)
 ├── supabase/         # Migraciones SQL
-├── imag/             # Imágenes del carrusel
+├── video/            # Repositorio oficial de videos
 └── DISENO-VISUAL-SAV.md
 ```
 
 ## Funcionalidades
 
-- ✅ Autenticación (login, registro con código de invitación)
-- ✅ Dashboard con carrusel
-- ✅ Sala de tareas por nivel
-- ✅ Detalle de tarea con pregunta/encuesta
-- ✅ Perfil de usuario con estadísticas
-- ✅ Retiro (con contraseña de fondo)
-- ✅ Recarga
-- ✅ Tabla de niveles VIP / ganancias
-- ✅ Registro de facturación (ingresos/gastos)
-- ✅ Sorteo / ruleta
-- ✅ Seguridad de cuenta
-- ✅ Panel admin (usuarios, recargas, retiros)
+- ✅ Tiempo Real: Saldo y ganancias actualizados al instante vía WebSockets.
+- ✅ Videos Locales: Reproducción directa desde el servidor, sin dependencias externas.
+- ✅ App Nativa: Lista para generar APK Android mediante Capacitor.
+- ✅ Multinivel: Sistema de comisiones por red de afiliados.
+- ✅ Seguridad: Encriptación de contraseñas y claves de retiro.
+- ✅ Panel Admin: Control total de usuarios, finanzas y contenido.
 
 ## Observaciones
 
-Este proyecto es una **demo educativa**. No usar en producción sin revisión de seguridad, legal y financiera.
+Este proyecto es una plataforma de gestión de activos virtuales. No usar en producción sin revisión de seguridad y legalidad financiera.

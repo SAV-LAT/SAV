@@ -78,7 +78,7 @@ export default function AdminLayout() {
             <Logo variant="header" className="h-8" />
           </div>
           <div>
-            <h1 className="font-black text-lg leading-tight uppercase tracking-tighter text-white">Panel SAV</h1>
+            <h1 className="font-black text-lg leading-tight uppercase tracking-tighter text-white">SAV Admin</h1>
             <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Administrador</p>
           </div>
         </div>

@@ -117,10 +117,12 @@ export default function AdminContenidoHome() {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Contenido Home</h1>
-        <p className="text-gray-500 font-medium uppercase tracking-widest text-[10px] mt-1">Notificaciones, horarios y noticias generales</p>
+    <div className="p-8 max-w-4xl mx-auto pb-24">
+      <div className="flex items-center justify-between mb-10">
+        <div>
+          <h1 className="text-3xl font-black text-[#1a1f36] uppercase tracking-tighter">SAV Configuración</h1>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] mt-1">Control Global de Contenido</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-[2rem] shadow-sm p-6 md:p-8 space-y-8 border border-gray-100">

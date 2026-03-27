@@ -62,27 +62,16 @@ export default function Register() {
         <div className="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping" style={{ animationDelay: '1s' }} />
       </div>
 
-      <div className="w-full max-w-sm relative z-10 py-6">
-        <div className="text-center mb-8 sm:mb-12 animate-fade-in">
-          <div className="relative inline-block group">
-            {/* Brillo exterior del logo */}
-            <div className="absolute inset-[-15px] bg-gradient-to-tr from-blue-500/30 to-purple-500/30 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-            
-            <div className="relative z-10 inline-flex items-center justify-center p-4 sm:p-5 rounded-[2.2rem] bg-[#1a1f36] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:scale-105 group-hover:-rotate-3">
-              <img src="/imag/logo.jpeg" alt="SAV" className="w-14 h-14 sm:w-20 sm:h-20 object-contain rounded-2xl shadow-2xl" />
+      <div className="relative z-10 w-full max-w-[440px]">
+        <div className="text-center mb-10">
+          <div className="inline-block mb-6 relative group">
+            <div className="absolute inset-0 bg-white/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            <div className="relative w-24 h-24 rounded-[2rem] overflow-hidden shadow-2xl border-2 border-white/10 p-1 bg-white/5 backdrop-blur-2xl transition-all duration-700 group-hover:scale-110 group-hover:rotate-6">
+              <img src="/imag/logo.jpeg" alt="SAV" className="w-full h-full object-cover rounded-[1.8rem]" />
             </div>
           </div>
-          
-          <div className="mt-8 space-y-1">
-            <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tighter italic">
-              ÚNETE A <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">SAV</span>
-            </h1>
-            <div className="flex items-center justify-center gap-2">
-              <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-white/20" />
-              <p className="text-[9px] sm:text-[11px] text-white/40 font-black uppercase tracking-[0.4em]">Nueva Cuenta</p>
-              <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-white/20" />
-            </div>
-          </div>
+          <h1 className="text-5xl font-black tracking-tighter text-white mb-2 drop-shadow-2xl">SAV</h1>
+          <p className="text-[10px] font-black tracking-[0.5em] text-white/30 uppercase">Global Activos Virtuales</p>
         </div>
 
         <div className="bg-[#1a1f36]/40 backdrop-blur-3xl rounded-[2.5rem] sm:rounded-[3rem] p-6 sm:p-10 shadow-[0_25px_80px_rgba(0,0,0,0.4)] border border-white/5 relative overflow-hidden group animate-slideUp">

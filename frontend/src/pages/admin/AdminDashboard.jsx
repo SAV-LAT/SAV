@@ -13,7 +13,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-8">Panel de administración</h1>
+      <h1 className="text-2xl font-black text-[#1a1f36] mb-8 uppercase tracking-tighter">SAV Admin Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-3">

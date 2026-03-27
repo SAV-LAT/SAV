@@ -133,7 +133,7 @@ export default function Withdrawal() {
                     <div className="space-y-1">
                       <span className={`text-[10px] font-black uppercase tracking-tight ${tipoBilletera === b.id ? 'text-[#1a1f36]' : 'text-gray-400 group-hover:text-[#1a1f36]'}`}>{b.label}</span>
                       <p className={`text-lg font-black ${tipoBilletera === b.id ? 'text-[#1a1f36]' : 'text-gray-600 group-hover:text-[#1a1f36]'}`}>
-                        {b.value.toFixed(2)} <span className="text-[10px] opacity-50">BOB</span>
+                        {Number(b.value || 0).toFixed(2)} <span className="text-[10px] opacity-50">BOB</span>
                       </p>
                     </div>
                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${tipoBilletera === b.id ? 'border-[#1a1f36] bg-[#1a1f36]' : 'border-gray-200'}`}>

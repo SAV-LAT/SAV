@@ -112,7 +112,7 @@ export default function VIP() {
                     <div>
                       <h4 className="font-black text-[#1a1f36] uppercase tracking-tighter text-lg">{nivel.nombre}</h4>
                       <p className="text-[#1a1f36] font-black text-2xl tracking-tighter mt-0.5">
-                        {(nivel.deposito || nivel.costo)?.toFixed(0)} 
+                        {Number(nivel.deposito || nivel.costo || 0).toFixed(0)} 
                         <span className="text-[10px] text-gray-400 font-bold ml-1.5 uppercase tracking-widest">BOB</span>
                       </p>
                     </div>
@@ -144,7 +144,7 @@ export default function VIP() {
                   <div className="bg-gray-50/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-100 transition-all group-hover:bg-white group-hover:border-[#1a1f36]/10">
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ingreso diario</p>
                     <p className="text-sm font-black text-[#00C853]">
-                      +{( (nivel.num_tareas_diarias || nivel.tareas_diarias) * (nivel.comision_por_tarea || nivel.recompensa_tarea) ).toFixed(2)} 
+                      +{Number( (nivel.num_tareas_diarias || nivel.tareas_diarias || 0) * (nivel.comision_por_tarea || nivel.recompensa_tarea || 0) ).toFixed(2)} 
                       <span className="text-[10px] font-bold ml-1 uppercase">BOB</span>
                     </p>
                   </div>

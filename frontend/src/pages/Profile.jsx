@@ -147,14 +147,14 @@ export default function Profile() {
             ].map((s, i) => (
               <div key={i} className={`p-5 rounded-3xl ${s.bg} border border-gray-100/50 shadow-sm transition-transform hover:scale-[1.02]`}>
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{s.label}</p>
-                <p className={`text-xl font-black ${s.color}`}>{(s.value || 0).toFixed(2)}</p>
+                <p className={`text-xl font-black ${s.color}`}>{Number(s.value || 0).toFixed(2)}</p>
               </div>
             ))}
             <div className="p-7 rounded-[2rem] bg-gradient-to-br from-[#1a1f36] to-[#2a2f46] text-white col-span-2 flex justify-between items-center border border-white/10 shadow-[0_15px_30px_-5px_rgba(26,31,54,0.3)] relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl transition-transform group-hover:scale-150 duration-700" />
               <div className="relative z-10">
                 <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.3em] mb-2">Ingresos acumulados</p>
-                <p className="text-3xl font-black tracking-tighter">{(stats?.ingresos_totales || 0).toFixed(2)} <span className="text-xs font-normal text-white/40 ml-1.5">BOB</span></p>
+                <p className="text-3xl font-black tracking-tighter">{Number(stats?.ingresos_totales || 0).toFixed(2)} <span className="text-xs font-normal text-white/40 ml-1.5">BOB</span></p>
               </div>
               <TrendingUp size={40} className="text-white opacity-10 relative z-10 transform group-hover:scale-125 transition-transform duration-500" />
             </div>

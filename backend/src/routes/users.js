@@ -144,19 +144,32 @@ router.get('/earnings', authenticate, async (req, res) => {
     const summary = await getUserEarningsSummary(req.user.id);
     
     // Obtener historial de movimientos
-    const { data: movimientos, error } = await trySupabase(() => 
-      supabase.from('movimientos_saldo')
-        .select('*')
-        .eq('usuario_id', req.user.id)
-        .order('fecha', { ascending: false })
-        .limit(50)
-    );
-    
-    if (error) throw error;
+    let movimientos = [];
+    try {
+      const { data, error } = await trySupabase(() => 
+        supabase.from('movimientos_saldo')
+          .select('*')
+          .eq('usuario_id', req.user.id)
+          .order('fecha', { ascending: false })
+          .limit(50)
+      );
+      if (error) {
+        console.warn('[Earnings] Error al consultar movimientos_saldo:', error.message);
+      } else {
+        movimientos = data || [];
+      }
+    } catch (e) {
+      console.warn('[Earnings] La tabla movimientos_saldo no es accesible aún.');
+    }
     
     res.json({
-      summary,
-      history: movimientos || []
+      summary: summary || {
+        hoy: 0, ayer: 0, semana: 0, mes: 0, total: 0,
+        saldo_principal: user?.saldo_principal || 0,
+        saldo_comisiones: user?.saldo_comisiones || 0,
+        tareas_completadas: 0
+      },
+      history: movimientos
     });
   } catch (err) {
     console.error('[Earnings] Error:', err);

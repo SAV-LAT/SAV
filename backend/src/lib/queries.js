@@ -382,14 +382,14 @@ export async function getUserEarningsSummary(userId) {
     });
 
     return {
-      hoy: hoy.toFixed(2),
-      ayer: ayer.toFixed(2),
-      semana: semana.toFixed(2),
-      mes: mes.toFixed(2),
-      total: total.toFixed(2),
-      saldo_principal: user.saldo_principal,
-      saldo_comisiones: user.saldo_comisiones,
-      tareas_completadas: user.tareas_completadas_exito || 0
+      hoy: Number(hoy),
+      ayer: Number(ayer),
+      semana: Number(semana),
+      mes: Number(mes),
+      total: Number(total),
+      saldo_principal: Number(user.saldo_principal || 0),
+      saldo_comisiones: Number(user.saldo_comisiones || 0),
+      tareas_completadas: Number(user.tareas_completadas_exito || 0)
     };
   } catch (err) {
     console.error('[Queries] Error al calcular resumen de ganancias:', err);

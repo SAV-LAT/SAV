@@ -1,9 +1,11 @@
 package com.sav.app;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.WebResourceError;
@@ -14,6 +16,7 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.splashscreen.SplashScreen;
 
@@ -23,11 +26,14 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private FrameLayout errorLayout;
     private TextView errorText;
+    
+    // --- CAMBIAR URL AQUÍ ---
     private final String TARGET_URL = "https://sav-lat.vercel.app";
+    // ------------------------
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Manejar Splash Screen (API nativa de Android 12+)
+        // Splash Screen nativo
         SplashScreen.installSplashScreen(this);
         
         super.onCreate(savedInstanceState);
@@ -39,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
         errorText = findViewById(R.id.errorText);
 
         setupWebView();
+        handleBackNavigation();
         loadUrl();
     }
 
@@ -50,8 +57,13 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadsImagesAutomatically(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
         
-        // Comportamiento de contenedor: no abrir navegador externo
+        // Optimización para carga rápida
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setEnableSmoothTransition(true);
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -69,18 +81,42 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
-                    showError("Error al cargar la plataforma. Por favor, verifica tu conexión.");
+                    showError("Error al cargar SAV. Verifica tu conexión.");
                 }
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                // Solo navegar internamente si es nuestro dominio
-                if (url.contains("sav-lat.vercel.app") || url.contains("supabase.co") || url.contains("onrender.com")) {
+                
+                // Permitir navegación interna para nuestro dominio y servicios esenciales
+                if (url.contains("sav-lat.vercel.app") || 
+                    url.contains("supabase.co") || 
+                    url.contains("onrender.com")) {
                     return false; // Cargar en el WebView
                 }
-                return true; // Bloquear o abrir fuera (opcional, aquí bloqueamos para ser un contenedor puro)
+
+                // Abrir enlaces externos (WhatsApp, Telegram, etc.) en el navegador o app correspondiente
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    startActivity(intent);
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            }
+        });
+    }
+
+    private void handleBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    finish(); // Salir de la app si no hay más historial
+                }
             }
         });
     }
@@ -89,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
         if (isNetworkAvailable()) {
             webView.loadUrl(TARGET_URL);
         } else {
-            showError("No hay conexión a internet disponible.");
+            showError("No hay conexión a internet.");
         }
     }
 
@@ -110,14 +146,5 @@ public class MainActivity extends AppCompatActivity {
         errorLayout.setVisibility(View.GONE);
         webView.setVisibility(View.VISIBLE);
         loadUrl();
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
     }
 }

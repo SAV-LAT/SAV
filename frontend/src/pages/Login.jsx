@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Eye, EyeOff, Zap, ChevronRight } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
+import DownloadButton from '../components/DownloadButton.jsx';
 
 const PAISES = [
   { codigo: '+591', pais: '🇧🇴 Bolivia' },
@@ -156,6 +157,11 @@ export default function Login() {
             <ChevronRight size={14} className="relative z-10 group-hover:translate-x-1 transition-transform" />
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           </Link>
+        </div>
+
+        {/* Botón de Descarga App Android */}
+        <div className="mt-2">
+          <DownloadButton />
         </div>
       </div>
     </div>

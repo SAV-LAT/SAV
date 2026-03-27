@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
+import DownloadButton from '../components/DownloadButton.jsx';
 import { api } from '../lib/api.js';
 import { 
   ClipboardList, TrendingUp, Bell, HandCoins, 
@@ -340,6 +341,11 @@ export default function Dashboard() {
               <span className="text-sm font-black text-white uppercase tracking-[0.3em]">Mejorar Nivel VIP <span className="ml-2 group-hover:translate-x-2 transition-transform inline-block">→</span></span>
             </div>
           </Link>
+        </div>
+
+        {/* Sección de Descarga App Nativa */}
+        <div className="mt-4">
+          <DownloadButton />
         </div>
 
         {/* Footer Info sutil */}

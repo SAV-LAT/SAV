@@ -256,7 +256,7 @@ export default function TaskRoom() {
           </header>
 
           <div className="max-w-xl mx-auto px-5 py-8 space-y-8">
-            {/* VIDEO SECTION */}
+            {/* ZONA 1: REPRODUCTOR DE VIDEO (SIEMPRE VISIBLE) */}
             <section className="relative group">
               <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-30 transition duration-1000"></div>
               <div className="relative aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border-[6px] border-white ring-1 ring-black/5">
@@ -271,7 +271,7 @@ export default function TaskRoom() {
                   onCanPlay={(e) => { e.target.muted = false; e.target.play().catch(()=>{}); }} 
                 />
                 
-                {/* Timer Overlay sutil */}
+                {/* Timer Overlay sutil (solo visible durante el conteo) */}
                 {!surveyVisible && !showResult && (
                   <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 flex items-center gap-3">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
@@ -281,30 +281,79 @@ export default function TaskRoom() {
               </div>
             </section>
 
-            {/* CONTENIDO PRINCIPAL DINÁMICO */}
-            <div className="space-y-6">
-              {!showResult ? (
-                <>
-                  {/* Info de la Tarea */}
-                  <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-gray-100 flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1a1f36] to-[#2a2f46] flex items-center justify-center shrink-0 shadow-lg shadow-[#1a1f36]/20">
-                      <Sparkles className="text-amber-400" size={28} />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Campaña Publicitaria</h3>
-                      <p className="text-sm font-black text-[#1a1f36] uppercase tracking-tight">{activeTask.nombre}</p>
-                      {activeTask.descripcion && (
-                        <p className="text-[9px] text-gray-400 font-medium italic mt-1 leading-relaxed">
-                          {activeTask.descripcion}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Recompensa</span>
-                      <span className="text-sm font-black text-emerald-500">+{activeTask.recompensa} BOB</span>
-                    </div>
-                  </div>
+            {/* ZONA 2: INFORMACIÓN DE LA TAREA (SIEMPRE VISIBLE) */}
+            <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-gray-100 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1a1f36] to-[#2a2f46] flex items-center justify-center shrink-0 shadow-lg shadow-[#1a1f36]/20">
+                <Sparkles className="text-amber-400" size={28} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Campaña Publicitaria</h3>
+                <p className="text-sm font-black text-[#1a1f36] uppercase tracking-tight">{activeTask.nombre}</p>
+                {activeTask.descripcion && (
+                  <p className="text-[9px] text-gray-400 font-medium italic mt-1 leading-relaxed">
+                    {activeTask.descripcion}
+                  </p>
+                )}
+              </div>
+              <div className="text-right shrink-0">
+                <span className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Recompensa</span>
+                <span className="text-sm font-black text-emerald-500">+{activeTask.recompensa} BOB</span>
+              </div>
+            </div>
 
+            {/* ZONA 3: BLOQUE DINÁMICO (TIMER, ENCUESTA O RESULTADO) */}
+            <div className="space-y-6">
+              {showResult ? (
+                /* VISTA DE RESULTADO FINAL (BAJO EL VIDEO) */
+                <section className="bg-white p-12 rounded-[3.5rem] border-4 border-white text-center animate-scale-in shadow-2xl relative overflow-hidden">
+                  {isCorrect ? (
+                    <>
+                      <div className="absolute top-0 left-0 w-full h-3 bg-emerald-500" />
+                      <div className="w-24 h-24 bg-emerald-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-emerald-500/40 border-4 border-white rotate-6">
+                        <Trophy className="text-white" size={48} strokeWidth={2.5} />
+                      </div>
+                      <h3 className="font-black text-[#1a1f36] text-3xl uppercase mb-3 tracking-tighter">¡ÉXITO TOTAL!</h3>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] mb-10">Recompensa acreditada al instante</p>
+                      
+                      <div className="bg-emerald-50 py-8 px-10 rounded-[2.5rem] border border-emerald-100 inline-flex flex-col items-center gap-2 mb-10 shadow-inner">
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Respuesta: {selectedOption}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-5xl font-black text-[#1a1f36] tracking-tighter">+{activeTask.recompensa}</span>
+                          <span className="text-sm font-black text-[#1a1f36]/40 uppercase tracking-widest">BOB</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="absolute top-0 left-0 w-full h-3 bg-rose-500" />
+                      <div className="w-24 h-24 bg-rose-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-rose-500/40 border-4 border-white -rotate-6">
+                        <X className="text-white" size={48} strokeWidth={4} />
+                      </div>
+                      <h3 className="font-black text-[#1a1f36] text-3xl uppercase mb-3 tracking-tighter">FALLASTE</h3>
+                      <div className="space-y-2 mb-8">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Tu respuesta: <span className="text-rose-500">{selectedOption}</span></p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Correcta: <span className="text-emerald-500">{activeTask.respuesta_correcta}</span></p>
+                      </div>
+                      <div className="bg-rose-50 py-6 px-10 rounded-[2.5rem] border border-rose-100 inline-flex items-center gap-4 mb-10">
+                        <span className="text-xl font-black text-rose-600 tracking-tighter">0.00 BOB</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="pt-8">
+                    <button
+                      onClick={finishAndGoBack}
+                      className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all ${
+                        isCorrect ? 'bg-emerald-500 text-white' : 'bg-[#1a1f36] text-white'
+                      }`}
+                    >
+                      Continuar
+                    </button>
+                    <p className="mt-4 text-[9px] font-black text-[#1a1f36]/30 uppercase tracking-[0.4em]">Finalizando sesión de tarea...</p>
+                  </div>
+                </section>
+              ) : (
+                <>
                   {/* ENCUESTA O ESPERA */}
                   {!surveyVisible ? (
                     <div className="bg-[#1a1f36] rounded-[2.5rem] p-8 text-center space-y-4 shadow-2xl border border-white/5">
@@ -370,55 +419,6 @@ export default function TaskRoom() {
                     </section>
                   )}
                 </>
-              ) : (
-                /* VISTA DE RESULTADO FINAL */
-                <section className="bg-white p-12 rounded-[3.5rem] border-4 border-white text-center animate-scale-in shadow-2xl relative overflow-hidden">
-                  {isCorrect ? (
-                    <>
-                      <div className="absolute top-0 left-0 w-full h-3 bg-emerald-500" />
-                      <div className="w-24 h-24 bg-emerald-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-emerald-500/40 border-4 border-white rotate-6">
-                        <Trophy className="text-white" size={48} strokeWidth={2.5} />
-                      </div>
-                      <h3 className="font-black text-[#1a1f36] text-3xl uppercase mb-3 tracking-tighter">¡ÉXITO TOTAL!</h3>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] mb-10">Recompensa acreditada al instante</p>
-                      
-                      <div className="bg-emerald-50 py-8 px-10 rounded-[2.5rem] border border-emerald-100 inline-flex flex-col items-center gap-2 mb-10 shadow-inner">
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Respuesta: {selectedOption}</span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-5xl font-black text-[#1a1f36] tracking-tighter">+{activeTask.recompensa}</span>
-                          <span className="text-sm font-black text-[#1a1f36]/40 uppercase tracking-widest">BOB</span>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="absolute top-0 left-0 w-full h-3 bg-rose-500" />
-                      <div className="w-24 h-24 bg-rose-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-rose-500/40 border-4 border-white -rotate-6">
-                        <X className="text-white" size={48} strokeWidth={4} />
-                      </div>
-                      <h3 className="font-black text-[#1a1f36] text-3xl uppercase mb-3 tracking-tighter">FALLASTE</h3>
-                      <div className="space-y-2 mb-8">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Tu respuesta: <span className="text-rose-500">{selectedOption}</span></p>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Correcta: <span className="text-emerald-500">{activeTask.respuesta_correcta}</span></p>
-                      </div>
-                      <div className="bg-rose-50 py-6 px-10 rounded-[2.5rem] border border-rose-100 inline-flex items-center gap-4 mb-10">
-                        <span className="text-xl font-black text-rose-600 tracking-tighter">0.00 BOB</span>
-                      </div>
-                    </>
-                  )}
-                  
-                  <div className="pt-8">
-                    <button
-                      onClick={finishAndGoBack}
-                      className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all ${
-                        isCorrect ? 'bg-emerald-500 text-white' : 'bg-[#1a1f36] text-white'
-                      }`}
-                    >
-                      Continuar
-                    </button>
-                    <p className="mt-4 text-[9px] font-black text-[#1a1f36]/30 uppercase tracking-[0.4em]">Finalizando sesión de tarea...</p>
-                  </div>
-                </section>
               )}
             </div>
           </div>

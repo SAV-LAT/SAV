@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
@@ -38,7 +39,6 @@ export function AuthProvider({ children }) {
     localStorage.setItem('lastUserUpdate', now.toString());
     
     const token = localStorage.getItem('token');
-    const deviceId = getDeviceId();
     
     // Al cargar por primera vez, intentar recuperar del localStorage para evitar el flicker
     const savedUser = localStorage.getItem('user');
@@ -86,7 +86,7 @@ export function AuthProvider({ children }) {
       setLoading(false);
       isUpdatingRef.current = false;
     }
-  }, [getDeviceId, logout, user]);
+  }, [logout, user]);
 
   useEffect(() => {
     // Carga inicial al montar el componente
@@ -100,7 +100,7 @@ export function AuthProvider({ children }) {
     };
     init();
     
-    // Polling inteligente: cada 30s
+    // Polling inteligente: cada 30s como respaldo
     const pollInterval = setInterval(async () => {
       if (localStorage.getItem('token') && document.visibilityState === 'visible') {
         await loadUser();
@@ -118,7 +118,59 @@ export function AuthProvider({ children }) {
       clearInterval(pollInterval);
       window.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [loadUser]); // Solo depende de loadUser que es estable con useCallback
+  }, [loadUser]);
+
+  // --- IMPLEMENTACIÓN SUPABASE REALTIME ---
+  useEffect(() => {
+    if (!user?.id) return;
+
+    console.log(`[Realtime] Suscribiendo a cambios para usuario: ${user.id}`);
+
+    // Suscribirse a cambios en la tabla 'usuarios' para el ID del usuario actual
+    const userChannel = supabase
+      .channel(`public:usuarios:id=eq.${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'usuarios',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Cambio detectado en perfil de usuario:', payload.new);
+          // Actualizamos el usuario localmente con los nuevos datos
+          const updatedUser = { ...user, ...payload.new };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+      )
+      .subscribe();
+
+    // Suscribirse a cambios en 'actividad_tareas' para recargar estadísticas si hay nuevas tareas
+    const activityChannel = supabase
+      .channel(`public:actividad_tareas:usuario_id=eq.${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'actividad_tareas',
+          filter: `usuario_id=eq.${user.id}`,
+        },
+        () => {
+          console.log('[Realtime] Nueva tarea detectada, recargando perfil...');
+          loadUser(true); // Forzamos recarga para actualizar contadores complejos
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('[Realtime] Desconectando canales...');
+      supabase.removeChannel(userChannel);
+      supabase.removeChannel(activityChannel);
+    };
+  }, [user?.id, loadUser]); // Depende del ID para re-suscribir si cambia el usuario
 
   const login = useCallback(async (telefono, password) => {
     const deviceId = getDeviceId();
@@ -138,7 +190,7 @@ export function AuthProvider({ children }) {
     return u;
   }, [getDeviceId]);
 
-  const refreshUser = useCallback(() => loadUser(), [loadUser]);
+  const refreshUser = useCallback(() => loadUser(true), [loadUser]);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>

@@ -91,10 +91,10 @@ export async function getLevels() {
     const codes = new Set();
 
     for (const dbLevel of data) {
-      const code = String(dbLevel.codigo).toLowerCase();
+      const code = String(dbLevel.codigo || dbLevel.nombre).toLowerCase();
       if (!codes.has(code)) {
         codes.add(code);
-        const seedLevel = seedLevels.find(s => String(s.codigo).toLowerCase() === code);
+        const seedLevel = seedLevels.find(s => String(s.codigo || s.nombre).toLowerCase() === code);
         uniqueLevels.push({
           ...dbLevel,
           activo: seedLevel ? (seedLevel.activo !== false) : (dbLevel.activo !== false)

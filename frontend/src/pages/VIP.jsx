@@ -17,9 +17,19 @@ export default function VIP() {
 
   const formatBOB = (val) => Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  // Generar la estructura de comisiones basada en los niveles reales de la DB
+  // Generar la estructura de comisiones basada en los niveles reales de la DB (Solo S1-S9)
   const commissionStructure = niveles
-    .filter(n => n.codigo !== 'pasante' && n.codigo !== 'internar')
+    .filter(n => {
+      const code = String(n.codigo || n.nombre).toLowerCase();
+      return code !== 'pasante' && code !== 'internar';
+    })
+    .reduce((acc, curr) => {
+      const code = String(curr.codigo || curr.nombre).toLowerCase();
+      if (!acc.some(n => String(n.codigo || n.nombre).toLowerCase() === code)) {
+        acc.push(curr);
+      }
+      return acc;
+    }, [])
     .sort((a, b) => (a.orden || 0) - (b.orden || 0))
     .map(n => {
       const inv = n.deposito || n.costo || 0;
@@ -86,7 +96,13 @@ export default function VIP() {
           </div>
 
           {niveles
-            .filter(n => n.codigo !== 'pasante' && n.codigo !== 'internar')
+            .reduce((acc, curr) => {
+              const code = String(curr.codigo || curr.nombre).toLowerCase();
+              if (!acc.some(n => String(n.codigo || n.nombre).toLowerCase() === code)) {
+                acc.push(curr);
+              }
+              return acc;
+            }, [])
             .map((nivel) => {
             const esActual = nivel.id === user?.nivel_id;
             const esSuperior = esNivelSuperior(nivel);

@@ -74,21 +74,31 @@ router.get('/', authenticate, async (req, res) => {
       // Filtrar tareas que NO se han intentado hoy (ni bien ni mal)
       const attemptedTaskIdsToday = new Set(todayActivity.map(a => String(a.tarea_id)));
       
-      // FILTRO DE INTEGRIDAD ESTRICTO: Solo tareas que tengan video, pregunta, opciones y respuesta correcta
-      const pool = allTasks.filter(t => {
-        const hasVideo = t.video_url && String(t.video_url).trim().length > 0;
-        const hasQuestion = t.pregunta && String(t.pregunta).trim().length > 0;
-        const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0 && t.opciones.every(o => String(o).trim().length > 0);
-        const hasAnswer = t.respuesta_correcta && String(t.respuesta_correcta).trim().length > 0;
-        const isNotAttempted = !attemptedTaskIdsToday.has(String(t.id));
-        
-        if (!hasVideo || !hasQuestion || !hasOptions || !hasAnswer) {
-          console.warn(`[INTEGRIDAD] Tarea ${t.id} ("${t.nombre}") EXCLUIDA:`, { hasVideo, hasQuestion, hasOptions, hasAnswer });
-          return false;
-        }
-        
-        return isNotAttempted;
-      });
+    // FILTRO DE INTEGRIDAD ESTRICTO: Solo tareas que tengan video, pregunta, opciones y respuesta correcta
+    const pool = allTasks.filter(t => {
+      const hasVideo = t.video_url && String(t.video_url).trim().length > 0;
+      const hasQuestion = t.pregunta && String(t.pregunta).trim().length > 0;
+      const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0 && t.opciones.every(o => String(o).trim().length > 0);
+      const hasAnswer = t.respuesta_correcta && String(t.respuesta_correcta).trim().length > 0;
+      const isNotAttempted = !attemptedTaskIdsToday.has(String(t.id));
+      
+      // LOG TEMPORAL PARA DEPURAR FILTRADO
+      if (!hasVideo || !hasQuestion || !hasOptions || !hasAnswer) {
+        console.warn(`[FILTRO TAREA] ${t.id} ("${t.nombre}") EXCLUIDA:`, {
+          hasVideo: !!hasVideo,
+          hasQuestion: !!hasQuestion,
+          hasOptions: !!hasOptions,
+          hasAnswer: !!hasAnswer,
+          video_url: t.video_url,
+          pregunta: t.pregunta,
+          opcionesCount: Array.isArray(t.opciones) ? t.opciones.length : 0,
+          respuesta_correcta: t.respuesta_correcta
+        });
+        return false;
+      }
+      
+      return isNotAttempted;
+    });
       
       // Selección aleatoria
       availableTasks = pool.sort(() => 0.5 - Math.random()).slice(0, remaining);

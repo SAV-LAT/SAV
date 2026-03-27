@@ -4,7 +4,7 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="SAV"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.App.Starting">
@@ -12,7 +12,7 @@
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
-            android:label="@string/app_name"
+            android:label="SAV"
             android:theme="@style/Theme.App.Starting"
             android:launchMode="singleTask"
             android:exported="true">

@@ -85,7 +85,9 @@ export default function VIP() {
             <h3 className="text-xs font-black text-[#1a1f36] uppercase tracking-[0.2em]">Niveles de Inversión</h3>
           </div>
 
-          {niveles.map((nivel) => {
+          {niveles
+            .filter(n => n.codigo !== 'pasante' && n.codigo !== 'internar')
+            .map((nivel) => {
             const esActual = nivel.id === user?.nivel_id;
             const esSuperior = esNivelSuperior(nivel);
             const estaBloqueadoAdmin = nivel.activo === false;

@@ -14,7 +14,12 @@ async function addNewUser() {
     const password_hash = await bcrypt.hash(password, 10);
     const codigo_invitacion = Math.random().toString(36).slice(2, 10).toUpperCase();
     const levels = await getLevels();
+    const pasanteLevel = levels.find(l => l.codigo === 'pasante' || l.nombre === 'pasante');
     
+    if (!pasanteLevel) {
+      throw new Error('No se pudo encontrar el nivel pasante en la base de datos.');
+    }
+
     const newUser = {
       id: uuidv4(),
       telefono,
@@ -23,7 +28,7 @@ async function addNewUser() {
       password_hash,
       codigo_invitacion,
       invitado_por: null, // Sin invitador para esta prueba
-      nivel_id: 'l1', // Nivel Pasante
+      nivel_id: pasanteLevel.id, // ID real de Supabase
       saldo_principal: 0,
       saldo_comisiones: 0,
       rol: 'usuario',
@@ -35,7 +40,7 @@ async function addNewUser() {
     const result = await createUser(newUser);
     
     if (result) {
-      console.log('✅ Usuario creado exitosamente en Supabase/Memoria.');
+      console.log('✅ Usuario creado exitosamente en Supabase.');
       console.log('-----------------------------------');
       console.log('Credenciales de acceso:');
       console.log(`Teléfono: ${telefono}`);
@@ -47,7 +52,7 @@ async function addNewUser() {
   } catch (error) {
     console.error('❌ Error al ejecutar el script:', error.message);
   } finally {
-    process.exit();
+    // Eliminado process.exit() para ver el output
   }
 }
 

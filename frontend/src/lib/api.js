@@ -61,9 +61,9 @@ async function request(url, options = {}, retries = 3) {
     return await res.json().catch(() => ({}));
   } catch (err) {
     if (err.name === 'AbortError') {
-      console.error(`[API Timeout] La petición a ${url} tardó más de 60 segundos y fue cancelada.`);
+      console.error(`[API Timeout] La petición a ${url} excedió el tiempo de espera (120s) debido a un inicio en frío del servidor.`);
       // No reintentar en caso de timeout, es probable que el servidor esté caído o saturado
-      throw new Error('El servidor está tardando demasiado en responder. Por favor, intenta de nuevo más tarde.');
+      throw new Error('El servidor de Render está "despertando". Por favor, espera 30 segundos e intenta de nuevo.');
     }
 
     // No reintentar en errores de cliente (4xx)

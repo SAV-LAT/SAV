@@ -186,38 +186,26 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Ya intentaste esta tarea hoy' });
     }
 
-    // Normalización para validación (quitar tildes, mayúsculas, espacios, puntuación)
-    const normalizar = (str) => {
-      if (!str) return '';
-      return String(str)
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar tildes
-        .replace(/[^\w\s]/gi, '') // Quitar puntuación (como ' en McDonald's)
-        .toUpperCase()
-        .trim();
-    };
-
-    const respuestaUsuario = normalizar(respuesta);
-    const respuestaCorrecta = normalizar(task.respuesta_correcta);
+    // Lógica de validación simplificada: Comparación directa y exacta (ignora espacios extra)
+    const valUser = String(respuesta || '').trim();
+    const valCorrect = String(task.respuesta_correcta || '').trim();
     
-    // Validación de seguridad: Asegurar que la respuesta_correcta coincida con una de las opciones normalizadas
-    const opcionesNormalizadas = (Array.isArray(task.opciones) ? task.opciones : []).map(opt => normalizar(opt));
-    const esCorrectaEnOpciones = opcionesNormalizadas.includes(respuestaCorrecta);
-
-    console.log(`[Tasks v4] Validación de tarea ${task.id}:`);
-    console.log(`  - Usuario: ${user.nombre_usuario} (${user.id})`);
-    console.log(`  - Pregunta: "${task.pregunta}"`);
-    console.log(`  - Opciones disponibles: ${JSON.stringify(task.opciones)}`);
-    console.log(`  - Respuesta enviada: "${respuesta}" (Normalizada: "${respuestaUsuario}")`);
-    console.log(`  - Respuesta esperada: "${task.respuesta_correcta}" (Normalizada: "${respuestaCorrecta}")`);
-    console.log(`  - ¿Respuesta correcta está en opciones?: ${esCorrectaEnOpciones ? 'SÍ' : 'NO ⚠️'}`);
-    console.log(`  - Resultado final: ${respuestaUsuario === respuestaCorrecta ? 'CORRECTA ✅' : 'INCORRECTA ❌'}`);
-    
-    if (!esCorrectaEnOpciones) {
-      console.error(`[Tasks v4] ERROR DE CONFIGURACIÓN: La respuesta correcta "${task.respuesta_correcta}" no coincide con ninguna de las opciones: ${JSON.stringify(task.opciones)}`);
-    }
-
-    const esCorrectaReal = respuestaUsuario === respuestaCorrecta;
+    // Para mayor seguridad pero manteniendo la exactitud, comparamos en mayúsculas
+    const esCorrectaReal = valUser.toUpperCase() === valCorrect.toUpperCase();
     const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
+
+    console.log(`\n[VALIDACIÓN TAREA] ID: ${task.id}`);
+    console.log(`  - Usuario: ${user.nombre_usuario}`);
+    console.log(`  - Opciones en DB: ${JSON.stringify(task.opciones)}`);
+    console.log(`  - Valor Botón Seleccionado: "${valUser}"`);
+    console.log(`  - Respuesta Correcta en DB: "${valCorrect}"`);
+    console.log(`  - ¿Coinciden?: ${esCorrectaReal ? 'SÍ ✅' : 'NO ❌'}`);
+    
+    // Verificación de integridad de opciones
+    const opcionesMayus = (Array.isArray(task.opciones) ? task.opciones : []).map(o => String(o).trim().toUpperCase());
+    if (!opcionesMayus.includes(valCorrect.toUpperCase())) {
+      console.error(`  - ⚠️ ERROR DE CONFIGURACIÓN: La respuesta "${valCorrect}" no existe en las opciones.`);
+    }
 
     const levels = await getLevels();
     const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];

@@ -105,21 +105,15 @@ export default function TaskRoom() {
       return;
     }
 
-    if (!task.pregunta || !task.opciones || !Array.isArray(task.opciones) || task.opciones.length === 0 || !task.video_url) {
-      const missing = [];
-      if (!task.pregunta) missing.push('pregunta');
-      if (!task.opciones || !Array.isArray(task.opciones) || task.opciones.length === 0) missing.push('opciones');
-      if (!task.video_url) missing.push('video_url');
-      if (!task.respuesta_correcta) missing.push('respuesta_correcta');
-
-      console.error('[TaskRoom] Error: Tarea incompleta detectada.', {
-        id: task.id,
-        nombre: task.nombre,
-        missing: missing.join(', '),
-        data: task
-      });
-      alert(`Error técnico: La tarea "${task.nombre}" (ID: ${task.id.substring(0, 8)}) está incompleta. Faltan: ${missing.join(', ')}. Por favor, contacta al soporte.`);
-      return;
+    // Verificación de seguridad mínima
+    if (!task.pregunta || !task.opciones || !Array.isArray(task.opciones) || task.opciones.length === 0) {
+      console.warn('[TaskRoom] Tarea con datos incompletos:', task);
+      // No bloqueamos con alert si hay al menos una pregunta por defecto o algo similar, 
+      // pero si está vacío, el componente no podrá renderizar la encuesta.
+      if (!task.pregunta && !task.opciones) {
+        alert("Esta tarea requiere configuración adicional.");
+        return;
+      }
     }
 
     // Ya tenemos toda la data de la tarea en la lista, no necesitamos api.tasks.get(task.id)
@@ -137,6 +131,14 @@ export default function TaskRoom() {
   // Manejo de Confirmación de Encuesta
   const onConfirmResponse = async () => {
     if (!selectedOption || isSubmitting) return;
+    
+    console.log('[TaskRoom] Enviando respuesta:', {
+      tarea_id: activeTask.id,
+      opcion_seleccionada: selectedOption,
+      opciones_disponibles: activeTask.opciones,
+      respuesta_correcta_esperada: activeTask.respuesta_correcta
+    });
+
     setIsSubmitting(true);
     setErrorMessage('');
     try {
@@ -147,21 +149,8 @@ export default function TaskRoom() {
         refreshUser();
       } else {
         setIsCorrect(false);
-        // Mostrar la respuesta correcta para depuración si es necesario, 
-        // o un mensaje más amigable.
-        setErrorMessage('La respuesta seleccionada no coincide con el contenido del video.');
+        setErrorMessage('La respuesta seleccionada no coincide con el registro.');
       }
-      
-      // Auto-regreso desactivado para que el usuario pueda ver el resultado
-      // El usuario deberá pulsar un botón para volver o esperar más tiempo
-      /*
-      setTimeout(() => {
-        setActiveTask(null);
-        fetchTasks();
-        refreshUser();
-      }, 3500);
-      */
-
     } catch (err) {
       setErrorMessage(err.message || 'Error al validar la respuesta.');
       setShowResult(true);

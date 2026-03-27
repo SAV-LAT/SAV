@@ -41,33 +41,53 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isMounted) return;
     
-    // ... banners ...
-    api.banners()
-      .then(data => {
-        if (data && data.length > 0) {
-          setBanners(data);
-        } else {
-          setBanners(defaultBanners);
-        }
-      })
-      .catch(() => setBanners(defaultBanners));
+    const fetchBanners = () => {
+      api.banners()
+        .then(data => {
+          if (data && data.length > 0) {
+            setBanners(data);
+          } else {
+            setBanners(defaultBanners);
+          }
+        })
+        .catch(() => setBanners(defaultBanners));
+    };
 
+    const fetchPublicConfig = () => {
+      api.publicContent()
+        .then((data) => {
+          setPublicConfig(data);
+          setGuideText(g => data.home_guide || g);
+          setPopup(data);
+          
+          const hasSeenPopup = sessionStorage.getItem('sav_popup_seen');
+          if (data.popup_enabled && !hasSeenPopup) {
+            setShowPopup(true);
+            sessionStorage.setItem('sav_popup_seen', 'true');
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchBanners();
+    fetchPublicConfig();
     api.users.stats().then(setStats).catch(() => {});
-    
-    api.publicContent()
-      .then((data) => {
-        setPublicConfig(data);
-        setGuideText(g => data.home_guide || g);
-        setPopup(data);
-        
-        // Lógica para mostrar el popup solo una vez por sesión
-        const hasSeenPopup = sessionStorage.getItem('sav_popup_seen');
-        if (data.popup_enabled && !hasSeenPopup) {
-          setShowPopup(true);
-          sessionStorage.setItem('sav_popup_seen', 'true');
-        }
+
+    // Realtime para cambios globales del Admin
+    const adminChannel = supabase.channel('admin_global_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banners' }, () => {
+        console.log('[Realtime] Banners actualizados por admin');
+        fetchBanners();
       })
-      .catch(() => {});
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'public_content' }, () => {
+        console.log('[Realtime] Configuración pública actualizada por admin');
+        fetchPublicConfig();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(adminChannel);
+    };
   }, [isMounted]);
 
   useEffect(() => {

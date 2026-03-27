@@ -83,7 +83,16 @@ export default function TaskRoom() {
           filter: `usuario_id=eq.${user.id}` 
         }, () => {
           console.log('[TaskRoomRealtime] Nuevo movimiento de ganancia, refrescando...');
-          // Opcional: mostrar notificación de crédito
+        })
+        // Escuchar cambios globales en tareas o niveles hechos por admin
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tareas' }, () => {
+          console.log('[TaskRoomRealtime] Tareas actualizadas por admin, refrescando...');
+          fetchTasks();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'niveles' }, () => {
+          console.log('[TaskRoomRealtime] Niveles actualizados por admin, refrescando...');
+          fetchTasks();
+          refreshUser();
         })
         .subscribe((status) => {
           console.log(`[TaskRoomRealtime] Estado: ${status}`);

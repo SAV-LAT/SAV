@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/Layout.jsx';
 import DownloadButton from '../components/DownloadButton.jsx';
 import { api } from '../lib/api.js';
+import { supabase } from '../lib/supabase.js';
 import { 
   ClipboardList, TrendingUp, Bell, HandCoins, 
   Wallet, Users, Gift, UserPlus, 

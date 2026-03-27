@@ -4,6 +4,7 @@ import Layout from '../components/Layout.jsx';
 import DownloadButton from '../components/DownloadButton.jsx';
 import { api } from '../lib/api.js';
 import { supabase } from '../lib/supabase.js';
+import { CONFIG } from '../config.js';
 import { 
   ClipboardList, TrendingUp, Bell, HandCoins, 
   Wallet, Users, Gift, UserPlus, 
@@ -135,16 +136,10 @@ export default function Dashboard() {
       return;
     }
 
-    // Intentar descarga del APK real si está disponible
+    // Intentar descarga del APK real configurado
     try {
-      const apkUrl = '/SAV_v1.0.0.apk'; // Ruta al APK alojado en public/
-      console.log('[Dashboard] Iniciando descarga de APK:', apkUrl);
-      const link = document.createElement('a');
-      link.href = apkUrl;
-      link.download = 'SAV_Plataforma.apk';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      console.log('[Dashboard] Iniciando descarga de APK:', CONFIG.APK_DOWNLOAD_URL);
+      window.location.href = CONFIG.APK_DOWNLOAD_URL;
       return;
     } catch (e) {
       console.warn('[Dashboard] Fallo descarga directa APK, intentando PWA:', e);

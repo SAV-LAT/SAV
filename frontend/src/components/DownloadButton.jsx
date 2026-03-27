@@ -1,9 +1,8 @@
 import React from 'react';
 import { Smartphone, DownloadCloud, AlertCircle } from 'lucide-react';
+import { CONFIG } from '../config.js';
 
 const DownloadButton = () => {
-  const APK_URL = 'https://github.com/SAV-LAT/SAV/releases/download/v1.0.0/app-release.apk';
-
   const handleDownload = () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     
@@ -12,8 +11,8 @@ const DownloadButton = () => {
       return;
     }
 
-    // Redirección directa al APK en GitHub
-    window.location.href = APK_URL;
+    // Redirección directa al APK configurado
+    window.location.href = CONFIG.APK_DOWNLOAD_URL;
   };
 
   return (

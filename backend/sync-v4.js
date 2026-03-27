@@ -45,7 +45,8 @@ async function syncV4() {
       descripcion: task.descripcion,
       pregunta: task.pregunta,
       respuesta_correcta: task.respuesta_correcta,
-      opciones: task.opciones
+      opciones: task.opciones,
+      comentario_ingles: task.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.'
     }, { onConflict: 'nombre,nivel_id' });
 
     if (errIns) {

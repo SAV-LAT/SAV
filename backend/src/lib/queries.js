@@ -331,13 +331,19 @@ export async function getUserEarningsSummary(userId) {
 
     // Obtener todos los movimientos de ingreso del usuario
     // Tipos que cuentan como ganancias: ganancia_tarea, comision_subordinado, recompensa_invitacion
-    const { data: movimientos, error } = await supabase
-      .from('movimientos_saldo')
-      .select('*')
-      .eq('usuario_id', userId)
-      .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion']);
-
-    if (error) throw error;
+    let movimientos = [];
+    try {
+      const { data, error } = await supabase
+        .from('movimientos_saldo')
+        .select('*')
+        .eq('usuario_id', userId)
+        .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion']);
+      
+      if (error) throw error;
+      movimientos = data || [];
+    } catch (e) {
+      console.warn(`[Queries] No se pudo leer de movimientos_saldo (probablemente no existe). Usando caché de usuario.`);
+    }
 
     const now = new Date();
     const getBoliviaTime = (date) => {
@@ -413,7 +419,12 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
       referencia: `EARN-${Date.now()}-${Math.floor(Math.random() * 1000)}`
     };
 
-    await createMovimiento(movimiento);
+    try {
+      await createMovimiento(movimiento);
+    } catch (moveErr) {
+      console.warn(`[Earnings] La tabla movimientos_saldo no existe o no es accesible. Saltando registro contable.`);
+      // No lanzamos error para no bloquear la actualización de saldo del usuario
+    }
 
     // 2. Actualizar el caché en la tabla usuarios
     // Nota: Aunque recalculamos desde movimientos, tener el caché ayuda a la UI inmediata

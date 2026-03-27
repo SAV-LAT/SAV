@@ -232,7 +232,8 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     try {
       const activityId = uuidv4();
       console.log(`  - [STEP] Intentando registrar actividad...`);
-      await createTaskActivity({
+      
+      const activityData = {
         id: activityId,
         usuario_id: user.id,
         tarea_id: task.id,
@@ -240,7 +241,17 @@ router.post('/:id/responder', authenticate, async (req, res) => {
         recompensa_otorgada: recompensa,
         nivel_id: level.id,
         created_at: new Date().toISOString(),
-      });
+      };
+
+      try {
+        await createTaskActivity(activityData);
+      } catch (schemaErr) {
+        console.warn(`  - [FALLBACK] Error al registrar actividad con nivel_id. Reintentando sin nivel_id...`);
+        // Fallback: Quitar nivel_id si la columna no existe aún en producción
+        delete activityData.nivel_id;
+        await createTaskActivity(activityData);
+      }
+      
       console.log(`  - [OK] createTaskActivity registrada.`);
 
       if (esCorrectaReal) {

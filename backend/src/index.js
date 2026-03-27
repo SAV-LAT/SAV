@@ -72,10 +72,16 @@ const videoHeaderMiddleware = (req, res, next) => {
 };
 
 // Servir archivos estáticos del frontend y carpetas de medios
-app.use('/imag', express.static(path.join(__dirname, '../../frontend/public/imag')));
+const publicImagPath = path.join(__dirname, '../../frontend/public/imag');
+const publicVideoPath = path.join(__dirname, '../../frontend/public/video');
+
+console.log(`[SERVER] Sirviendo imágenes desde: ${publicImagPath}`);
+console.log(`[SERVER] Sirviendo videos desde: ${publicVideoPath}`);
+
+app.use('/imag', express.static(publicImagPath));
 // Unificar fuente de videos a la carpeta de medios compartida
-app.use('/video', videoHeaderMiddleware, express.static(path.join(__dirname, '../../frontend/public/video')));
-app.use('/videos', videoHeaderMiddleware, express.static(path.join(__dirname, '../../frontend/public/video')));
+app.use('/video', videoHeaderMiddleware, express.static(publicVideoPath));
+app.use('/videos', videoHeaderMiddleware, express.static(publicVideoPath));
 console.log('[SERVER] Rutas estáticas configuradas.');
 
 app.get('/', (req, res) => {

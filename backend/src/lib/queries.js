@@ -357,19 +357,21 @@ export async function getUserEarningsSummary(userId) {
       };
     }
 
-    const now = new Date();
-    const getBoliviaTime = (date) => {
-      return new Date(date.toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+    const getBoliviaDateString = (date) => {
+      return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }); // Retorna YYYY-MM-DD
     };
 
-    const boliviaNow = getBoliviaTime(now);
-    const todayStr = boliviaNow.toISOString().split('T')[0];
+    const todayStr = getBoliviaDateString(new Date());
     
-    const yesterday = new Date(boliviaNow);
+    const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = getBoliviaDateString(yesterday);
 
-    // Inicio de semana (Lunes)
+    // Inicio de semana (Lunes) en Bolivia
+    const now = new Date();
+    const boliviaTimeStr = now.toLocaleString('en-US', { timeZone: 'America/La_Paz' });
+    const boliviaNow = new Date(boliviaTimeStr);
+    
     const startOfWeek = new Date(boliviaNow);
     const day = startOfWeek.getDay();
     const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
@@ -382,8 +384,8 @@ export async function getUserEarningsSummary(userId) {
     let hoy = 0, ayer = 0, semana = 0, mes = 0, total = 0;
 
     movimientos.forEach(m => {
-      const mDate = getBoliviaTime(new Date(m.fecha));
-      const mDateStr = mDate.toISOString().split('T')[0];
+      const mDateStr = getBoliviaDateString(m.fecha);
+      const mDate = new Date(new Date(m.fecha).toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
       const monto = Number(m.monto) || 0;
 
       total += monto;

@@ -197,55 +197,83 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Ya intentaste esta tarea hoy' });
     }
 
-    // --- LÓGICA DE VALIDACIÓN EXACTA ---
+    // --- LÓGICA DE VALIDACIÓN EXACTA REFORZADA ---
     const selectedValue = String(respuesta || '').trim();
     const correctValue = String(task.respuesta_correcta || '').trim();
     
-    // Comparación directa (Case Insensitive para evitar fallos tontos, pero exacta en contenido)
-    // Usamos normalize para eliminar caracteres invisibles o acentos que puedan romper la igualdad visual
-    const normalizeStr = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    // Normalización avanzada: quita tildes, comillas variantes, apóstrofes y caracteres invisibles
+    const normalizeStr = (s) => {
+      if (!s) return '';
+      return s
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Quitar tildes
+        .replace(/['’‘´`]/g, "'")        // Unificar todo tipo de comillas/apóstrofes a '
+        .replace(/[\u200B-\u200D\uFEFF]/g, "") // Quitar caracteres invisibles
+        .replace(/\s+/g, " ")           // Unificar espacios múltiples a uno solo
+        .trim()
+        .toUpperCase();
+    };
+
     const esCorrectaReal = normalizeStr(selectedValue) === normalizeStr(correctValue);
     const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
 
-    console.log(`\n[VALIDACIÓN] Tarea: ${task.id} (${task.nombre})`);
-    console.log(`  - Usuario: ${user.nombre_usuario}`);
-    console.log(`  - Seleccionado Original: "${respuesta}"`);
-    console.log(`  - Seleccionado Clean: "${selectedValue}"`);
-    console.log(`  - Esperado Clean: "${correctValue}"`);
+    console.log(`\n[VALIDACIÓN PASO A PASO]`);
+    console.log(`  - Task ID: ${task.id}`);
+    console.log(`  - User ID: ${user.id} (${user.nombre_usuario})`);
+    console.log(`  - Recibido: "${respuesta}" -> Normalizado: "${normalizeStr(selectedValue)}"`);
+    console.log(`  - Esperado: "${task.respuesta_correcta}" -> Normalizado: "${normalizeStr(correctValue)}"`);
     console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
-    console.log(`  - Opciones Disponibles: ${JSON.stringify(task.opciones)}`);
-    
-    // Alerta de configuración si la respuesta correcta no está en las opciones
-    if (!task.opciones?.some(o => normalizeStr(String(o).trim()) === normalizeStr(correctValue))) {
-      console.error(`[ALERTA CONFIG] Tarea ${task.id} tiene una respuesta correcta que no figura en sus opciones.`);
-    }
 
     const levels = await getLevels();
     const level = levels.find(l => String(l.id) === String(user.nivel_id)) || levels[0];
 
-    // Registrar actividad PRIMERO para que cuente el intento incluso si falla
-    const activityId = uuidv4();
-    await createTaskActivity({
-      id: activityId,
-      usuario_id: user.id,
-      tarea_id: task.id,
-      respuesta_correcta: esCorrectaReal,
-      recompensa_otorgada: recompensa,
-      nivel_id: level.id,
-      created_at: new Date().toISOString(),
-    });
-
-    if (esCorrectaReal) {
-      // PAGO A ACTIVOS (saldo_principal)
-      await updateUser(user.id, {
-        saldo_principal: (Number(user.saldo_principal) || 0) + recompensa,
+    // Registrar actividad PRIMERO
+    try {
+      const activityId = uuidv4();
+      await createTaskActivity({
+        id: activityId,
+        usuario_id: user.id,
+        tarea_id: task.id,
+        respuesta_correcta: esCorrectaReal,
+        recompensa_otorgada: recompensa,
+        nivel_id: level.id,
+        created_at: new Date().toISOString(),
       });
-      
-      // Registrar en estadísticas persistentes con el nuevo sistema de eventos
-      await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
-      
-      // Distribuir comisiones a la red (Upline)
-      await distributeCommissions(user.id, recompensa);
+      console.log(`  - [OK] createTaskActivity registrada.`);
+
+      if (esCorrectaReal) {
+        // Actualizar saldo usuario
+        try {
+          await updateUser(user.id, {
+            saldo_principal: (Number(user.saldo_principal) || 0) + recompensa,
+          });
+          console.log(`  - [OK] updateUser (saldo_principal) actualizado.`);
+        } catch (e) {
+          console.error(`  - [ERROR] updateUser falló:`, e.message);
+          throw e;
+        }
+        
+        // Registrar ganancias
+        try {
+          await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
+          console.log(`  - [OK] addUserEarnings registrado.`);
+        } catch (e) {
+          console.error(`  - [ERROR] addUserEarnings falló:`, e.message);
+          throw e;
+        }
+        
+        // Comisiones
+        try {
+          await distributeCommissions(user.id, recompensa);
+          console.log(`  - [OK] distributeCommissions procesado.`);
+        } catch (e) {
+          console.error(`  - [ERROR] distributeCommissions falló:`, e.message);
+          // No lanzamos error aquí para no romper el flujo principal si las comisiones fallan
+        }
+      }
+    } catch (e) {
+      console.error(`  - [CRÍTICO] Fallo en el proceso de guardado:`, e.message);
+      throw e;
     }
 
     res.json({

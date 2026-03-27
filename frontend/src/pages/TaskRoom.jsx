@@ -153,13 +153,16 @@ export default function TaskRoom() {
       }
     } catch (err) {
       console.error('[TaskRoom] Error en onConfirmResponse:', err);
-      if (err.status === 500) {
-        setErrorMessage('Error interno al validar la tarea (Servidor). Inténtalo de nuevo.');
+      // DIFERENCIAR ERROR DE RED/SERVIDOR DE RESPUESTA INCORRECTA
+      setIsCorrect(false); 
+      if (err.status === 500 || err.message?.includes('500')) {
+        setErrorMessage('Error interno del servidor al procesar la tarea. Inténtalo de nuevo.');
+      } else if (err.status === 400) {
+        setErrorMessage(err.message || 'Petición inválida.');
       } else {
-        setErrorMessage(err.message || 'Error al validar la respuesta.');
+        setErrorMessage('No se pudo conectar con el servidor. Revisa tu conexión.');
       }
       setShowResult(true);
-      setIsCorrect(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -367,10 +370,17 @@ export default function TaskRoom() {
                       <div className="w-20 h-20 bg-rose-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-6 shadow-2xl shadow-rose-500/40 border-4 border-white -rotate-6">
                         <X className="text-white" size={40} strokeWidth={4} />
                       </div>
-                      <h3 className="font-black text-[#1a1f36] text-2xl uppercase mb-2 tracking-tighter">FALLASTE</h3>
+                      <h3 className="font-black text-[#1a1f36] text-2xl uppercase mb-2 tracking-tighter">
+                        {errorMessage.includes('servidor') || errorMessage.includes('conexión') ? 'ERROR DE SISTEMA' : 'FALLASTE'}
+                      </h3>
                       <div className="space-y-2 mb-8 bg-rose-50 p-6 rounded-3xl border border-rose-100">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Tu respuesta: <span className="text-rose-500">{selectedOption}</span></p>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Correcta: <span className="text-emerald-500">{activeTask.respuesta_correcta}</span></p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] mb-2">{errorMessage}</p>
+                        {!errorMessage.includes('servidor') && !errorMessage.includes('conexión') && (
+                          <>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Tu respuesta: <span className="text-rose-500">{selectedOption}</span></p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Correcta: <span className="text-emerald-500">{activeTask.respuesta_correcta}</span></p>
+                          </>
+                        )}
                       </div>
                     </>
                   )}

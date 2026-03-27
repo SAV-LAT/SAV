@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { findUserById, getLevels, getTasks, getTaskById, getTaskActivity, createTaskActivity, updateUser, addUserEarnings } from '../lib/queries.js';
+import { findUserById, getLevels, getTasks, getTaskById, getTaskActivity, createTaskActivity, updateUser, addUserEarnings, distributeCommissions } from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -206,7 +206,6 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
       
       // Distribuir comisiones a la red (Upline)
-      const { distributeCommissions } = await import('../lib/queries.js');
       await distributeCommissions(user.id, recompensa);
     }
 
@@ -217,8 +216,11 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       mensaje: esCorrectaReal ? '¡Tarea completada con éxito!' : 'Respuesta incorrecta.',
     });
   } catch (err) {
-    console.error(`[Tasks v4] Error en responder:`, err.message);
-    res.status(500).json({ error: 'Error al procesar la respuesta' });
+    console.error(`[Tasks v4] Error crítico en responder tarea ${req.params.id}:`, err);
+    res.status(500).json({ 
+      error: 'Error al procesar la respuesta',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 

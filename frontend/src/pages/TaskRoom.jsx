@@ -75,6 +75,21 @@ export default function TaskRoom() {
     return () => clearInterval(interval);
   }, [activeTask, surveyVisible, timer]);
 
+  const isYouTube = (url) => {
+    return url && (url.includes('youtube.com') || url.includes('youtu.be'));
+  };
+
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return '';
+    let videoId = '';
+    if (url.includes('v=')) {
+      videoId = url.split('v=')[1].split('&')[0];
+    } else if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1].split('?')[0];
+    }
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0`;
+  };
+
   // Manejo de Inicio de Tarea
   const startTask = (task) => {
     console.log('[TaskRoom] Iniciando tarea:', task.id);
@@ -235,9 +250,9 @@ export default function TaskRoom() {
     const options = activeTask.opciones || [];
     return (
       <Layout hideNav={true}>
-        <div className="bg-gray-50 min-h-screen pb-20 animate-fade-in">
+        <div className="bg-gray-50 min-h-screen pb-20 animate-fade-in flex flex-col">
           {/* Header de Ejecución */}
-          <header className="sticky top-0 z-40 bg-[#1a1f36] flex items-center justify-between px-6 py-5 border-b border-white/10 shadow-2xl backdrop-blur-md">
+          <header className="sticky top-0 z-50 bg-[#1a1f36] flex items-center justify-between px-6 py-5 border-b border-white/10 shadow-2xl backdrop-blur-md">
             <button 
               onClick={() => {
                 if (window.confirm("¿Deseas abandonar la tarea? El progreso se perderá.")) {
@@ -255,25 +270,36 @@ export default function TaskRoom() {
             <div className="w-10" />
           </header>
 
-          <div className="max-w-xl mx-auto px-5 py-8 space-y-8">
+          <div className="max-w-xl mx-auto w-full px-5 py-6 space-y-6 flex-1 overflow-y-auto">
             {/* ZONA 1: REPRODUCTOR DE VIDEO (SIEMPRE VISIBLE) */}
-            <section className="relative group">
+            <section className="relative group w-full shrink-0">
               <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-30 transition duration-1000"></div>
-              <div className="relative aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border-[6px] border-white ring-1 ring-black/5">
-                <video 
-                  ref={videoRef}
-                  className="w-full h-full object-cover" 
-                  src={api.getMediaUrl(activeTask.video_url)} 
-                  controls={videoFinished}
-                  autoPlay 
-                  playsInline 
-                  onEnded={() => setVideoFinished(true)} 
-                  onCanPlay={(e) => { e.target.muted = false; e.target.play().catch(()=>{}); }} 
-                />
+              <div className="relative w-full aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border-[6px] border-white ring-1 ring-black/5 flex items-center justify-center">
+                {isYouTube(activeTask.video_url) ? (
+                  <iframe 
+                    className="w-full h-full absolute inset-0 z-10"
+                    src={getYouTubeEmbedUrl(activeTask.video_url)}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video 
+                    ref={videoRef}
+                    className="w-full h-full object-cover absolute inset-0 z-10" 
+                    src={api.getMediaUrl(activeTask.video_url)} 
+                    controls={videoFinished}
+                    autoPlay 
+                    playsInline 
+                    onEnded={() => setVideoFinished(true)} 
+                    onCanPlay={(e) => { e.target.muted = false; e.target.play().catch(()=>{}); }} 
+                  />
+                )}
                 
                 {/* Timer Overlay sutil (solo visible durante el conteo) */}
                 {!surveyVisible && !showResult && (
-                  <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 flex items-center gap-3">
+                  <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 flex items-center gap-3 z-30">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
                     <span className="text-white font-black text-xs tabular-nums">{timer}s</span>
                   </div>
@@ -282,15 +308,15 @@ export default function TaskRoom() {
             </section>
 
             {/* ZONA 2: INFORMACIÓN DE LA TAREA (SIEMPRE VISIBLE) */}
-            <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-gray-100 flex items-center gap-5">
+            <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-gray-100 flex items-center gap-5 shrink-0">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1a1f36] to-[#2a2f46] flex items-center justify-center shrink-0 shadow-lg shadow-[#1a1f36]/20">
                 <Sparkles className="text-amber-400" size={28} />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Campaña Publicitaria</h3>
-                <p className="text-sm font-black text-[#1a1f36] uppercase tracking-tight">{activeTask.nombre}</p>
+                <p className="text-sm font-black text-[#1a1f36] uppercase tracking-tight truncate">{activeTask.nombre}</p>
                 {activeTask.descripcion && (
-                  <p className="text-[9px] text-gray-400 font-medium italic mt-1 leading-relaxed">
+                  <p className="text-[9px] text-gray-400 font-medium italic mt-1 leading-relaxed line-clamp-2">
                     {activeTask.descripcion}
                   </p>
                 )}
@@ -302,23 +328,23 @@ export default function TaskRoom() {
             </div>
 
             {/* ZONA 3: BLOQUE DINÁMICO (TIMER, ENCUESTA O RESULTADO) */}
-            <div className="space-y-6">
+            <div className="space-y-6 flex-1">
               {showResult ? (
                 /* VISTA DE RESULTADO FINAL (BAJO EL VIDEO) */
-                <section className="bg-white p-12 rounded-[3.5rem] border-4 border-white text-center animate-scale-in shadow-2xl relative overflow-hidden">
+                <section className="bg-white p-10 rounded-[3.5rem] border-4 border-white text-center animate-scale-in shadow-2xl relative overflow-hidden">
                   {isCorrect ? (
                     <>
                       <div className="absolute top-0 left-0 w-full h-3 bg-emerald-500" />
-                      <div className="w-24 h-24 bg-emerald-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-emerald-500/40 border-4 border-white rotate-6">
-                        <Trophy className="text-white" size={48} strokeWidth={2.5} />
+                      <div className="w-20 h-20 bg-emerald-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-6 shadow-2xl shadow-emerald-500/40 border-4 border-white rotate-6">
+                        <Trophy className="text-white" size={40} strokeWidth={2.5} />
                       </div>
-                      <h3 className="font-black text-[#1a1f36] text-3xl uppercase mb-3 tracking-tighter">¡ÉXITO TOTAL!</h3>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] mb-10">Recompensa acreditada al instante</p>
+                      <h3 className="font-black text-[#1a1f36] text-2xl uppercase mb-2 tracking-tighter">¡ÉXITO TOTAL!</h3>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] mb-8">Recompensa acreditada al instante</p>
                       
-                      <div className="bg-emerald-50 py-8 px-10 rounded-[2.5rem] border border-emerald-100 inline-flex flex-col items-center gap-2 mb-10 shadow-inner">
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Respuesta: {selectedOption}</span>
+                      <div className="bg-emerald-50 py-6 px-8 rounded-[2.5rem] border border-emerald-100 inline-flex flex-col items-center gap-2 mb-8 shadow-inner w-full">
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center">Respuesta: {selectedOption}</span>
                         <div className="flex items-center gap-3">
-                          <span className="text-5xl font-black text-[#1a1f36] tracking-tighter">+{activeTask.recompensa}</span>
+                          <span className="text-4xl font-black text-[#1a1f36] tracking-tighter">+{activeTask.recompensa}</span>
                           <span className="text-sm font-black text-[#1a1f36]/40 uppercase tracking-widest">BOB</span>
                         </div>
                       </div>
@@ -326,21 +352,18 @@ export default function TaskRoom() {
                   ) : (
                     <>
                       <div className="absolute top-0 left-0 w-full h-3 bg-rose-500" />
-                      <div className="w-24 h-24 bg-rose-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-rose-500/40 border-4 border-white -rotate-6">
-                        <X className="text-white" size={48} strokeWidth={4} />
+                      <div className="w-20 h-20 bg-rose-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-6 shadow-2xl shadow-rose-500/40 border-4 border-white -rotate-6">
+                        <X className="text-white" size={40} strokeWidth={4} />
                       </div>
-                      <h3 className="font-black text-[#1a1f36] text-3xl uppercase mb-3 tracking-tighter">FALLASTE</h3>
-                      <div className="space-y-2 mb-8">
+                      <h3 className="font-black text-[#1a1f36] text-2xl uppercase mb-2 tracking-tighter">FALLASTE</h3>
+                      <div className="space-y-2 mb-8 bg-rose-50 p-6 rounded-3xl border border-rose-100">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Tu respuesta: <span className="text-rose-500">{selectedOption}</span></p>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Correcta: <span className="text-emerald-500">{activeTask.respuesta_correcta}</span></p>
-                      </div>
-                      <div className="bg-rose-50 py-6 px-10 rounded-[2.5rem] border border-rose-100 inline-flex items-center gap-4 mb-10">
-                        <span className="text-xl font-black text-rose-600 tracking-tighter">0.00 BOB</span>
                       </div>
                     </>
                   )}
                   
-                  <div className="pt-8">
+                  <div className="pt-4">
                     <button
                       onClick={finishAndGoBack}
                       className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all ${
@@ -349,7 +372,6 @@ export default function TaskRoom() {
                     >
                       Continuar
                     </button>
-                    <p className="mt-4 text-[9px] font-black text-[#1a1f36]/30 uppercase tracking-[0.4em]">Finalizando sesión de tarea...</p>
                   </div>
                 </section>
               ) : (
@@ -372,30 +394,30 @@ export default function TaskRoom() {
                       </div>
                     </div>
                   ) : (
-                    <section className="bg-white rounded-[3rem] p-10 shadow-2xl border-2 border-emerald-50 animate-slideUp overflow-hidden relative">
+                    <section className="bg-white rounded-[3rem] p-8 shadow-2xl border-2 border-emerald-50 animate-slideUp overflow-hidden relative">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
                       
-                      <div className="text-center mb-8 relative z-10">
+                      <div className="text-center mb-6 relative z-10">
                         <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-[0.3em] mb-4 border border-emerald-100">Pregunta de Verificación</span>
-                        <h3 className="text-xl font-black text-[#1a1f36] uppercase tracking-tighter leading-tight">
+                        <h3 className="text-lg font-black text-[#1a1f36] uppercase tracking-tighter leading-tight">
                           {activeTask.pregunta || '¿Cuál es la marca del video?'}
                         </h3>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4 mb-10 relative z-10">
+                      <div className="grid grid-cols-1 gap-3 mb-8 relative z-10">
                         {options.map((opt, idx) => (
                           <button
                             key={idx}
                             onClick={() => setSelectedOption(opt)}
-                            className={`group w-full py-6 px-8 rounded-[1.8rem] text-[11px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between border-2 ${
+                            className={`group w-full py-5 px-6 rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between border-2 ${
                               selectedOption === opt 
                                 ? 'bg-[#1a1f36] text-white border-[#1a1f36] shadow-xl translate-x-2' 
                                 : 'bg-gray-50 text-gray-400 border-gray-100 hover:border-emerald-200 hover:bg-white hover:text-[#1a1f36]'
                             }`}
                           >
                             <span>{opt}</span>
-                            <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all ${selectedOption === opt ? 'border-emerald-400 bg-emerald-400/20' : 'border-gray-200'}`}>
-                              {selectedOption === opt && <Check size={14} className="text-white" />}
+                            <div className={`w-5 h-5 rounded-xl border-2 flex items-center justify-center transition-all ${selectedOption === opt ? 'border-emerald-400 bg-emerald-400/20' : 'border-gray-200'}`}>
+                              {selectedOption === opt && <Check size={12} className="text-white" />}
                             </div>
                           </button>
                         ))}
@@ -404,7 +426,7 @@ export default function TaskRoom() {
                       <button
                         onClick={onConfirmResponse}
                         disabled={!selectedOption || isSubmitting}
-                        className="w-full py-6 rounded-[2rem] bg-[#1a1f36] text-white font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-4 relative z-10 overflow-hidden group"
+                        className="w-full py-5 rounded-[2rem] bg-[#1a1f36] text-white font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-4 relative z-10 overflow-hidden group"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity" />
                         {isSubmitting ? (

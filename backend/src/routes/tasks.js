@@ -231,7 +231,7 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     // Registrar actividad PRIMERO
     try {
       const activityId = uuidv4();
-      console.log(`  - [STEP] Intentando registrar actividad...`);
+      console.log(`  - [STEP 1] Registrando actividad_tareas...`);
       
       const activityData = {
         id: activityId,
@@ -245,55 +245,54 @@ router.post('/:id/responder', authenticate, async (req, res) => {
 
       try {
         await createTaskActivity(activityData);
+        console.log(`  - [OK] Actividad registrada.`);
       } catch (schemaErr) {
         console.warn(`  - [FALLBACK] Error al registrar actividad con nivel_id. Reintentando sin nivel_id...`);
-        // Fallback: Quitar nivel_id si la columna no existe aún en producción
         delete activityData.nivel_id;
         await createTaskActivity(activityData);
+        console.log(`  - [OK] Actividad registrada (fallback).`);
       }
-      
-      console.log(`  - [OK] createTaskActivity registrada.`);
 
       if (esCorrectaReal) {
-        // Actualizar saldo usuario
-        try {
-          console.log(`  - [STEP] Intentando actualizar saldo principal...`);
-          await updateUser(user.id, {
-            saldo_principal: (Number(user.saldo_principal) || 0) + recompensa,
-          });
-          console.log(`  - [OK] updateUser (saldo_principal) actualizado.`);
-        } catch (e) {
-          console.error(`  - [ERROR] updateUser falló:`, e.message);
-          throw new Error(`Fallo al actualizar saldo: ${e.message}`);
-        }
+        console.log(`  - [STEP 2] Tarea correcta. Iniciando acreditación de ${recompensa} BOB...`);
         
-        // Registrar ganancias
+        // 1. Registrar ganancia y movimiento contable (addUserEarnings ya maneja movimientos_saldo)
         try {
-          console.log(`  - [STEP] Intentando registrar ganancias (Accounting)...`);
           await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
-          console.log(`  - [OK] addUserEarnings registrado.`);
+          console.log(`  - [OK] Ganancia y movimiento contable registrados.`);
         } catch (e) {
-          console.error(`  - [ERROR] addUserEarnings falló:`, e.message);
-          throw new Error(`Fallo al registrar ganancias: ${e.message}`);
+          console.error(`  - [ERROR] Fallo al registrar ganancia contable:`, e.message);
+          throw new Error(`Fallo contable: ${e.message}`);
+        }
+
+        // 2. Actualizar saldo real del usuario
+        try {
+          const nuevoSaldo = Number((Number(user.saldo_principal) || 0) + recompensa).toFixed(2);
+          await updateUser(user.id, { saldo_principal: nuevoSaldo });
+          console.log(`  - [OK] Saldo principal actualizado a ${nuevoSaldo}.`);
+        } catch (e) {
+          console.error(`  - [ERROR] Fallo al actualizar saldo principal:`, e.message);
+          throw new Error(`Fallo de saldo: ${e.message}`);
         }
         
-        // Comisiones
+        // 3. Distribuir comisiones (No bloqueante para el usuario)
         try {
-          console.log(`  - [STEP] Intentando distribuir comisiones...`);
+          console.log(`  - [STEP 3] Procesando comisiones de red...`);
           await distributeCommissions(user.id, recompensa);
-          console.log(`  - [OK] distributeCommissions procesado.`);
+          console.log(`  - [OK] Comisiones enviadas a cola de procesamiento.`);
         } catch (e) {
-          console.error(`  - [ERROR] distributeCommissions falló (No crítico):`, e.message);
+          console.error(`  - [AVISO] Fallo no crítico en comisiones:`, e.message);
         }
+      } else {
+        console.log(`  - [STEP 2] Tarea incorrecta. No se acredita recompensa.`);
       }
     } catch (e) {
-      console.error(`  - [CRÍTICO] Fallo en el proceso de guardado de la tarea ${task.id}:`, e.message);
-      res.status(500).json({ 
+      console.error(`  - [CRÍTICO] El proceso de respuesta falló en el servidor:`, e.message);
+      return res.status(500).json({ 
         error: 'Error interno al procesar la respuesta', 
-        message: e.message,
-        step: 'save_process'
+        details: e.message,
+        step: 'transactional_save'
       });
-      return;
     }
 
     res.json({

@@ -325,12 +325,12 @@ export async function createMovimiento(movimiento) {
  * Calcula las ganancias de un usuario para diferentes periodos en zona horaria de Bolivia
  */
 export async function getUserEarningsSummary(userId) {
+  console.log(`[Resumen] Calculando ganancias para usuario ${userId}...`);
   try {
     const user = await findUserById(userId);
     if (!user) return null;
 
     // Obtener todos los movimientos de ingreso del usuario
-    // Tipos que cuentan como ganancias: ganancia_tarea, comision_subordinado, recompensa_invitacion
     let movimientos = [];
     try {
       const { data, error } = await supabase
@@ -341,8 +341,20 @@ export async function getUserEarningsSummary(userId) {
       
       if (error) throw error;
       movimientos = data || [];
+      console.log(`  - [OK] ${movimientos.length} movimientos recuperados.`);
     } catch (e) {
-      console.warn(`[Queries] No se pudo leer de movimientos_saldo (probablemente no existe). Usando caché de usuario.`);
+      console.warn(`[Resumen] No se pudo leer de movimientos_saldo. Usando caché de usuario.`);
+      // Si la tabla no existe, devolvemos los campos de la tabla usuarios como fallback
+      return {
+        hoy: Number(user.ganancias_hoy || 0),
+        ayer: Number(user.ganancias_ayer || 0),
+        semana: Number(user.ganancias_semana || 0),
+        mes: Number(user.ganancias_mes || 0),
+        total: Number(user.ganancias_totales || 0),
+        saldo_principal: Number(user.saldo_principal || 0),
+        saldo_comisiones: Number(user.saldo_comisiones || 0),
+        tareas_completadas: Number(user.tareas_completadas_exito || 0)
+      };
     }
 
     const now = new Date();
@@ -381,6 +393,8 @@ export async function getUserEarningsSummary(userId) {
       if (mDate >= startOfMonth) mes += monto;
     });
 
+    console.log(`  - [RESULTADO] Hoy: ${hoy}, Total: ${total}`);
+
     return {
       hoy: Number(hoy),
       ayer: Number(ayer),
@@ -392,7 +406,7 @@ export async function getUserEarningsSummary(userId) {
       tareas_completadas: Number(user.tareas_completadas_exito || 0)
     };
   } catch (err) {
-    console.error('[Queries] Error al calcular resumen de ganancias:', err);
+    console.error('[Resumen] Error crítico:', err);
     return null;
   }
 }

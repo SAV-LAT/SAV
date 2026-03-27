@@ -87,7 +87,7 @@ export default function Profile() {
             <h2 className="text-3xl font-black tracking-tighter uppercase drop-shadow-lg">{user?.nombre_usuario}</h2>
             <div className="flex flex-wrap items-center gap-2">
               <div className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-[0.2em] border border-white/20 shadow-lg">
-                {user?.nivel_codigo === 'internar' ? 'PASANTE' : user?.nivel_codigo || user?.nivel}
+                {(user?.nivel_codigo === 'pasante' || user?.nivel_codigo === 'internar') ? 'PASANTE' : (user?.nivel_codigo || user?.nivel)}
               </div>
               <div className="px-3 py-1.5 rounded-full bg-black/20 text-white/60 text-[10px] font-black uppercase tracking-widest border border-white/5">
                 ID: {user?.id?.slice(0, 8)}

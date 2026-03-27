@@ -13,20 +13,20 @@ export default function Invite() {
   const inviteLink = `${window.location.origin}/registro?ref=${user?.codigo_invitacion || ''}`;
 
   const handleCopyCode = () => {
-    if (!user?.codigo_invitacion || user?.nivel_codigo === 'internar') return;
+    if (!user?.codigo_invitacion || user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') return;
     navigator.clipboard.writeText(user.codigo_invitacion);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const handleCopyLink = () => {
-    if (user?.nivel_codigo === 'internar') return;
+    if (user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') return;
     navigator.clipboard.writeText(inviteLink);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  if (user?.nivel_codigo === 'internar') {
+  if (user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') {
     return (
       <Layout>
         <Header title="Invitar Amigos" />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Save, X, Edit2, Shield, Info } from 'lucide-react';
+import { Save, X, Edit2, Shield, Info, TrendingUp, Users, Award, Clock } from 'lucide-react';
 
 export default function AdminNiveles() {
   const [niveles, setNiveles] = useState([]);

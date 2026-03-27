@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Layout from '../components/Layout.jsx';
 import Header from '../components/Header.jsx';
 import { api } from '../lib/api.js';
+import { supabase } from '../lib/supabase.js';
 import { TrendingUp, Info, ShieldCheck, Play, Check, Clock, Wallet, ArrowRight, X, Sparkles, AlertCircle, ClipboardList } from 'lucide-react';
 
 /**

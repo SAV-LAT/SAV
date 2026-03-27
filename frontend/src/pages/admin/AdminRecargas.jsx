@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api.js';
-import { Send, CheckCircle2, XCircle, Clock, ExternalLink, QrCode } from 'lucide-react';
+import { Send, CheckCircle2, XCircle, Clock, ExternalLink, QrCode, User, Wallet } from 'lucide-react';
 
 export default function AdminRecargas() {
   const [list, setList] = useState([]);

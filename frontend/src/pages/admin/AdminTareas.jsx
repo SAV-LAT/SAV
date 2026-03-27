@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Play, Clock, Award } from 'lucide-react';
 
 export default function AdminTareas() {
   const [tareas, setTareas] = useState([]);

@@ -12,7 +12,7 @@ export default function Team() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (user?.nivel_codigo !== 'internar') {
+    if (user?.nivel_codigo !== 'internar' && user?.nivel_codigo !== 'pasante') {
       api.users.team().then(setData).catch(() => setData(null));
     }
   }, [user]);
@@ -24,7 +24,7 @@ export default function Team() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (user?.nivel_codigo === 'internar') {
+  if (user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') {
     return (
       <Layout>
         <Header title="Informe del equipo" />
@@ -92,12 +92,12 @@ export default function Team() {
                 <div className="flex flex-col">
                   <span className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-0.5">Código Único</span>
                   <span className="text-lg font-black text-white tracking-[0.2em]">
-                    {user?.nivel_codigo === 'internar' ? '**********' : (user?.codigo_invitacion || '---')}
+                    {(user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') ? '**********' : (user?.codigo_invitacion || '---')}
                   </span>
                 </div>
                 <button 
                   onClick={handleCopy} 
-                  disabled={user?.nivel_codigo === 'internar'}
+                  disabled={user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante'}
                   className="p-3 hover:bg-white/20 rounded-xl transition-all disabled:opacity-30 active:scale-90"
                 >
                   {copied ? <Check size={20} className="text-[#00C853]" /> : <Copy size={20} className="text-white/60" />}

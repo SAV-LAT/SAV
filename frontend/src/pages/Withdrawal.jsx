@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import Header from '../components/Header';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Check, Upload, Info } from 'lucide-react';
+import { Eye, EyeOff, Check, Upload, Info, AlertCircle, Clock, Wallet } from 'lucide-react';
 import { isScheduleOpen } from '../lib/schedule';
 
 export default function Withdrawal() {

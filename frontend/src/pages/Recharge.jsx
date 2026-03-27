@@ -5,7 +5,7 @@ import Header from '../components/Header';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { isScheduleOpen } from '../lib/schedule';
-import { Upload, CheckCircle2, Lock } from 'lucide-react';
+import { Upload, CheckCircle2, Lock, Info, Clock, AlertCircle } from 'lucide-react';
 
 export default function Recharge() {
   const { user } = useAuth();

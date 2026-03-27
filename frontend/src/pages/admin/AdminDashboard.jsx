@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Users, CreditCard, Wallet } from 'lucide-react';
+import { Users, CreditCard, Wallet, TrendingUp, Calendar, Clock } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [data, setData] = useState(null);

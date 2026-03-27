@@ -73,7 +73,7 @@ export default function VIP() {
             </div>
             <p className="text-[11px] font-black text-white/40 uppercase tracking-[0.3em] mb-2">Tu Estatus Actual</p>
             <h2 className="text-3xl font-black uppercase tracking-tighter text-white drop-shadow-xl">
-              {user?.nivel_codigo === 'internar' ? 'PASANTE' : user?.nivel_codigo || user?.nivel}
+              {(user?.nivel_codigo === 'pasante' || user?.nivel_codigo === 'internar') ? 'PASANTE' : (user?.nivel_codigo || user?.nivel)}
             </h2>
             <div className="mt-4 w-12 h-1 bg-[#00C853] rounded-full shadow-[0_0_10px_#00C853]" />
           </div>

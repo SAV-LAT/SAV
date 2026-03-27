@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
+import { Save, Clock, Calendar, Info, ShieldCheck, Gift, Bell, Play } from 'lucide-react';
 
 function defaultHorario() {
   return {

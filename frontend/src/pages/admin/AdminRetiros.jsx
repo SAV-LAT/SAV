@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api.js';
-import { Wallet, CheckCircle2, XCircle, Clock, ExternalLink } from 'lucide-react';
+import { Wallet, CheckCircle2, XCircle, Clock, ExternalLink, User, ShieldCheck } from 'lucide-react';
 
 export default function AdminRetiros() {
   const [list, setList] = useState([]);

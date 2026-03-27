@@ -315,17 +315,18 @@ export default function TaskRoom() {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Campaña Publicitaria</h3>
                       <p className="text-sm font-black text-[#1a1f36] uppercase tracking-tight truncate">{activeTask.nombre}</p>
-                      {activeTask.descripcion && (
-                        <div className="mt-1 space-y-1">
+                      
+                      <div className="mt-1 space-y-1">
+                        {activeTask.descripcion && (
                           <p className="text-[10px] text-[#1a1f36] font-bold leading-relaxed line-clamp-2">
                             {activeTask.descripcion}
                           </p>
-                          {/* Comentario en inglés dinámico */}
-                          <p className="text-[9px] text-gray-400 font-medium italic leading-relaxed">
-                            {activeTask.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.'}
-                          </p>
-                        </div>
-                      )}
+                        )}
+                        {/* Comentario en inglés dinámico - SIEMPRE VISIBLE */}
+                        <p className="text-[9px] text-gray-400 font-medium italic leading-relaxed">
+                          {activeTask.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.'}
+                        </p>
+                      </div>
                     </div>
               <div className="text-right shrink-0">
                 <span className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Recompensa</span>

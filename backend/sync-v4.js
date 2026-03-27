@@ -5,10 +5,17 @@ import { v4_tasks } from './src/data/v4_tasks.js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Error: SUPABASE_URL o SUPABASE_SERVICE_KEY no definidos en .env');
+  process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function syncV4() {
   console.log('🚀 Iniciando Sincronización SAV v4.0.0...');
+  console.log(`📡 Conectando a Supabase: ${supabaseUrl}`);
 
   // 1. Obtener Niveles para mapear IDs
   const { data: niveles, error: errNiv } = await supabase.from('niveles').select('id, codigo');
@@ -30,15 +37,16 @@ async function syncV4() {
       continue;
     }
 
-    const { error: errIns } = await supabase.from('tareas').insert({
+    const { error: errIns } = await supabase.from('tareas').upsert({
       nombre: task.nombre,
       nivel_id: levelId,
       recompensa: task.recompensa,
       video_url: task.video_url,
       descripcion: task.descripcion,
+      pregunta: task.pregunta,
       respuesta_correcta: task.respuesta_correcta,
       opciones: task.opciones
-    });
+    }, { onConflict: 'nombre,nivel_id' });
 
     if (errIns) {
       console.error(`❌ Error insertando ${task.nombre}:`, errIns.message);

@@ -74,19 +74,20 @@ router.get('/', authenticate, async (req, res) => {
       // Filtrar tareas que NO se han intentado hoy (ni bien ni mal)
       const attemptedTaskIdsToday = new Set(todayActivity.map(a => String(a.tarea_id)));
       
-      // FILTRO DE INTEGRIDAD: Solo tareas que tengan video, pregunta, opciones y respuesta correcta
+      // FILTRO DE INTEGRIDAD ESTRICTO: Solo tareas que tengan video, pregunta, opciones y respuesta correcta
       const pool = allTasks.filter(t => {
-        const hasVideo = !!t.video_url;
-        const hasQuestion = !!t.pregunta;
-        const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0;
-        const hasAnswer = !!t.respuesta_correcta;
+        const hasVideo = t.video_url && String(t.video_url).trim().length > 0;
+        const hasQuestion = t.pregunta && String(t.pregunta).trim().length > 0;
+        const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0 && t.opciones.every(o => String(o).trim().length > 0);
+        const hasAnswer = t.respuesta_correcta && String(t.respuesta_correcta).trim().length > 0;
         const isNotAttempted = !attemptedTaskIdsToday.has(String(t.id));
         
         if (!hasVideo || !hasQuestion || !hasOptions || !hasAnswer) {
-          console.warn(`[Tasks v4] Tarea ${t.id} ("${t.nombre}") excluida del pool por estar incompleta.`);
+          console.warn(`[INTEGRIDAD] Tarea ${t.id} ("${t.nombre}") EXCLUIDA:`, { hasVideo, hasQuestion, hasOptions, hasAnswer });
+          return false;
         }
         
-        return hasVideo && hasQuestion && hasOptions && hasAnswer && isNotAttempted;
+        return isNotAttempted;
       });
       
       // Selección aleatoria
@@ -128,7 +129,7 @@ router.get('/:id', authenticate, async (req, res) => {
     const activity = await getTaskActivity(req.user.id);
     
     const getBoliviaDateString = (date) => {
-      return new Date(date).toLocaleDateString('en-US', { timeZone: 'America/La_Paz' });
+      return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }); // YYYY-MM-DD
     };
     
     const todayStr = getBoliviaDateString(new Date());
@@ -173,7 +174,7 @@ router.post('/:id/responder', authenticate, async (req, res) => {
 
     const activity = await getTaskActivity(user.id);
     const getBoliviaDateString = (date) => {
-      return new Date(date).toLocaleDateString('en-US', { timeZone: 'America/La_Paz' });
+      return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }); // YYYY-MM-DD
     };
     const todayStr = getBoliviaDateString(new Date());
 
@@ -186,25 +187,24 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Ya intentaste esta tarea hoy' });
     }
 
-    // Lógica de validación simplificada: Comparación directa y exacta (ignora espacios extra)
-    const valUser = String(respuesta || '').trim();
-    const valCorrect = String(task.respuesta_correcta || '').trim();
+    // --- LÓGICA DE VALIDACIÓN EXACTA ---
+    const selectedValue = String(respuesta || '').trim();
+    const correctValue = String(task.respuesta_correcta || '').trim();
     
-    // Para mayor seguridad pero manteniendo la exactitud, comparamos en mayúsculas
-    const esCorrectaReal = valUser.toUpperCase() === valCorrect.toUpperCase();
+    // Comparación directa (Case Insensitive para evitar fallos tontos, pero exacta en contenido)
+    const esCorrectaReal = selectedValue.toUpperCase() === correctValue.toUpperCase();
     const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
 
-    console.log(`\n[VALIDACIÓN TAREA] ID: ${task.id}`);
+    console.log(`\n[VALIDACIÓN] Tarea: ${task.id} (${task.nombre})`);
     console.log(`  - Usuario: ${user.nombre_usuario}`);
-    console.log(`  - Opciones en DB: ${JSON.stringify(task.opciones)}`);
-    console.log(`  - Valor Botón Seleccionado: "${valUser}"`);
-    console.log(`  - Respuesta Correcta en DB: "${valCorrect}"`);
-    console.log(`  - ¿Coinciden?: ${esCorrectaReal ? 'SÍ ✅' : 'NO ❌'}`);
+    console.log(`  - Seleccionado: "${selectedValue}"`);
+    console.log(`  - Esperado: "${correctValue}"`);
+    console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
+    console.log(`  - Opciones Disponibles: ${JSON.stringify(task.opciones)}`);
     
-    // Verificación de integridad de opciones
-    const opcionesMayus = (Array.isArray(task.opciones) ? task.opciones : []).map(o => String(o).trim().toUpperCase());
-    if (!opcionesMayus.includes(valCorrect.toUpperCase())) {
-      console.error(`  - ⚠️ ERROR DE CONFIGURACIÓN: La respuesta "${valCorrect}" no existe en las opciones.`);
+    // Alerta de configuración si la respuesta correcta no está en las opciones
+    if (!task.opciones?.some(o => String(o).trim().toUpperCase() === correctValue.toUpperCase())) {
+      console.error(`[ALERTA CONFIG] Tarea ${task.id} tiene una respuesta correcta que no figura en sus opciones.`);
     }
 
     const levels = await getLevels();

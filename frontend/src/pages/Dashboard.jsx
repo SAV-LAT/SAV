@@ -23,6 +23,12 @@ const gridItems = [
   { to: '/recompensas', icon: Gift, label: 'Premios', color: 'text-indigo-500', bg: 'bg-indigo-50' },
 ];
 
+const defaultBanners = [
+  { id: 1, imagen_url: '/imag/carrusel1.jpeg', titulo: 'SAV Global' },
+  { id: 2, imagen_url: '/imag/carrusel2.jpeg', titulo: 'Activos Virtuales' },
+  { id: 3, imagen_url: '/imag/carrusel3.jpeg', titulo: 'Libertad Financiera' },
+];
+
 export default function Dashboard() {
   const { user, refreshUser } = useAuth();
   const [banners, setBanners] = useState([]);

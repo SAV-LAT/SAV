@@ -10,7 +10,7 @@ export default function Invite() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const inviteLink = `${window.location.origin}/registro?ref=${user?.codigo_invitacion || ''}`;
+  const inviteLink = `https://sav-lat.vercel.app/register?ref=${user?.codigo_invitacion || ''}`;
 
   const handleCopyCode = () => {
     if (!user?.codigo_invitacion || user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') return;

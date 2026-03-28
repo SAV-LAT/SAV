@@ -29,6 +29,8 @@ export default function Dashboard() {
   const [slide, setSlide] = useState(0);
   const [stats, setStats] = useState(null);
   const [guideText, setGuideText] = useState('BIENVENIDO A SAV. TU FUTURO FINANCIERO COMIENZA AQUÍ. ALCANZA TUS METAS.');
+  // Force update trigger
+  const [triggerUpdate, setTriggerUpdate] = useState(0);
   const [popup, setPopup] = useState({ popup_enabled: false, popup_title: '', popup_message: '' });
   const [showPopup, setShowPopup] = useState(false);
   const [publicConfig, setPublicConfig] = useState(null);

@@ -165,8 +165,8 @@ router.get('/earnings', authenticate, async (req, res) => {
     res.json({
       summary: summary || {
         hoy: 0, ayer: 0, semana: 0, mes: 0, total: 0,
-        saldo_principal: user?.saldo_principal || 0,
-        saldo_comisiones: user?.saldo_comisiones || 0,
+        saldo_principal: 0,
+        saldo_comisiones: 0,
         tareas_completadas: 0
       },
       history: movimientos

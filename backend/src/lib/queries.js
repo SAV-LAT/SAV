@@ -457,53 +457,50 @@ export async function getUserEarningsSummary(userId) {
  */
 export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', origenId = null, descripcion = null) {
   if (!amount || amount <= 0) return;
-  try {
-    const user = await findUserById(userId);
-    if (!user) return;
+  
+  const user = await findUserById(userId);
+  if (!user) throw new Error(`Usuario ${userId} no encontrado para acreditar ganancias.`);
 
-    // 1. Crear el movimiento contable
-    const movimiento = {
-      usuario_id: userId,
-      tipo_movimiento: tipo,
-      origen_id: origenId,
-      monto: amount,
-      saldo_anterior: user.saldo_principal,
-      saldo_nuevo: (Number(user.saldo_principal) || 0) + amount,
-      nivel_id_momento: user.nivel_id,
-      descripcion: descripcion || (tipo === 'ganancia_tarea' ? 'Ganancia por tarea completada' : 'Comisión de red'),
-      referencia: `EARN-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-    };
+  const nuevoSaldo = Number((Number(user.saldo_principal) || 0) + amount).toFixed(2);
 
-    try {
-      await createMovimiento(movimiento);
-    } catch (moveErr) {
-      console.warn(`[Earnings] La tabla movimientos_saldo no existe o no es accesible. Saltando registro contable.`);
-      // No lanzamos error para no bloquear la actualización de saldo del usuario
-    }
+  // 1. Crear el movimiento contable (Obligatorio)
+  const movimiento = {
+    usuario_id: userId,
+    tipo_movimiento: tipo,
+    origen_id: origenId,
+    monto: amount,
+    saldo_anterior: user.saldo_principal,
+    saldo_nuevo: nuevoSaldo,
+    nivel_id_momento: user.nivel_id,
+    descripcion: descripcion || (tipo === 'ganancia_tarea' ? 'Ganancia por tarea completada' : 'Comisión de red'),
+    referencia: `EARN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    fecha: boliviaTime.now().toISOString()
+  };
 
-    // 2. Actualizar el caché en la tabla usuarios y el saldo REAL
-    const nuevoSaldo = Number((Number(user.saldo_principal) || 0) + amount).toFixed(2);
-    const updates = {
-      saldo_principal: nuevoSaldo,
-      ganancias_totales: Number((Number(user.ganancias_totales) || 0) + amount).toFixed(2),
-      tareas_completadas_exito: tipo === 'ganancia_tarea' ? (user.tareas_completadas_exito || 0) + 1 : user.tareas_completadas_exito
-    };
-
-    // Actualizamos también los periodos para que la UI se vea bien de inmediato
-    const boliviaNow = boliviaTime.now();
-    
-    // Si estamos en el mismo día, sumamos a hoy
-    updates.ganancias_hoy = Number((Number(user.ganancias_hoy) || 0) + amount).toFixed(2);
-    updates.ganancias_semana = Number((Number(user.ganancias_semana) || 0) + amount).toFixed(2);
-    updates.ganancias_mes = Number((Number(user.ganancias_mes) || 0) + amount).toFixed(2);
-
-    await updateUser(userId, updates);
-    
-    // 3. Invalidar caché si fuera necesario (opcional)
-    console.log(`[Earnings] +${amount} registrado para ${user.nombre_usuario} tipo: ${tipo}`);
-  } catch (err) {
-    console.error('[Earnings] Error al registrar ganancias:', err);
+  // Intentar crear movimiento, si falla lanzamos error para revertir flujo lógico
+  const { error: moveError } = await trySupabase(() => supabase.from('movimientos_saldo').insert([movimiento]));
+  if (moveError) {
+    console.error(`[Earnings] Error al insertar en movimientos_saldo:`, moveError);
+    throw new Error(`Fallo en registro contable: ${moveError.message}`);
   }
+
+  // 2. Actualizar el caché en la tabla usuarios y el saldo REAL (Obligatorio)
+  const updates = {
+    saldo_principal: nuevoSaldo,
+    ganancias_totales: Number((Number(user.ganancias_totales) || 0) + amount).toFixed(2),
+    tareas_completadas_exito: tipo === 'ganancia_tarea' ? (user.tareas_completadas_exito || 0) + 1 : user.tareas_completadas_exito,
+    ganancias_hoy: Number((Number(user.ganancias_hoy) || 0) + amount).toFixed(2),
+    ganancias_semana: Number((Number(user.ganancias_semana) || 0) + amount).toFixed(2),
+    ganancias_mes: Number((Number(user.ganancias_mes) || 0) + amount).toFixed(2)
+  };
+
+  const { error: updateError } = await trySupabase(() => supabase.from('usuarios').update(updates).eq('id', userId));
+  if (updateError) {
+    console.error(`[Earnings] Error al actualizar tabla usuarios:`, updateError);
+    throw new Error(`Fallo en actualización de saldo: ${updateError.message}`);
+  }
+  
+  console.log(`[Earnings] SUCCESS: +${amount} registrado para ${user.nombre_usuario} tipo: ${tipo}`);
 }
 
 /**

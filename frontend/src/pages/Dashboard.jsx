@@ -176,7 +176,7 @@ export default function Dashboard() {
       </header>
 
       <div className="bg-gray-50/50 min-h-screen pb-24 relative overflow-hidden">
-        {/* Sección de Descarga Inteligente SAV */}
+        {/* Sección de Descarga Inteligente SAV (Prioridad Superior) */}
         <DownloadButton variant="intelligent" />
 
         {/* Elementos decorativos de fondo */}

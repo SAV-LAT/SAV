@@ -385,7 +385,7 @@ export async function getUserEarningsSummary(userId) {
         .from('movimientos_saldo')
         .select('*')
         .eq('usuario_id', userId)
-        .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion']);
+        .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion', 'ajuste_admin']);
       
       if (error) throw error;
       movimientos = data || [];
@@ -407,7 +407,7 @@ export async function getUserEarningsSummary(userId) {
 
     const todayStr = boliviaTime.todayStr();
     
-    const yesterday = new Date();
+    const yesterday = new Date(boliviaTime.now());
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = boliviaTime.getDateString(yesterday);
 
@@ -415,13 +415,14 @@ export async function getUserEarningsSummary(userId) {
     const boliviaNow = boliviaTime.now();
     
     const startOfWeek = new Date(boliviaNow);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+    const day = startOfWeek.getDay(); // 0 (Dom) a 6 (Sab)
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Ajuste a Lunes
     startOfWeek.setDate(diff);
     startOfWeek.setHours(0, 0, 0, 0);
 
     // Inicio de mes
     const startOfMonth = new Date(boliviaNow.getFullYear(), boliviaNow.getMonth(), 1);
+    startOfMonth.setHours(0, 0, 0, 0);
 
     let hoy = 0, ayer = 0, semana = 0, mes = 0, total = 0;
 
@@ -430,21 +431,24 @@ export async function getUserEarningsSummary(userId) {
       const mDate = boliviaTime.getBoliviaDate(m.fecha);
       const monto = Number(m.monto) || 0;
 
-      total += monto;
-      if (mDateStr === todayStr) hoy += monto;
-      if (mDateStr === yesterdayStr) ayer += monto;
-      if (mDate >= startOfWeek) semana += monto;
-      if (mDate >= startOfMonth) mes += monto;
+      // Solo contar como "ingreso" si el monto es positivo
+      if (monto > 0) {
+        total += monto;
+        if (mDateStr === todayStr) hoy += monto;
+        if (mDateStr === yesterdayStr) ayer += monto;
+        if (mDate >= startOfWeek) semana += monto;
+        if (mDate >= startOfMonth) mes += monto;
+      }
     });
 
-    console.log(`  - [RESULTADO] Hoy: ${hoy}, Total: ${total}`);
+    console.log(`  - [RESULTADO REAL] Hoy: ${hoy.toFixed(2)}, Total: ${total.toFixed(2)}`);
 
     return {
-      hoy: Number(hoy),
-      ayer: Number(ayer),
-      semana: Number(semana),
-      mes: Number(mes),
-      total: Number(total),
+      hoy: Number(hoy.toFixed(2)),
+      ayer: Number(ayer.toFixed(2)),
+      semana: Number(semana.toFixed(2)),
+      mes: Number(mes.toFixed(2)),
+      total: Number(total.toFixed(2)),
       saldo_principal: Number(user.saldo_principal || 0),
       saldo_comisiones: Number(user.saldo_comisiones || 0),
       tareas_completadas: Number(user.tareas_completadas_exito || 0)
@@ -488,39 +492,66 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
 
     const nuevoSaldo = Number((Number(user.saldo_principal) || 0) + amount).toFixed(2);
 
-    // 1. Crear el movimiento contable
-    const { error: moveError } = await trySupabase(() => supabase.from('movimientos_saldo').insert([{
-      usuario_id: userId,
-      tipo_movimiento: tipo,
-      origen_id: origenId,
-      monto: amount,
-      saldo_anterior: user.saldo_principal,
-      saldo_nuevo: nuevoSaldo,
-      nivel_id_momento: user.nivel_id,
-      descripcion: desc,
-      referencia: referencia,
-      fecha: boliviaTime.now().toISOString()
-    }]));
+    // 1. Crear el movimiento contable (Solo si existe la tabla)
+    try {
+      const { error: moveError } = await trySupabase(() => supabase.from('movimientos_saldo').insert([{
+        usuario_id: userId,
+        tipo_movimiento: tipo,
+        origen_id: origenId,
+        monto: amount,
+        saldo_anterior: user.saldo_principal,
+        saldo_nuevo: nuevoSaldo,
+        nivel_id_momento: user.nivel_id,
+        descripcion: desc,
+        referencia: referencia,
+        fecha: boliviaTime.now().toISOString()
+      }]));
 
-    if (moveError) {
-      console.error(`[Earnings] Fallback: Error al insertar en movimientos_saldo:`, moveError);
-      throw new Error(`Fallo en registro contable (fallback): ${moveError.message}`);
+      if (moveError) {
+        if (moveError.message?.includes('not find the table') || moveError.message?.includes('does not exist')) {
+          console.error(`[Earnings] CRÍTICO: La tabla 'movimientos_saldo' no existe. Acreditando solo en caché.`);
+        } else {
+          throw new Error(`Fallo en registro contable (fallback): ${moveError.message}`);
+        }
+      }
+    } catch (e) {
+      console.error(`[Earnings] No se pudo registrar movimiento contable, pero seguiremos con la actualización del saldo:`, e.message);
     }
 
-    // 2. Actualizar el caché en la tabla usuarios
+    // 2. Actualizar el caché en la tabla usuarios (Este paso es el que hace que el saldo suba)
     const updates = {
       saldo_principal: nuevoSaldo,
       ganancias_totales: Number((Number(user.ganancias_totales) || 0) + amount).toFixed(2),
-      tareas_completadas_exito: tipo === 'ganancia_tarea' ? (user.tareas_completadas_exito || 0) + 1 : user.tareas_completadas_exito,
       ganancias_hoy: Number((Number(user.ganancias_hoy) || 0) + amount).toFixed(2),
       ganancias_semana: Number((Number(user.ganancias_semana) || 0) + amount).toFixed(2),
       ganancias_mes: Number((Number(user.ganancias_mes) || 0) + amount).toFixed(2)
     };
 
-    const { error: updateError } = await trySupabase(() => supabase.from('usuarios').update(updates).eq('id', userId));
-    if (updateError) {
-      console.error(`[Earnings] Fallback: Error al actualizar tabla usuarios:`, updateError);
-      throw new Error(`Fallo en actualización de saldo (fallback): ${updateError.message}`);
+    // Solo actualizar tareas_completadas si la columna existe (algunos esquemas usan tareas_completadas_hoy o similar)
+    if (user.hasOwnProperty('tareas_completadas_exito')) {
+      updates.tareas_completadas_exito = tipo === 'ganancia_tarea' ? (user.tareas_completadas_exito || 0) + 1 : user.tareas_completadas_exito;
+    } else if (user.hasOwnProperty('tareas_completadas')) {
+      updates.tareas_completadas = tipo === 'ganancia_tarea' ? (user.tareas_completadas || 0) + 1 : user.tareas_completadas;
+    }
+
+    try {
+      const { error: updateError } = await supabase.from('usuarios').update(updates).eq('id', userId);
+      if (updateError) {
+        console.error(`[Earnings] Fallback: Error al actualizar tabla usuarios:`, updateError);
+        throw new Error(`Fallo en actualización de saldo (fallback): ${updateError.message}`);
+      }
+    } catch (dbErr) {
+      if (dbErr.message?.includes('column') && dbErr.message?.includes('does not exist')) {
+        console.warn(`[Earnings] Columna de conteo falló. Reintentando actualización básica de saldo...`);
+        const basicUpdates = {
+          saldo_principal: nuevoSaldo,
+          ganancias_totales: updates.ganancias_totales,
+          ganancias_hoy: updates.ganancias_hoy
+        };
+        await supabase.from('usuarios').update(basicUpdates).eq('id', userId);
+      } else {
+        throw dbErr;
+      }
     }
   } else if (data && !data.success) {
     console.error(`[Earnings] Error lógico en RPC:`, data.error);

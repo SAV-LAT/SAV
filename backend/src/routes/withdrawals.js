@@ -90,17 +90,17 @@ router.post('/', authenticate, async (req, res) => {
   await updateUser(user.id, updates);
 
   // Notificar por Telegram (Bot de Retiros)
-  const msg = `💸 Nuevo Retiro Pendiente\n\n` +
-    `👤 Usuario: ${user.nombre_usuario}\n` +
-    `📛 Nombre Real: ${user.nombre_real || 'No especificado'}\n` +
-    `📱 Teléfono: ${user.telefono || 'No disponible'}\n` +
-    `💰 Monto Solicitado: ${retiro.monto} BOB\n` +
-    `🧾 Comisión (10%): ${retiro.comision} BOB\n` +
-    `💵 Monto a Recibir: ${retiro.monto_a_recibir} BOB\n\n` +
-    `🏦 Banco/Billetera: ${tarjetaElegida?.tipo || 'N/A'}\n` +
-    `👤 Titular: ${tarjetaElegida?.nombre_banco || 'N/A'}\n` +
-    `🔢 Nro. Cuenta: ${tarjetaElegida?.numero_masked || 'N/A'}\n` +
-    `🕒 Fecha: ${new Date(retiro.created_at).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}`;
+  const msg = `<b>💸 SOLICITUD DE RETIRO PENDIENTE</b>\n\n` +
+    `<b>👤 Usuario:</b> ${user.nombre_usuario}\n` +
+    `<b>📛 Nombre Real:</b> ${user.nombre_real || 'No especificado'}\n` +
+    `<b>📱 Teléfono:</b> ${user.telefono || 'No disponible'}\n\n` +
+    `<b>💰 MONTO SOLICITADO:</b> ${retiro.monto.toFixed(2)} BOB\n` +
+    `<b>🧾 Comisión (10%):</b> -${retiro.comision.toFixed(2)} BOB\n` +
+    `<b>💵 NETO A PAGAR:</b> <u>${retiro.monto_a_recibir.toFixed(2)} BOB</u>\n\n` +
+    `<b>🏦 Banco/Billetera:</b> ${tarjetaElegida?.tipo || 'N/A'}\n` +
+    `<b>👤 Titular:</b> ${tarjetaElegida?.nombre_banco || 'N/A'}\n` +
+    `<b>🔢 Nro. Cuenta:</b> <code>${tarjetaElegida?.numero_masked || 'N/A'}</code>\n\n` +
+    `<b>🕒 Fecha:</b> ${new Date(retiro.created_at).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}`;
   
   if (retiro.qr_retiro && retiro.qr_retiro.startsWith('data:image')) {
     telegram.sendRetiroConFoto(msg, retiro.qr_retiro, retiro.id).catch(console.error);

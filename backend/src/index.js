@@ -18,6 +18,7 @@ import sorteoRoutes from './routes/sorteo.js';
 import telegramWebhookRoutes from './routes/telegram_webhook.js';
 import { getPublicContent, getBanners } from './lib/queries.js';
 import { mergePublicContent } from './data/publicContentDefaults.js';
+import { startTelegramPolling } from './lib/telegram_polling.js';
 
 console.log('\n[SERVER] Proceso de servidor iniciado. BUILD_ID: ' + Date.now());
 console.log('[SERVER] Versión: 3.0.1 - MIME Fix');
@@ -35,7 +36,8 @@ app.use((req, res, next) => {
 // Configuración de CORS estricta para producción
 console.log('[SERVER] Configurando CORS...');
 const whitelist = [
-  'https://sav-lat.vercel.app',          // Tu nuevo dominio de producción en Vercel
+  'https://sav-lat.vercel.app',          // Dominio principal
+  'https://sav-g9xx-cr2q3gvo5-sav3.vercel.app', // URL de despliegue Vercel
   'http://localhost:5173',               // Entorno de desarrollo local
   'http://127.0.0.1:5173'
 ];
@@ -63,8 +65,8 @@ app.use(cors(corsOptions));
 console.log('[SERVER] CORS configurado.');
 
 console.log('[SERVER] Configurando parsers y archivos estáticos...');
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Middleware para servir videos con cabeceras que eviten errores de caché
 const videoHeaderMiddleware = (req, res, next) => {
@@ -135,6 +137,9 @@ app.get('/api/public-content', async (req, res) => {
 
 app.listen(PORT, async () => {
   console.log(`\n[SUCCESS] ¡Servidor SAV API escuchando en http://localhost:${PORT}!\n`);
+  
+  // Iniciar Polling de Telegram (Para cuando no hay Webhook como en Local)
+  startTelegramPolling();
   
   // Tarea de mantenimiento: Reset de ganancias diarias a las 00:00 Bolivia (UTC-4)
   const setupCron = async () => {

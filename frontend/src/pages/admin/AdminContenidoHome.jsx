@@ -96,6 +96,13 @@ export default function AdminContenidoHome() {
     recompensa_amigos_activa: true,
     recompensa_amigos_cantidad: 10,
     recompensa_amigos_nivel_minimo: 'S1',
+    telegram_recargas_token: '',
+    telegram_recargas_chat_id: '',
+    telegram_recargas_enabled: true,
+    telegram_retiros_token: '',
+    telegram_retiros_chat_id: '',
+    telegram_retiros_enabled: true,
+    telegram_global_enabled: true,
   });
   const [saving, setSaving] = useState(false);
 
@@ -230,6 +237,103 @@ export default function AdminContenidoHome() {
                   Activar reto de 10 amigos
                 </span>
               </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-8 border-t border-gray-100 space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">Notificaciones de Telegram</h2>
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={!!form.telegram_global_enabled}
+                onChange={(e) => setForm((f) => ({ ...f, telegram_global_enabled: e.target.checked }))}
+                className="w-4 h-4 rounded text-sav-primary focus:ring-0"
+              />
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-sav-primary transition-colors">Sistema Activo</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Bot de Recargas */}
+            <div className={`p-6 rounded-3xl border-2 transition-all ${form.telegram_recargas_enabled ? 'bg-emerald-50/30 border-emerald-500/10' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl ${form.telegram_recargas_enabled ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                    <Bell size={18} />
+                  </div>
+                  <span className="text-xs font-black text-gray-700 uppercase tracking-widest">Bot de Recargas</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={!!form.telegram_recargas_enabled}
+                  onChange={(e) => setForm((f) => ({ ...f, telegram_recargas_enabled: e.target.checked }))}
+                  className="w-4 h-4 rounded text-emerald-500 focus:ring-0"
+                />
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Token del Bot</label>
+                  <input
+                    type="password"
+                    value={form.telegram_recargas_token || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, telegram_recargas_token: e.target.value }))}
+                    placeholder="8732160195:AA..."
+                    className="w-full rounded-xl bg-white border border-gray-200 px-4 py-3 text-xs font-bold focus:border-emerald-500/50 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Chat IDs (Separados por coma)</label>
+                  <input
+                    type="text"
+                    value={form.telegram_recargas_chat_id || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, telegram_recargas_chat_id: e.target.value }))}
+                    placeholder="-1001234567, 987654321"
+                    className="w-full rounded-xl bg-white border border-gray-200 px-4 py-3 text-xs font-bold focus:border-emerald-500/50 outline-none transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bot de Retiros */}
+            <div className={`p-6 rounded-3xl border-2 transition-all ${form.telegram_retiros_enabled ? 'bg-blue-50/30 border-blue-500/10' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl ${form.telegram_retiros_enabled ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                    <Bell size={18} />
+                  </div>
+                  <span className="text-xs font-black text-gray-700 uppercase tracking-widest">Bot de Retiros</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={!!form.telegram_retiros_enabled}
+                  onChange={(e) => setForm((f) => ({ ...f, telegram_retiros_enabled: e.target.checked }))}
+                  className="w-4 h-4 rounded text-blue-500 focus:ring-0"
+                />
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Token del Bot</label>
+                  <input
+                    type="password"
+                    value={form.telegram_retiros_token || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, telegram_retiros_token: e.target.value }))}
+                    placeholder="8715456427:AA..."
+                    className="w-full rounded-xl bg-white border border-gray-200 px-4 py-3 text-xs font-bold focus:border-blue-500/50 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Chat IDs (Separados por coma)</label>
+                  <input
+                    type="text"
+                    value={form.telegram_retiros_chat_id || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, telegram_retiros_chat_id: e.target.value }))}
+                    placeholder="-1001234567, 987654321"
+                    className="w-full rounded-xl bg-white border border-gray-200 px-4 py-3 text-xs font-bold focus:border-blue-500/50 outline-none transition-all"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

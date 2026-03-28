@@ -30,6 +30,8 @@ function sanitizeUser(u, levels) {
     saldo_comisiones: u.saldo_comisiones,
     rol: u.rol,
     bloqueado: u.bloqueado,
+    tipo_lider: u.tipo_lider,
+    allow_weekend_tasks: u.allow_weekend_tasks,
     tickets_ruleta: Number(u.tickets_ruleta) || 0,
     created_at: u.created_at,
   };

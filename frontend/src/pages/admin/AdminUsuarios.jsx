@@ -11,19 +11,70 @@ export default function AdminUsuarios() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [u, n] = await Promise.all([api.admin.usuarios(), api.levels.list()]);
+      const [u, n, c] = await Promise.all([
+        api.admin.usuarios(), 
+        api.levels.list(),
+        api.publicContent()
+      ]);
       setUsers(u);
       setNiveles(n);
+      setPublicConfig(c);
     } catch (err) {
       console.error(err);
     }
   }, []);
 
+  const [publicConfig, setPublicConfig] = useState({});
+
+  const handleToggleTaskDay = async (day) => {
+    const currentDays = publicConfig.task_allowed_days || '1,2,3,4,5';
+    const daysArray = currentDays.split(',').filter(d => d);
+    let newDays;
+    if (daysArray.includes(day.toString())) {
+      newDays = daysArray.filter(d => d !== day.toString()).join(',');
+    } else {
+      newDays = [...daysArray, day.toString()].sort().join(',');
+    }
+    
+    try {
+      await api.admin.updatePublicContent({ task_allowed_days: newDays });
+      setPublicConfig({ ...publicConfig, task_allowed_days: newDays });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleToggleWeekendUser = async (user) => {
+    try {
+      const newValue = !user.allow_weekend_tasks;
+      await api.admin.updateUsuario(user.id, { allow_weekend_tasks: newValue });
+      setUsers(users.map(u => u.id === user.id ? { ...u, allow_weekend_tasks: newValue } : u));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleChangeTipoLider = async (userId, nuevoTipo) => {
+    try {
+      await api.admin.updateUsuario(userId, { tipo_lider: nuevoTipo });
+      setUsers(users.map(u => u.id === userId ? { ...u, tipo_lider: nuevoTipo } : u));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const days = [
+    { id: 1, label: 'L' },
+    { id: 2, label: 'M' },
+    { id: 3, label: 'X' },
+    { id: 4, label: 'J' },
+    { id: 5, label: 'V' },
+    { id: 6, label: 'S', weekend: true },
+    { id: 0, label: 'D', weekend: true },
+  ];
+
   useEffect(() => {
-    const init = async () => {
-      await fetchData();
-    };
-    init();
+    fetchData();
   }, [fetchData]);
 
   const handleChangeNivel = async (userId, nuevoNivelId) => {
@@ -64,9 +115,34 @@ export default function AdminUsuarios() {
           <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">Gestión de Usuarios</h1>
           <p className="text-gray-500 font-medium uppercase tracking-widest text-[10px] mt-1">Control total de miembros y niveles</p>
         </div>
-        <div className="bg-[#1a1f36] text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-3">
-          <User size={20} className="text-white/60" />
-          <span className="font-bold">{users.length} Miembros</span>
+        <div className="flex items-center gap-4">
+          {/* Configuración Global de Días */}
+          <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-2">
+            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Días de Tareas Globales</span>
+            <div className="flex gap-1.5">
+              {days.map(day => {
+                const isSelected = (publicConfig.task_allowed_days || '1,2,3,4,5').split(',').includes(day.id.toString());
+                return (
+                  <button
+                    key={day.id}
+                    onClick={() => handleToggleTaskDay(day.id)}
+                    className={`w-7 h-7 rounded-lg text-[10px] font-black transition-all ${
+                      isSelected 
+                        ? 'bg-[#1a1f36] text-white shadow-lg shadow-[#1a1f36]/20' 
+                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                    } ${day.weekend ? 'border-b-2 border-amber-400' : ''}`}
+                    title={day.weekend ? 'Fin de semana' : ''}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="bg-[#1a1f36] text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-3">
+            <User size={20} className="text-white/60" />
+            <span className="font-bold">{users.length} Miembros</span>
+          </div>
         </div>
       </div>
 
@@ -90,6 +166,8 @@ export default function AdminUsuarios() {
                 <th className="p-6 font-black text-gray-400 uppercase tracking-widest text-[10px]">Info Usuario</th>
                 <th className="p-6 font-black text-gray-400 uppercase tracking-widest text-[10px]">Teléfono</th>
                 <th className="p-6 font-black text-gray-400 uppercase tracking-widest text-[10px]">Nivel</th>
+                <th className="p-6 font-black text-gray-400 uppercase tracking-widest text-[10px]">Liderazgo</th>
+                <th className="p-6 font-black text-gray-400 uppercase tracking-widest text-[10px]">Fines de Semana</th>
                 <th className="p-6 font-black text-gray-400 uppercase tracking-widest text-[10px]">Saldos (T/C)</th>
                 <th className="p-6 font-black text-gray-400 uppercase tracking-widest text-[10px] text-center">Acciones</th>
               </tr>
@@ -121,6 +199,35 @@ export default function AdminUsuarios() {
                         <option key={n.id} value={n.id}>{n.nombre}</option>
                       ))}
                     </select>
+                  </td>
+                  <td className="p-6">
+                    <select 
+                      value={u.tipo_lider || ''} 
+                      onChange={(e) => handleChangeTipoLider(u.id, e.target.value)}
+                      className={`border-2 text-[9px] font-black uppercase tracking-widest rounded-xl px-3 py-2 focus:border-[#1a1f36] outline-none transition-all cursor-pointer ${
+                        u.tipo_lider === 'lider_premium' 
+                          ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' 
+                          : u.tipo_lider === 'lider' 
+                          ? 'bg-blue-500/10 border-blue-500/20 text-blue-600' 
+                          : 'bg-gray-50 border-gray-100 text-gray-400'
+                      }`}
+                    >
+                      <option value="">Ninguno</option>
+                      <option value="lider">Líder</option>
+                      <option value="lider_premium">Líder Premium</option>
+                    </select>
+                  </td>
+                  <td className="p-6">
+                    <button
+                      onClick={() => handleToggleWeekendUser(u)}
+                      className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                        u.allow_weekend_tasks 
+                          ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                          : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                      }`}
+                    >
+                      {u.allow_weekend_tasks ? 'Habilitado' : 'Deshabilitado'}
+                    </button>
                   </td>
                   <td className="p-6">
                     <p className="text-[10px] font-black text-emerald-600">{(u.saldo_principal || 0).toFixed(2)}</p>

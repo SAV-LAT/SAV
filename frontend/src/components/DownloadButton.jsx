@@ -8,9 +8,12 @@ const DownloadButton = ({ variant = 'default' }) => {
 
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
-    if (/android/.test(ua)) {
+    const isAndroid = /android/.test(ua);
+    const isIos = /iphone|ipad|ipod/.test(ua);
+    
+    if (isAndroid) {
       setDevice('android');
-    } else if (/iphone|ipad|ipod/.test(ua)) {
+    } else if (isIos) {
       setDevice('ios');
     } else {
       setDevice('desktop');
@@ -18,6 +21,7 @@ const DownloadButton = ({ variant = 'default' }) => {
   }, []);
 
   const handleAndroidDownload = () => {
+    // Usar la URL centralizada desde config.js
     window.location.href = CONFIG.APK_DOWNLOAD_URL;
   };
 
@@ -28,6 +32,38 @@ const DownloadButton = ({ variant = 'default' }) => {
   const handleWebAction = () => {
     window.location.href = CONFIG.WEB_URL;
   };
+
+  // Renderizado para el Header (Botón compacto)
+  if (variant === 'header') {
+    return (
+      <>
+        <div className="flex items-center gap-1.5">
+          {/* Botón para Android/Desktop */}
+          {(device === 'android' || device === 'desktop') && (
+            <button
+              onClick={handleAndroidDownload}
+              title="Descargar App Android"
+              className="w-9 h-9 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all active:scale-90 shadow-lg shadow-emerald-500/20 group"
+            >
+              <DownloadCloud size={18} className="group-hover:animate-bounce" />
+            </button>
+          )}
+
+          {/* Botón para iOS/Desktop */}
+          {(device === 'ios' || device === 'desktop') && (
+            <button
+              onClick={device === 'ios' ? handleIosAction : handleWebAction}
+              title={device === 'ios' ? 'Instalar en iPhone' : 'Versión Web'}
+              className="w-9 h-9 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/20 transition-all active:scale-90 shadow-lg group"
+            >
+              {device === 'ios' ? <Apple size={18} /> : <Globe size={18} />}
+            </button>
+          )}
+        </div>
+        {showIosModal && <IosInstructions onClose={() => setShowIosModal(false)} />}
+      </>
+    );
+  }
 
   // Renderizado Inteligente para el Dashboard (Parte Superior)
   if (variant === 'intelligent') {
@@ -40,7 +76,11 @@ const DownloadButton = ({ variant = 'default' }) => {
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-tr from-[#1a1f36] to-[#2a2f46] rounded-2xl flex items-center justify-center shadow-lg border border-white/10">
-                {device === 'ios' ? <Apple className="text-white" size={24} /> : <DownloadCloud className="text-emerald-400" size={24} />}
+                {device === 'ios' ? (
+                  <Apple className="text-white" size={24} />
+                ) : (
+                  <DownloadCloud className="text-emerald-400" size={24} />
+                )}
               </div>
               <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-tight">
@@ -49,6 +89,11 @@ const DownloadButton = ({ variant = 'default' }) => {
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">
                   {device === 'android' ? `Versión ${CONFIG.APP_VERSION} Estable` : device === 'ios' ? 'Instalación PWA Optimizada' : 'Acceso Multiplataforma'}
                 </p>
+                {device === 'ios' && (
+                  <p className="text-[8px] font-bold text-emerald-500/80 uppercase tracking-wider mt-1.5 flex items-center gap-1">
+                    <AlertCircle size={10} /> APK solo compatible con Android
+                  </p>
+                )}
               </div>
             </div>
 
@@ -60,7 +105,7 @@ const DownloadButton = ({ variant = 'default' }) => {
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-500/20 group/btn"
                 >
                   <DownloadCloud size={16} className="group-hover/btn:animate-bounce" />
-                  Descargar APK
+                  Descargar para Android
                 </button>
               )}
 
@@ -70,7 +115,7 @@ const DownloadButton = ({ variant = 'default' }) => {
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-[#1a1f36] rounded-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-lg group/btn"
                 >
                   {device === 'ios' ? <Apple size={16} /> : <Globe size={16} />}
-                  {device === 'ios' ? 'Instalar en iPhone' : 'Versión Web'}
+                  {device === 'ios' ? 'Abrir en Navegador' : 'Versión Web'}
                 </button>
               )}
             </div>
@@ -84,23 +129,27 @@ const DownloadButton = ({ variant = 'default' }) => {
   // Mantener compatibilidad con otras variantes si existen
   return (
     <div className="w-full flex flex-col items-center justify-center py-6 px-4">
-      {/* Botón Simple (Android por defecto) */}
+      {/* Botón Simple (Inteligente por defecto) */}
       <div className="relative group w-full max-w-[280px]">
         <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
         <button
-          onClick={handleAndroidDownload}
+          onClick={device === 'ios' ? handleIosAction : handleAndroidDownload}
           className="relative w-full flex items-center justify-between px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 active:scale-95 border border-white/10 group bg-[#1a1f36] text-white"
         >
           <div className="flex items-center gap-4">
-            <div className="bg-emerald-500 p-2 rounded-xl shadow-lg transition-transform duration-500 group-hover:rotate-12">
-              <DownloadCloud size={24} className="text-white" strokeWidth={2.5} />
+            <div className={`${device === 'ios' ? 'bg-blue-500' : 'bg-emerald-500'} p-2 rounded-xl shadow-lg transition-transform duration-500 group-hover:rotate-12`}>
+              {device === 'ios' ? <Apple size={24} className="text-white" strokeWidth={2.5} /> : <DownloadCloud size={24} className="text-white" strokeWidth={2.5} />}
             </div>
             <div className="text-left">
-              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1">Android App</p>
-              <p className="text-sm font-black text-white uppercase tracking-tight leading-none">Descargar SAV 📲</p>
+              <p className={`text-[10px] font-black ${device === 'ios' ? 'text-blue-400' : 'text-emerald-400'} uppercase tracking-widest leading-none mb-1`}>
+                {device === 'ios' ? 'iOS Web App' : 'Android App'}
+              </p>
+              <p className="text-sm font-black text-white uppercase tracking-tight leading-none">
+                {device === 'ios' ? 'Usar Versión Web' : 'Descargar SAV 📲'}
+              </p>
             </div>
           </div>
-          <Smartphone size={18} className="text-white/20 group-hover:text-emerald-400 transition-colors" />
+          {device === 'ios' ? <ExternalLink size={18} className="text-white/20 group-hover:text-blue-400 transition-colors" /> : <Smartphone size={18} className="text-white/20 group-hover:text-emerald-400 transition-colors" />}
         </button>
       </div>
       {showIosModal && <IosInstructions onClose={() => setShowIosModal(false)} />}
@@ -123,8 +172,8 @@ const IosInstructions = ({ onClose }) => (
           <Apple size={40} className="text-white" strokeWidth={2.5} />
         </div>
 
-        <h3 className="text-2xl font-black text-[#1a1f36] uppercase tracking-tighter mb-2">Instalar en iPhone</h3>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-8">Sigue estos 3 pasos rápidos</p>
+        <h3 className="text-2xl font-black text-[#1a1f36] uppercase tracking-tighter mb-2">Usar Versión Web</h3>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-8">Instala SAV en tu iPhone en 3 pasos</p>
 
         <div className="space-y-4 text-left">
           <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100 group">

@@ -31,10 +31,24 @@ export default function TaskRoom() {
   const [videoFinished, setVideoFinished] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showResult, setShowResult] = useState(false);
+  const [correctAnswerFromServer, setCorrectAnswerFromServer] = useState('');
 
   const videoRef = useRef(null);
 
-  const fetchTasks = () => {
+  // Función para normalizar y obtener el ID de YouTube
+  const getYoutubeEmbedUrl = (url) => {
+    if (!url) return '';
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1`;
+    }
+    return url;
+  };
+
+  const isYoutube = activeTask?.video_url?.includes('youtube.com') || activeTask?.video_url?.includes('youtu.be');
+
+  const fetchTasks = async () => {
     setLoading(true);
     setError(null);
     api.tasks.list()
@@ -170,15 +184,28 @@ export default function TaskRoom() {
     try {
       const res = await api.tasks.responder(activeTask.id, selectedOption);
       setShowResult(true);
-      if (res.correcta) {
+      if (res.respuesta_correcta) {
+        setCorrectAnswerFromServer(res.respuesta_correcta);
+      }
+      
+      if (res.correcta || res.success) {
         setIsCorrect(true);
         refreshUser();
       } else {
         setIsCorrect(false);
-        setErrorMessage('La respuesta seleccionada no coincide con el registro.');
+        setErrorMessage(res.mensaje || res.error || 'La respuesta seleccionada no coincide con el registro.');
       }
     } catch (err) {
       console.error('[TaskRoom] Error en onConfirmResponse:', err);
+      
+      // Manejo especial para el error 400 de tarea ya completada
+      if (err.status === 400 && (err.message?.includes('completado') || err.error?.includes('completado'))) {
+        setIsCorrect(true); // Tratamos como éxito visualmente ya que la tarea está hecha
+        setShowResult(true);
+        refreshUser();
+        return;
+      }
+
       // DIFERENCIAR ERROR DE RED/SERVIDOR DE RESPUESTA INCORRECTA
       if (err.status === 500 || err.message?.includes('500') || err.message?.includes('servidor')) {
         setErrorMessage('Error interno del servidor al procesar la tarea. Por favor, intenta de nuevo más tarde.');
@@ -319,16 +346,31 @@ export default function TaskRoom() {
             <section className="relative group w-full shrink-0">
               <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-30 transition duration-1000"></div>
               <div className="relative w-full aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border-[6px] border-white ring-1 ring-black/5 flex items-center justify-center">
-                <video 
-                  ref={videoRef}
-                  className="w-full h-full object-cover absolute inset-0 z-10" 
-                  src={activeTask.video_url} 
-                  controls={videoFinished}
-                  autoPlay 
-                  playsInline 
-                  onEnded={() => setVideoFinished(true)} 
-                  onCanPlay={(e) => { e.target.muted = false; e.target.play().catch(()=>{}); }} 
-                />
+                {isYoutube ? (
+                  <iframe 
+                    className="w-full h-full absolute inset-0 z-10"
+                    src={getYoutubeEmbedUrl(activeTask.video_url)}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    onLoad={() => {
+                      // Simular final de video para YouTube ya que no hay evento directo cross-origin
+                      setTimeout(() => setVideoFinished(true), 10000); 
+                    }}
+                  />
+                ) : (
+                  <video 
+                    ref={videoRef}
+                    className="w-full h-full object-cover absolute inset-0 z-10" 
+                    src={activeTask.video_url} 
+                    controls={videoFinished}
+                    autoPlay 
+                    playsInline 
+                    onEnded={() => setVideoFinished(true)} 
+                    onCanPlay={(e) => { e.target.muted = false; e.target.play().catch(()=>{}); }} 
+                  />
+                )}
                 
                 {/* Timer Overlay sutil (solo visible durante el conteo) */}
                 {!surveyVisible && !showResult && (
@@ -403,7 +445,7 @@ export default function TaskRoom() {
                         {!errorMessage.includes('servidor') && !errorMessage.includes('conexión') && (
                           <>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Tu respuesta: <span className="text-rose-500">{selectedOption}</span></p>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Correcta: <span className="text-emerald-500">{activeTask.respuesta_correcta}</span></p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em]">Correcta: <span className="text-emerald-500">{correctAnswerFromServer || activeTask.respuesta_correcta}</span></p>
                           </>
                         )}
                       </div>

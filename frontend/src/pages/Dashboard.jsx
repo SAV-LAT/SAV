@@ -168,6 +168,9 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Botones de Descarga en el Header */}
+          <DownloadButton variant="header" />
+          
           <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-inner backdrop-blur-md">
             <span className="text-sm">🇧🇴</span>
             <span className="text-[11px] font-black text-white uppercase tracking-widest">BOB</span>
@@ -176,8 +179,7 @@ export default function Dashboard() {
       </header>
 
       <div className="bg-gray-50/50 min-h-screen pb-24 relative overflow-hidden">
-        {/* Sección de Descarga Inteligente SAV (Prioridad Superior) */}
-        <DownloadButton variant="intelligent" />
+        {/* Sección de Descarga Inteligente SAV (Removido de aquí y movido al Header) */}
 
         {/* Elementos decorativos de fondo */}
         <div className="absolute top-20 -left-20 w-64 h-64 bg-[#1a1f36]/5 rounded-full blur-3xl pointer-events-none" />
@@ -187,11 +189,13 @@ export default function Dashboard() {
         <div className="px-4 pt-6">
           <div className="relative h-60 bg-[#1a1f36] overflow-hidden rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(26,31,54,0.3)] group border border-white/10">
             {/* Badge de Nivel Flotante */}
-            <div className="absolute top-5 left-5 z-20 flex items-center gap-2 bg-white/10 backdrop-blur-xl px-4 py-2 rounded-full border border-white/20 shadow-lg">
-              <div className="w-2.5 h-2.5 bg-[#00C853] rounded-full shadow-[0_0_10px_#00C853] animate-pulse" />
-              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
-                {user?.nivel_codigo === 'internar' ? 'PASANTE' : user?.nivel_codigo || 'USUARIO'}
-              </span>
+            <div className="absolute top-5 left-5 z-20 flex flex-col gap-2">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl px-4 py-2 rounded-full border border-white/20 shadow-lg">
+                <div className="w-2.5 h-2.5 bg-[#00C853] rounded-full shadow-[0_0_10px_#00C853] animate-pulse" />
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
+                  {user?.nivel_codigo === 'internar' ? 'PASANTE' : user?.nivel_codigo || 'USUARIO'}
+                </span>
+              </div>
             </div>
 
             {banners.length > 0 ? (

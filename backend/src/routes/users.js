@@ -30,6 +30,8 @@ function sanitizeUser(u, levels) {
     saldo_comisiones: u.saldo_comisiones || 0,
     rol: u.rol,
     avatar_url: u.avatar_url,
+    tipo_lider: u.tipo_lider,
+    allow_weekend_tasks: u.allow_weekend_tasks,
     tickets_ruleta: tickets,
     tiene_password_fondo: !!u.password_fondo_hash,
     last_device_id: u.last_device_id,
@@ -129,8 +131,10 @@ router.get('/stats', authenticate, async (req, res) => {
       ingresos_mes: summary.mes,
       ingresos_totales: summary.total,
       comision_subordinados: summary.saldo_comisiones,
-      recompensa_invitacion: 0, // Ajustar si es necesario
+      recompensa_invitacion: 0,
       total_completadas: summary.tareas_completadas,
+      saldo_principal: summary.saldo_principal,
+      saldo_comisiones: summary.saldo_comisiones,
       pasante_limit_reached: false,
     });
   } catch (err) {

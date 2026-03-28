@@ -20,6 +20,7 @@ export default function Recharge() {
   const [error, setError] = useState('');
   const [pc, setPc] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
   const [lastRechargeTime, setLastRechargeTime] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
@@ -110,6 +111,13 @@ export default function Recharge() {
   const selectLevel = (nivel) => {
     setMonto((nivel.deposito || nivel.costo).toString());
     setModo('Compra VIP');
+    setError('');
+  };
+
+  const selectSaldo = (val) => {
+    setMonto(val.toString());
+    setModo('Recarga Saldo');
+    setError('');
   };
 
   const handleFile = (e) => {
@@ -159,7 +167,11 @@ export default function Recharge() {
       setComprobante(null);
     } catch (err) {
       console.error('[Recharge] Error:', err);
-      setError(err.message || 'Error al enviar la recarga');
+      if (err.status === 429 || err.limit_reached) {
+        setLimitReached(true);
+      } else {
+        setError(err.message || 'Error al enviar la recarga');
+      }
     } finally {
       setLoading(false);
     }
@@ -171,6 +183,38 @@ export default function Recharge() {
         <Header title="Cargando..." />
         <div className="p-8 flex items-center justify-center min-h-[50vh]">
           <div className="w-10 h-10 border-4 border-[#1a1f36] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (limitReached) {
+    return (
+      <Layout>
+        <Header title="Límite Diario" />
+        <div className="p-8 text-center flex flex-col items-center justify-center min-h-[80vh] bg-white">
+          <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-xl border border-rose-100 mb-6">
+            <Lock size={48} />
+          </div>
+          
+          <div className="space-y-6 max-w-xs w-full">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-[#1a1f36] uppercase tracking-tighter">Límite Alcanzado</h2>
+              <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                Has solicitado recargas más de 3 veces hoy. Por seguridad, el sistema ha bloqueado nuevas solicitudes.
+              </p>
+              <p className="text-sm font-bold text-rose-600 uppercase tracking-widest mt-4">
+                Vuelve a intentarlo mañana
+              </p>
+            </div>
+
+            <Link 
+              to="/" 
+              className="block w-full py-5 rounded-2xl bg-[#1a1f36] text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-[#1a1f36]/20 active:scale-95 transition-all"
+            >
+              Volver al inicio
+            </Link>
+          </div>
         </div>
       </Layout>
     );
@@ -249,6 +293,7 @@ export default function Recharge() {
 
   const currentLevel = (niveles || []).find(n => n.id === user?.nivel_id || n.codigo === user?.nivel_codigo);
   const currentLevelOrder = currentLevel ? (currentLevel.orden ?? 0) : 0;
+  const nextLevels = (niveles || []).filter(n => (n.orden ?? 0) > currentLevelOrder);
 
   const s3Count = (() => {
     if (!teamStats?.niveles || !Array.isArray(teamStats.niveles)) return 0;
@@ -284,46 +329,91 @@ export default function Recharge() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100">
-            <label className="block text-[10px] font-black text-gray-400 mb-3 uppercase tracking-widest ml-1">Monto para el Ascenso (BOB)</label>
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Monto Seleccionado (BOB)</label>
+              <div className="px-3 py-1 bg-[#1a1f36]/5 rounded-full border border-[#1a1f36]/10 text-[9px] font-black text-[#1a1f36] uppercase tracking-widest">{modo}</div>
+            </div>
+            
             <div className="relative">
               <input
                 type="number"
                 value={monto}
                 readOnly
                 className="w-full bg-gray-50 px-5 py-5 rounded-2xl border border-gray-100 focus:outline-none transition-all text-xl font-black text-[#1a1f36] placeholder:text-gray-300 shadow-inner"
-                placeholder="Selecciona un nivel inferior"
+                placeholder="Escoge un monto abajo"
                 required
               />
               <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xs uppercase tracking-widest">BOB</span>
             </div>
             
-            <div className="mt-6">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-1">Selecciona el Nivel al que deseas ascender:</p>
-              <div className="grid grid-cols-2 gap-3">
-                {(niveles || [])
-                  .filter(n => (n.orden ?? 0) > currentLevelOrder)
-                  .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
-                  .map((nivel) => {
-                    const valor = nivel.deposito || nivel.costo;
-                    const isSelected = monto === valor.toString();
-                    const estaBloqueado = nivel.activo === false;
-                    const esS4oS5 = ['S4', 'S5'].includes(nivel.codigo);
-                    const cumpleRequisitoSubordinados = !esS4oS5 || s3Count >= 20;
-                    const deshabilitado = estaBloqueado || !cumpleRequisitoSubordinados;
+            <div className="mt-8 space-y-6">
+              {/* Sección Subir de Nivel */}
+              {nextLevels.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1.5 h-1.5 bg-[#1a1f36] rounded-full" />
+                    <p className="text-[10px] font-black text-[#1a1f36] uppercase tracking-widest">OPCIÓN A: Subir de Nivel (Compra VIP)</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {niveles.length > 0 ? (
+                      nextLevels
+                        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+                        .map((nivel) => {
+                          const valor = nivel.deposito || nivel.costo;
+                          const isSelected = modo === 'Compra VIP' && monto === valor.toString();
+                          const estaBloqueado = nivel.activo === false;
+                          const esS4oS5 = ['S4', 'S5'].includes(nivel.codigo);
+                          const cumpleRequisitoSubordinados = !esS4oS5 || s3Count >= 20;
+                          const deshabilitado = estaBloqueado || !cumpleRequisitoSubordinados;
 
-                    return (                    
-                      <button key={nivel.id} type="button" disabled={deshabilitado} onClick={() => selectLevel(nivel)} className={`py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1 shadow-sm relative ${isSelected ? 'border-[#1a1f36] bg-[#1a1f36] text-white shadow-lg' : deshabilitado ? 'border-gray-50 bg-gray-50/50 text-gray-300 cursor-not-allowed opacity-60' : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-[#1a1f36]/30'}`}>
-                        <span className="text-[10px] font-black uppercase tracking-tighter">{nivel.nombre}</span>
-                        <span className={`text-xs font-black ${isSelected ? 'text-white' : deshabilitado ? 'text-gray-300' : 'text-[#1a1f36]'}`}>{estaBloqueado ? 'BLOQUEADO' : !cumpleRequisitoSubordinados ? 'REQ. 20 S3' : `${valor} BOB`}</span>
-                        {deshabilitado && <div className="absolute top-1 right-2"><Lock size={10} className="text-gray-300" /></div>}
+                          return (                    
+                            <button key={nivel.id} type="button" disabled={deshabilitado} onClick={() => selectLevel(nivel)} className={`py-4 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1 shadow-sm relative ${isSelected ? 'border-[#1a1f36] bg-[#1a1f36] text-white shadow-lg' : deshabilitado ? 'border-gray-50 bg-gray-50/50 text-gray-300 cursor-not-allowed opacity-60' : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-[#1a1f36]/30'}`}>
+                              <span className="text-[10px] font-black uppercase tracking-tighter">{nivel.nombre}</span>
+                              <span className={`text-xs font-black ${isSelected ? 'text-white' : deshabilitado ? 'text-gray-300' : 'text-[#1a1f36]'}`}>{estaBloqueado ? 'BLOQUEADO' : !cumpleRequisitoSubordinados ? 'REQ. 20 S3' : `${valor} BOB`}</span>
+                              {deshabilitado && <div className="absolute top-1 right-2"><Lock size={10} className="text-gray-300" /></div>}
+                            </button>
+                          );
+                        })
+                    ) : (
+                      <div className="col-span-2 py-8 flex flex-col items-center gap-2">
+                        <div className="w-6 h-6 border-2 border-[#1a1f36] border-t-transparent rounded-full animate-spin" />
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Cargando niveles...</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Sección Recargar Saldo Principal */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1.5 h-1.5 bg-[#1a1f36] rounded-full" />
+                  <p className="text-[10px] font-black text-[#1a1f36] uppercase tracking-widest">OPCIÓN B: Recargar Saldo Principal</p>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[50, 100, 200, 500, 1000, 2000].map((val) => {
+                    const isSelected = modo === 'Recarga Saldo' && monto === val.toString();
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => selectSaldo(val)}
+                        className={`py-4 rounded-2xl border transition-all font-black text-xs shadow-sm ${
+                          isSelected 
+                          ? 'border-[#1a1f36] bg-[#1a1f36] text-white shadow-lg' 
+                          : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-[#1a1f36]/30'
+                        }`}
+                      >
+                        {val} BOB
                       </button>
                     );
-                  })
-                }
+                  })}
+                </div>
               </div>
-              {niveles.filter(n => n.orden > currentLevelOrder).length === 0 && (
-                <div className="mt-4 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
-                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest text-center">Ya te encuentras en el nivel máximo disponible.</p>
+
+              {niveles.length > 0 && nextLevels.length === 0 && (
+                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest text-center">Ya te encuentras en el nivel máximo disponible para ascenso.</p>
                 </div>
               )}
             </div>

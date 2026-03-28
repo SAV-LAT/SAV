@@ -96,6 +96,8 @@ function sanitizeUser(u, levels) {
     saldo_comisiones: u.saldo_comisiones || 0,
     rol: u.rol,
     avatar_url: u.avatar_url,
+    tipo_lider: u.tipo_lider,
+    allow_weekend_tasks: u.allow_weekend_tasks,
     tickets_ruleta: Number(u.tickets_ruleta) || 0,
     tiene_password_fondo: !!u.password_fondo_hash,
     last_device_id: u.last_device_id,

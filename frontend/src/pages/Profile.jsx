@@ -86,11 +86,13 @@ export default function Profile() {
   }, [user?.id]);
 
   const handleCopy = () => {
-    if (!user?.codigo_invitacion) return;
+    if (!user?.codigo_invitacion || user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') return;
     navigator.clipboard.writeText(user.codigo_invitacion);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const isPasante = user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante';
 
   const menuItems = [
     { to: '/vip', icon: TrendingUp, label: 'Subir de Nivel VIP', color: 'bg-sav-accent', isHot: true },
@@ -105,7 +107,7 @@ export default function Profile() {
 
   return (
     <Layout>
-      <div className="bg-gradient-to-br from-[#1a1f36] to-[#2a2f46] text-white pt-12 pb-20 px-6 rounded-b-[3rem] shadow-[0_20px_50px_-15px_rgba(26,31,54,0.4)] relative overflow-hidden border-b border-white/10">
+      <div className="bg-gradient-to-br from-[#1a1f36] to-[#2a2f46] text-white pt-12 pb-24 px-6 rounded-b-[3rem] shadow-[0_20px_50px_-15px_rgba(26,31,54,0.4)] relative overflow-hidden border-b border-white/10">
         {/* Decoraciones de fondo dinámicas */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl animate-pulse" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full -ml-24 -mb-24 blur-3xl" />
@@ -130,6 +132,16 @@ export default function Profile() {
               <div className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-[0.2em] border border-white/20 shadow-lg">
                 {(user?.nivel_codigo === 'pasante' || user?.nivel_codigo === 'internar') ? 'PASANTE' : (user?.nivel_codigo || user?.nivel)}
               </div>
+              {user?.tipo_lider && (
+                <div className={`px-4 py-1.5 rounded-full backdrop-blur-md text-white text-[10px] font-black uppercase tracking-[0.2em] border shadow-lg flex items-center gap-2 ${
+                  user.tipo_lider === 'lider_premium' 
+                    ? 'bg-amber-500/20 border-amber-500/30 text-amber-300' 
+                    : 'bg-blue-500/20 border-blue-500/30 text-blue-300'
+                }`}>
+                  <ShieldCheck size={12} />
+                  {user.tipo_lider === 'lider_premium' ? 'Líder Premium' : 'Líder'}
+                </div>
+              )}
               <div className="px-3 py-1.5 rounded-full bg-black/20 text-white/60 text-[10px] font-black uppercase tracking-widest border border-white/5">
                 ID: {user?.id?.slice(0, 8)}
               </div>
@@ -137,8 +149,31 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* Sección de Código de Invitación (Condicional para S1+) */}
+        {!isPasante && user?.codigo_invitacion && (
+          <div className="mt-8 bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] p-4 flex items-center justify-between shadow-2xl relative z-10 animate-slideUp">
+            <div className="flex items-center gap-4 pl-2">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10 shadow-inner">
+                <UserPlus size={18} className="text-white/60" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">Tu Código SAV</span>
+                <span className="text-lg font-black text-white tracking-[0.2em] uppercase">{user.codigo_invitacion}</span>
+              </div>
+            </div>
+            <button
+              onClick={handleCopy}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg active:scale-90 ${
+                copied ? 'bg-[#00C853] text-white shadow-[#00C853]/20' : 'bg-white text-[#1a1f36]'
+              }`}
+            >
+              {copied ? <Check size={20} /> : <Copy size={20} />}
+            </button>
+          </div>
+        )}
+
         {/* Balance Cards con Estilo Premium */}
-        <div className="grid grid-cols-3 gap-3 mt-10 relative z-10">
+        <div className="grid grid-cols-3 gap-3 mt-8 relative z-10">
           <div className="bg-white/10 border border-white/20 p-4 rounded-3xl backdrop-blur-xl group hover:bg-white/15 transition-all">
             <div className="flex items-center gap-2 mb-2 opacity-60">
               <Wallet size={10} className="text-white" />

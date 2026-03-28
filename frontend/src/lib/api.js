@@ -4,7 +4,7 @@ const VITE_API_URL = import.meta.env.VITE_API_URL || (isProd ? '/api' : 'http://
 const API = VITE_API_URL;
 
 // Dominio base del backend para medios (videos/imágenes)
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://sav-zhyg.onrender.com';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (isProd ? 'https://sav-zhyg.onrender.com' : 'http://localhost:4000');
 
 function getToken() {
   return localStorage.getItem('token');

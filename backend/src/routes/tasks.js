@@ -5,19 +5,36 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
+// In-memory lock to prevent duplicate task submissions
+const taskLocks = new Set();
+
 router.get('/', authenticate, async (req, res) => {
   try {
-    // Restricción de fin de semana (Sábado = 6, Domingo = 0) - USANDO HORA DE BOLIVIA
-    const day = boliviaTime.getDay();
-    if (day === 0 || day === 6) {
-      return res.status(403).json({ 
-        error: 'Las tareas solo están disponibles de lunes a viernes (Horario Bolivia).',
-        es_fin_de_semana: true 
-      });
-    }
-
     const user = await findUserById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Restricción de días permitidos (Configuración Global + Excepción de Usuario)
+    let config = {};
+    try {
+      config = await getPublicContent();
+    } catch (e) {
+      console.warn('[Tasks] No se pudo cargar configuración pública, usando por defecto (L-V)');
+    }
+    
+    const allowedDays = (config.task_allowed_days || '1,2,3,4,5').split(',').map(Number);
+    const day = boliviaTime.getDay();
+    
+    const isWeekend = day === 0 || day === 6;
+    const isDayAllowed = allowedDays.includes(day);
+    const hasUserException = user.allow_weekend_tasks === true;
+
+    if (!isDayAllowed && !(isWeekend && hasUserException)) {
+      return res.status(403).json({ 
+        error: 'Las tareas no están disponibles el día de hoy (Horario Bolivia).',
+        es_fin_de_semana: isWeekend,
+        config_days: allowedDays
+      });
+    }
 
     const levels = await getLevels();
     const level = levels.find(l => 
@@ -173,6 +190,26 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     const { respuesta } = req.body;
     const user = await findUserById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Restricción de días permitidos al RESPONDER (Doble validación de seguridad)
+    let config = {};
+    try {
+      config = await getPublicContent();
+    } catch (e) {
+      console.warn('[Tasks] No se pudo cargar configuración pública al responder, usando por defecto (L-V)');
+    }
+    const allowedDays = (config.task_allowed_days || '1,2,3,4,5').split(',').map(Number);
+    const day = boliviaTime.getDay();
+    
+    const isWeekend = day === 0 || day === 6;
+    const isDayAllowed = allowedDays.includes(day);
+    const hasUserException = user.allow_weekend_tasks === true;
+
+    if (!isDayAllowed && !(isWeekend && hasUserException)) {
+      return res.status(403).json({ 
+        error: 'No puedes realizar tareas en este momento (Día no permitido).'
+      });
+    }
     
     const task = await getTaskById(req.params.id);
     if (!task) return res.status(404).json({ error: 'Tarea no encontrada' });
@@ -182,55 +219,75 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     const activity = await getTaskActivity(user.id);
     const todayStr = boliviaTime.todayStr();
 
-    // Verificamos si YA la completó exitosamente hoy
+    // Verificamos si YA la completó exitosamente hoy (Idempotencia)
     const yaGanadaHoy = activity.some(
       a => String(a.tarea_id) === String(task.id) && 
            boliviaTime.getDateString(a.created_at) === todayStr &&
            a.respuesta_correcta === true
     );
-    
-    // --- LÓGICA DE VALIDACIÓN ULTRA-REFORZADA ---
-    const normalizeStr = (s) => {
-      if (!s) return '';
-      return s
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Quitar tildes y diacríticos
-        // Unificar todo tipo de comillas, apóstrofes y variantes de puntuación
-        .replace(/['’‘´`\u00B4\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
-        .replace(/[\u200B-\u200D\uFEFF]/g, "") // Quitar caracteres invisibles
-        // MANTENER espacios para evitar falsos positivos en frases
-        .replace(/[^a-zA-Z0-9' ]/g, "") 
-        .replace(/\s+/g, " ") // Unificar múltiples espacios
-        .trim()
-        .toUpperCase();
-    };
 
-    const valUser = normalizeStr(respuesta);
-    const valCorrect = normalizeStr(task.respuesta_correcta);
-    const esCorrectaReal = valUser === valCorrect && valCorrect !== '';
-    const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
-
-    console.log(`\n[VALIDACIÓN PASO A PASO]`);
-    console.log(`  - Task ID: ${task.id}`);
-    console.log(`  - User ID: ${user.id} (${user.nombre_usuario})`);
-    console.log(`  - Recibido Original: "${respuesta}" -> Normalizado: "${valUser}"`);
-    console.log(`  - Esperado Original: "${task.respuesta_correcta}" -> Normalizado: "${valCorrect}"`);
-    console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
-
-    const levels = await getLevels();
-    const level = levels.find(l => 
-      String(l.id) === String(user.nivel_id) || 
-      String(l.codigo).toUpperCase() === String(user.nivel_id).toUpperCase() ||
-      String(l.nombre).toUpperCase() === String(user.nivel_id).toUpperCase()
-    );
-    
-    if (!level) {
-      console.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id} al responder: ${user.nivel_id}`);
-      throw new Error('Nivel de usuario no válido');
+    if (yaGanadaHoy) {
+      return res.status(400).json({ 
+        error: 'Ya has completado esta tarea exitosamente el día de hoy.',
+        success: true, // Para que el frontend lo trate como éxito si ya estaba hecha
+        correcta: true,
+        monto: 0
+      });
     }
 
-    // Registrar actividad PRIMERO
+    // --- BLOQUEO ANTI-DUPLICADO (Race Condition Prevention) ---
+    const lockKey = `${user.id}:${task.id}`;
+    if (taskLocks.has(lockKey)) {
+      console.log(`  - [BLOQUEO] Petición duplicada detectada para ${lockKey}. Ignorando...`);
+      return res.status(429).json({ error: 'Procesando tu respuesta anterior. Por favor, espera.' });
+    }
+    
+    taskLocks.add(lockKey);
+    // Aseguramos que el bloqueo se libere después de un tiempo (ej. 30 segundos) si algo falla catastróficamente
+    const lockTimeout = setTimeout(() => taskLocks.delete(lockKey), 30000);
+    
+    // --- LÓGICA DE VALIDACIÓN ULTRA-REFORZADA ---
     try {
+      const normalizeStr = (s) => {
+        if (!s) return '';
+        return s
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // Quitar tildes y diacríticos
+          // Unificar todo tipo de comillas, apóstrofes y variantes de puntuación
+          .replace(/['’‘´`\u00B4\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+          .replace(/[\u200B-\u200D\uFEFF]/g, "") // Quitar caracteres invisibles
+          // MANTENER espacios para evitar falsos positivos en frases
+          .replace(/[^a-zA-Z0-9' ]/g, "") 
+          .replace(/\s+/g, " ") // Unificar múltiples espacios
+          .trim()
+          .toUpperCase();
+      };
+
+      const valUser = normalizeStr(respuesta);
+      const valCorrect = normalizeStr(task.respuesta_correcta);
+      const esCorrectaReal = valUser === valCorrect && valCorrect !== '';
+      const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
+
+      console.log(`\n[VALIDACIÓN PASO A PASO]`);
+      console.log(`  - Task ID: ${task.id}`);
+      console.log(`  - User ID: ${user.id} (${user.nombre_usuario})`);
+      console.log(`  - Recibido Original: "${respuesta}" -> Normalizado: "${valUser}"`);
+      console.log(`  - Esperado Original: "${task.respuesta_correcta}" -> Normalizado: "${valCorrect}"`);
+      console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
+
+      const levels = await getLevels();
+      const level = levels.find(l => 
+        String(l.id) === String(user.nivel_id) || 
+        String(l.codigo).toUpperCase() === String(user.nivel_id).toUpperCase() ||
+        String(l.nombre).toUpperCase() === String(user.nivel_id).toUpperCase()
+      );
+      
+      if (!level) {
+        console.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id} al responder: ${user.nivel_id}`);
+        throw new Error('Nivel de usuario no válido');
+      }
+
+      // Registrar actividad PRIMERO
       const activityId = uuidv4();
       console.log(`  - [STEP 1] Registrando actividad_tareas...`);
       
@@ -281,21 +338,22 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       } else {
         console.log(`  - [STEP 2] Tarea incorrecta. No se acredita recompensa.`);
       }
-    } catch (e) {
-      console.error(`  - [CRÍTICO] El proceso de respuesta falló en el servidor:`, e.message);
-      return res.status(500).json({ 
-        error: 'Error interno al procesar la respuesta', 
-        details: e.message,
-        step: 'transactional_save'
+
+      res.json({
+        success: true,
+        correcta: esCorrectaReal,
+        monto: recompensa,
+        respuesta_correcta: task.respuesta_correcta, // Devolvemos la respuesta correcta para el feedback
+        mensaje: esCorrectaReal ? '¡Tarea completada con éxito!' : 'Respuesta incorrecta.',
       });
+
+    } finally {
+      // SIEMPRE liberamos el bloqueo al terminar (con éxito o error interno)
+      clearTimeout(lockTimeout);
+      taskLocks.delete(lockKey);
+      console.log(`  - [BLOQUEO] Liberado para ${lockKey}.`);
     }
 
-    res.json({
-      success: true,
-      correcta: esCorrectaReal,
-      monto: recompensa,
-      mensaje: esCorrectaReal ? '¡Tarea completada con éxito!' : 'Respuesta incorrecta.',
-    });
   } catch (err) {
     console.error(`[Tasks v4] Error crítico en responder tarea ${req.params.id}:`, err);
     res.status(500).json({ 

@@ -1,18 +1,17 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { findUserById, getLevels, getTasks, getTaskById, getTaskActivity, createTaskActivity, updateUser, addUserEarnings, distributeCommissions } from '../lib/queries.js';
+import { findUserById, getLevels, getTasks, getTaskById, getTaskActivity, createTaskActivity, updateUser, addUserEarnings, distributeCommissions, boliviaTime } from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
 router.get('/', authenticate, async (req, res) => {
   try {
-    // Restricción de fin de semana (Sábado = 6, Domingo = 0)
-    const now = new Date();
-    const day = now.getDay();
+    // Restricción de fin de semana (Sábado = 6, Domingo = 0) - USANDO HORA DE BOLIVIA
+    const day = boliviaTime.getDay();
     if (day === 0 || day === 6) {
       return res.status(403).json({ 
-        error: 'Las tareas solo están disponibles de lunes a viernes.',
+        error: 'Las tareas solo están disponibles de lunes a viernes (Horario Bolivia).',
         es_fin_de_semana: true 
       });
     }
@@ -38,15 +37,10 @@ router.get('/', authenticate, async (req, res) => {
     // Obtener actividad REAL del usuario (auditada por movimientos_saldo si es posible, o actividad_tareas)
     const activity = await getTaskActivity(user.id);
     
-    // Helper para fechas en zona horaria Bolivia
-    const getBoliviaDateString = (date) => {
-      return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }); // YYYY-MM-DD
-    };
-    
-    const todayStr = getBoliviaDateString(new Date());
+    const todayStr = boliviaTime.todayStr();
     
     // Contar intentos de hoy (solo los que coincidan con la fecha de hoy en Bolivia)
-    const todayActivity = activity.filter(a => getBoliviaDateString(a.created_at) === todayStr);
+    const todayActivity = activity.filter(a => boliviaTime.getDateString(a.created_at) === todayStr);
     const todayCompletedCount = todayActivity.length;
 
     // Lógica especial para Pasante: 3 días desde el REGISTRO
@@ -150,14 +144,10 @@ router.get('/:id', authenticate, async (req, res) => {
     
     const activity = await getTaskActivity(req.user.id);
     
-    const getBoliviaDateString = (date) => {
-      return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }); // YYYY-MM-DD
-    };
-    
-    const todayStr = getBoliviaDateString(new Date());
+    const todayStr = boliviaTime.todayStr();
     const yaCompletadaExitosamente = activity.some(
       a => String(a.tarea_id) === String(task.id) && 
-           getBoliviaDateString(a.created_at) === todayStr && 
+           boliviaTime.getDateString(a.created_at) === todayStr && 
            a.respuesta_correcta === true
     );
 
@@ -195,14 +185,11 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     console.log(`[Tasks v4] Respuesta recibida de ${user.nombre_usuario} para tarea ${req.params.id}: "${respuesta}"`);
 
     const activity = await getTaskActivity(user.id);
-    const getBoliviaDateString = (date) => {
-      return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }); // YYYY-MM-DD
-    };
-    const todayStr = getBoliviaDateString(new Date());
+    const todayStr = boliviaTime.todayStr();
 
     const yaIntentadaHoy = activity.some(
       a => String(a.tarea_id) === String(task.id) && 
-           getBoliviaDateString(a.created_at) === todayStr
+           boliviaTime.getDateString(a.created_at) === todayStr
     );
     
     if (yaIntentadaHoy) {

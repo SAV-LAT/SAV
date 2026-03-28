@@ -5,14 +5,20 @@ export function parseMinutes(hhmm) {
   return h * 60 + m;
 }
 
+/** @returns {Date} */
+export function getBoliviaNow() {
+  const now = new Date();
+  return new Date(now.toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+}
+
 /** @returns {{ ok: boolean, message?: string }} */
-export function isScheduleOpen(schedule, now = new Date()) {
+export function isScheduleOpen(schedule, now = getBoliviaNow()) {
   if (!schedule || schedule.enabled === false) return { ok: true };
   const dias = Array.isArray(schedule.dias_semana) ? schedule.dias_semana : [];
   if (dias.length === 0) return { ok: false, message: 'No hay días habilitados.' };
   const day = now.getDay();
   if (!dias.includes(day)) {
-    return { ok: false, message: 'Hoy no está permitido.' };
+    return { ok: false, message: 'Hoy no está permitido (Horario Bolivia).' };
   }
   const start = parseMinutes(schedule.hora_inicio || '00:00');
   const end = parseMinutes(schedule.hora_fin || '23:59');
@@ -23,7 +29,7 @@ export function isScheduleOpen(schedule, now = new Date()) {
   if (!inWindow) {
     return {
       ok: false,
-      message: `Fuera del horario (${schedule.hora_inicio || '00:00'} – ${schedule.hora_fin || '23:59'}).`,
+      message: `Fuera del horario (${schedule.hora_inicio || '00:00'} – ${schedule.hora_fin || '23:59'}) Horario Bolivia.`,
     };
   }
   return { ok: true };

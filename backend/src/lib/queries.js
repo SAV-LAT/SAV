@@ -28,6 +28,43 @@ export async function findUserByTelefono(telefono) {
   return data;
 }
 
+/**
+ * Utilidades para fechas en zona horaria de Bolivia (America/La_Paz)
+ */
+export const boliviaTime = {
+  // Obtiene la fecha actual en Bolivia como objeto Date
+  now: () => {
+    const now = new Date();
+    return new Date(now.toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+  },
+  
+  // Obtiene la fecha actual en Bolivia como string YYYY-MM-DD
+  todayStr: () => {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
+  },
+
+  // Obtiene el día de la semana actual en Bolivia (0-6)
+  getDay: () => {
+    const nowBolivia = new Date().toLocaleString('en-US', { timeZone: 'America/La_Paz' });
+    return new Date(nowBolivia).getDay();
+  },
+
+  // Formatea cualquier fecha a string YYYY-MM-DD en Bolivia
+  getDateString: (date) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
+  },
+
+  // Obtiene un objeto Date ajustado a Bolivia para comparaciones
+  getBoliviaDate: (date) => {
+    if (!date) return null;
+    return new Date(new Date(date).toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+  }
+};
+
+/**
+ * Busca un usuario por ID
+ */
 export async function findUserById(id) {
   const { data } = await trySupabase(() => supabase.from('usuarios').select('*').eq('id', id).maybeSingle());
   return data;
@@ -365,20 +402,14 @@ export async function getUserEarningsSummary(userId) {
       };
     }
 
-    const getBoliviaDateString = (date) => {
-      return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' }); // Retorna YYYY-MM-DD
-    };
-
-    const todayStr = getBoliviaDateString(new Date());
+    const todayStr = boliviaTime.todayStr();
     
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = getBoliviaDateString(yesterday);
+    const yesterdayStr = boliviaTime.getDateString(yesterday);
 
     // Inicio de semana (Lunes) en Bolivia
-    const now = new Date();
-    const boliviaTimeStr = now.toLocaleString('en-US', { timeZone: 'America/La_Paz' });
-    const boliviaNow = new Date(boliviaTimeStr);
+    const boliviaNow = boliviaTime.now();
     
     const startOfWeek = new Date(boliviaNow);
     const day = startOfWeek.getDay();
@@ -392,8 +423,8 @@ export async function getUserEarningsSummary(userId) {
     let hoy = 0, ayer = 0, semana = 0, mes = 0, total = 0;
 
     movimientos.forEach(m => {
-      const mDateStr = getBoliviaDateString(m.fecha);
-      const mDate = new Date(new Date(m.fecha).toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+      const mDateStr = boliviaTime.getDateString(m.fecha);
+      const mDate = boliviaTime.getBoliviaDate(m.fecha);
       const monto = Number(m.monto) || 0;
 
       total += monto;

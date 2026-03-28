@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import { findUserById, getRetirosByUser, createRetiro, getTarjetasByUser, getPublicContent, updateUser } from '../lib/queries.js';
+import { findUserById, getRetirosByUser, createRetiro, getTarjetasByUser, getPublicContent, updateUser, boliviaTime } from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
 import { mergePublicContent } from '../data/publicContentDefaults.js';
 import { isScheduleOpen } from '../lib/schedule.js';
@@ -41,14 +41,12 @@ router.post('/', authenticate, async (req, res) => {
   if (!ok) return res.status(400).json({ error: 'La contraseña de fondos es incorrecta, por favor confirma' });
   if (!qr_retiro) return res.status(400).json({ error: 'Debes subir tu QR para el retiro' });
 
-  // Validar un solo retiro por día
+  // Validar un solo retiro por día (Horario Bolivia)
   const userWithdrawals = await getRetirosByUser(user.id);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayStr = boliviaTime.todayStr();
   
   const hasWithdrawalToday = userWithdrawals.some(w => {
-    const withdrawalDate = new Date(w.created_at);
-    return withdrawalDate >= startOfToday;
+    return boliviaTime.getDateString(w.created_at) === todayStr;
   });
 
   if (hasWithdrawalToday) {

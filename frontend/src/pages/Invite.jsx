@@ -11,6 +11,8 @@ export default function Invite() {
   const [copiedLink, setCopiedLink] = useState(false);
 
   const inviteLink = `https://sav-lat.vercel.app/register?ref=${user?.codigo_invitacion || ''}`;
+  // Force update
+  const [trigger, setTrigger] = useState(0);
 
   const handleCopyCode = () => {
     if (!user?.codigo_invitacion || user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') return;

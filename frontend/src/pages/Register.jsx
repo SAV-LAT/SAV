@@ -67,7 +67,7 @@ export default function Register() {
           <div className="inline-block mb-6 relative group">
             <div className="absolute inset-0 bg-white/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             <div className="relative w-24 h-24 rounded-[2rem] overflow-hidden shadow-2xl border-2 border-white/10 p-1 bg-white/5 backdrop-blur-2xl transition-all duration-700 group-hover:scale-110 group-hover:rotate-6">
-              <img src="/imag/logo.jpeg" alt="SAV" className="w-full h-full object-cover rounded-[1.8rem]" />
+              <img src="/imag/logo-carrusel.png" alt="SAV" className="w-full h-full object-contain rounded-[1.8rem] bg-white/5 p-2" />
             </div>
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-white mb-2 drop-shadow-2xl">SAV</h1>

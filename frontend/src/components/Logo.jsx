@@ -12,7 +12,7 @@ export default function Logo({ variant = 'header', className = '' }) {
 
   return (
     <img
-      src="/imag/logo.jpeg"
+      src="/imag/logo-carrusel.png"
       alt="SAV"
       className={`${base} ${variants[variant] || variants.header} ${className}`}
     />

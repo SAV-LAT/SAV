@@ -116,21 +116,6 @@ export default function TaskRoom() {
     return () => clearInterval(interval);
   }, [activeTask, surveyVisible, timer]);
 
-  const isYouTube = (url) => {
-    return url && (url.includes('youtube.com') || url.includes('youtu.be'));
-  };
-
-  const getYouTubeEmbedUrl = (url) => {
-    if (!url) return '';
-    let videoId = '';
-    if (url.includes('v=')) {
-      videoId = url.split('v=')[1].split('&')[0];
-    } else if (url.includes('youtu.be/')) {
-      videoId = url.split('youtu.be/')[1].split('?')[0];
-    }
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0`;
-  };
-
   // Manejo de Inicio de Tarea
   const startTask = (task) => {
     console.log('[TaskRoom] Iniciando tarea:', task.id);
@@ -334,27 +319,16 @@ export default function TaskRoom() {
             <section className="relative group w-full shrink-0">
               <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-30 transition duration-1000"></div>
               <div className="relative w-full aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border-[6px] border-white ring-1 ring-black/5 flex items-center justify-center">
-                {isYouTube(activeTask.video_url) ? (
-                  <iframe 
-                    className="w-full h-full absolute inset-0 z-10"
-                    src={getYouTubeEmbedUrl(activeTask.video_url)}
-                    title="YouTube video player"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <video 
-                    ref={videoRef}
-                    className="w-full h-full object-cover absolute inset-0 z-10" 
-                    src={api.getMediaUrl(activeTask.video_url)} 
-                    controls={videoFinished}
-                    autoPlay 
-                    playsInline 
-                    onEnded={() => setVideoFinished(true)} 
-                    onCanPlay={(e) => { e.target.muted = false; e.target.play().catch(()=>{}); }} 
-                  />
-                )}
+                <video 
+                  ref={videoRef}
+                  className="w-full h-full object-cover absolute inset-0 z-10" 
+                  src={activeTask.video_url} 
+                  controls={videoFinished}
+                  autoPlay 
+                  playsInline 
+                  onEnded={() => setVideoFinished(true)} 
+                  onCanPlay={(e) => { e.target.muted = false; e.target.play().catch(()=>{}); }} 
+                />
                 
                 {/* Timer Overlay sutil (solo visible durante el conteo) */}
                 {!surveyVisible && !showResult && (

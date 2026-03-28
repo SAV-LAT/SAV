@@ -490,10 +490,7 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
     };
 
     // Actualizamos también los periodos para que la UI se vea bien de inmediato
-    // El cron job de medianoche se encargará de la precisión absoluta si fuera necesario
-    const now = new Date();
-    const boliviaTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
-    const hour = boliviaTime.getHours();
+    const boliviaNow = boliviaTime.now();
     
     // Si estamos en el mismo día, sumamos a hoy
     updates.ganancias_hoy = Number((Number(user.ganancias_hoy) || 0) + amount).toFixed(2);

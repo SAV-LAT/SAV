@@ -80,7 +80,7 @@ router.post('/', authenticate, async (req, res) => {
     tipo_billetera: tipo_billetera || 'principal',
     qr_retiro: qr_retiro,
     estado: 'pendiente',
-    created_at: new Date().toISOString(),
+    created_at: boliviaTime.now().toISOString(),
   };
   await createRetiro(retiro);
   

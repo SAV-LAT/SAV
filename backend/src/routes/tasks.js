@@ -248,7 +248,7 @@ router.post('/:id/responder', authenticate, async (req, res) => {
         respuesta_correcta: esCorrectaReal,
         recompensa_otorgada: recompensa,
         nivel_id: level.id,
-        created_at: new Date().toISOString(),
+        created_at: boliviaTime.now().toISOString(),
       };
 
       try {

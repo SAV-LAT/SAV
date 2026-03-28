@@ -305,11 +305,11 @@ export default function Ganancias() {
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5 text-[8px] font-black text-gray-300 uppercase tracking-widest">
                           <Clock size={10} />
-                          {new Date(m.fecha).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
+                          {new Date(m.fecha).toLocaleDateString('es-BO', { day: '2-digit', month: 'short', timeZone: 'America/La_Paz' })}
                         </div>
                         <div className="w-1 h-1 bg-gray-200 rounded-full" />
                         <span className="text-[8px] font-mono text-gray-300 uppercase tracking-widest">
-                          {new Date(m.fecha).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(m.fecha).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', timeZone: 'America/La_Paz' })}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

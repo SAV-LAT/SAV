@@ -1,4 +1,8 @@
 import 'dotenv/config';
+// Forzar Zona Horaria de Bolivia a nivel de proceso Node.js
+process.env.TZ = 'America/La_Paz';
+console.log('[TIMEZONE] Configurado a: ' + process.env.TZ + ' (Bolivia)');
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';

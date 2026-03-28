@@ -186,7 +186,7 @@ export default function Dashboard() {
           <div className="relative">
             <div className="absolute inset-0 bg-white/20 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="w-11 h-11 rounded-[1.2rem] overflow-hidden shadow-2xl border border-white/20 p-1 bg-white/5 backdrop-blur-xl relative z-10 transition-all duration-500 group-hover:scale-105 group-hover:rotate-3">
-              <img src="/imag/logo.jpeg" alt="SAV" className="w-full h-full object-cover rounded-lg" />
+              <img src="/imag/logo-carrusel.png" alt="SAV" className="w-full h-full object-contain rounded-lg" />
             </div>
           </div>
           <div className="flex flex-col justify-center">
@@ -196,12 +196,24 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center gap-2">
-          <DownloadButton platform="android" variant="header" />
-          <DownloadButton platform="ios" variant="header" />
+          <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-inner backdrop-blur-md">
+            <span className="text-sm">🇧🇴</span>
+            <span className="text-[11px] font-black text-white uppercase tracking-widest">BOB</span>
+          </div>
         </div>
       </header>
 
       <div className="bg-gray-50/50 min-h-screen pb-24 relative overflow-hidden">
+        {/* Sección de Descarga App Nativa - Superior */}
+        <div className="px-4 pt-4 flex gap-3">
+          <div className="flex-1">
+            <DownloadButton platform="android" variant="header" />
+          </div>
+          <div className="flex-1">
+            <DownloadButton platform="ios" variant="header" />
+          </div>
+        </div>
+
         {/* Elementos decorativos de fondo */}
         <div className="absolute top-20 -left-20 w-64 h-64 bg-[#1a1f36]/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-40 -right-20 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -355,14 +367,8 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Sección de Descarga App Nativa */}
-        <div className="mt-4 flex flex-col gap-2">
-          <DownloadButton platform="android" />
-          <DownloadButton platform="ios" />
-        </div>
-
         {/* Footer Info sutil */}
-        <div className="mt-8 px-8 text-center">
+        <div className="mt-12 pb-12 px-8 text-center">
           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
             SAV • Sistema de Activos Virtuales
           </p>

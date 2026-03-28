@@ -5,7 +5,7 @@ import { CONFIG } from '../config.js';
 const DownloadButton = ({ platform = 'android', variant = 'default' }) => {
   const handleDownload = () => {
     if (platform === 'ios') {
-      alert('📲 Instalación en iPhone:\n1. Toca el botón central de abajo (Compartir)\n2. Selecciona "Agregar a inicio"');
+      window.location.href = CONFIG.WEB_URL;
       return;
     }
 

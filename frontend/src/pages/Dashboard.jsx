@@ -176,15 +176,8 @@ export default function Dashboard() {
       </header>
 
       <div className="bg-gray-50/50 min-h-screen pb-24 relative overflow-hidden">
-        {/* Sección de Descarga App Nativa - Superior */}
-        <div className="px-4 pt-4 flex gap-3">
-          <div className="flex-1">
-            <DownloadButton platform="android" variant="header" />
-          </div>
-          <div className="flex-1">
-            <DownloadButton platform="ios" variant="header" />
-          </div>
-        </div>
+        {/* Sección de Descarga Inteligente SAV */}
+        <DownloadButton variant="intelligent" />
 
         {/* Elementos decorativos de fondo */}
         <div className="absolute top-20 -left-20 w-64 h-64 bg-[#1a1f36]/5 rounded-full blur-3xl pointer-events-none" />

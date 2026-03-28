@@ -157,9 +157,9 @@ export default function Login() {
           </Link>
         </div>
 
-        {/* Botón de Descarga App Android */}
-        <div className="mt-2">
-          <DownloadButton />
+        {/* Sección de Descarga Inteligente */}
+        <div className="mt-2 w-full max-w-[320px] mx-auto">
+          <DownloadButton variant="intelligent" />
         </div>
       </div>
     </div>

@@ -1,94 +1,108 @@
-import React, { useState } from 'react';
-import { Smartphone, DownloadCloud, AlertCircle, Apple, X, MoreVertical, Share, PlusSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Smartphone, DownloadCloud, AlertCircle, Apple, X, MoreVertical, Share, PlusSquare, Globe, ExternalLink } from 'lucide-react';
 import { CONFIG } from '../config.js';
 
-const DownloadButton = ({ platform = 'android', variant = 'default' }) => {
+const DownloadButton = ({ variant = 'default' }) => {
   const [showIosModal, setShowIosModal] = useState(false);
+  const [device, setDevice] = useState('unknown');
 
-  const handleDownload = () => {
-    if (platform === 'ios') {
-      setShowIosModal(true);
-      return;
+  useEffect(() => {
+    const ua = navigator.userAgent.toLowerCase();
+    if (/android/.test(ua)) {
+      setDevice('android');
+    } else if (/iphone|ipad|ipod/.test(ua)) {
+      setDevice('ios');
+    } else {
+      setDevice('desktop');
     }
+  }, []);
 
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIOS && platform === 'android') {
-      setShowIosModal(true);
-      return;
-    }
-
-    // Redirección directa al APK configurado
+  const handleAndroidDownload = () => {
     window.location.href = CONFIG.APK_DOWNLOAD_URL;
   };
 
-  if (variant === 'header') {
+  const handleIosAction = () => {
+    setShowIosModal(true);
+  };
+
+  const handleWebAction = () => {
+    window.location.href = CONFIG.WEB_URL;
+  };
+
+  // Renderizado Inteligente para el Dashboard (Parte Superior)
+  if (variant === 'intelligent') {
     return (
-      <>
-        <button
-          onClick={handleDownload}
-          className={`relative flex items-center gap-2 px-3 py-2 rounded-xl shadow-xl transition-all duration-300 active:scale-95 border border-white/10 group overflow-hidden ${
-            platform === 'ios' ? 'bg-white text-[#1a1f36]' : 'bg-[#1a1f36] text-white'
-          }`}
-        >
-          <div className={`p-1 rounded-lg shadow-lg ${platform === 'ios' ? 'bg-[#1a1f36] text-white' : 'bg-emerald-500 text-white'}`}>
-            {platform === 'ios' ? <Apple size={14} strokeWidth={2.5} /> : <DownloadCloud size={14} strokeWidth={2.5} />}
+      <div className="w-full px-4 pt-4 pb-2">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 shadow-2xl overflow-hidden relative group">
+          {/* Fondo decorativo sutil */}
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full group-hover:bg-emerald-500/20 transition-all duration-700" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-tr from-[#1a1f36] to-[#2a2f46] rounded-2xl flex items-center justify-center shadow-lg border border-white/10">
+                {device === 'ios' ? <Apple className="text-white" size={24} /> : <DownloadCloud className="text-emerald-400" size={24} />}
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-tight">
+                  {device === 'android' ? 'App Oficial para Android' : device === 'ios' ? 'Versión Web para iPhone' : 'Descarga nuestra App'}
+                </h3>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">
+                  {device === 'android' ? `Versión ${CONFIG.APP_VERSION} Estable` : device === 'ios' ? 'Instalación PWA Optimizada' : 'Acceso Multiplataforma'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              {/* Lógica de botones según dispositivo */}
+              {(device === 'android' || device === 'desktop') && (
+                <button
+                  onClick={handleAndroidDownload}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-500/20 group/btn"
+                >
+                  <DownloadCloud size={16} className="group-hover/btn:animate-bounce" />
+                  Descargar APK
+                </button>
+              )}
+
+              {(device === 'ios' || device === 'desktop') && (
+                <button
+                  onClick={device === 'ios' ? handleIosAction : handleWebAction}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-[#1a1f36] rounded-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-lg group/btn"
+                >
+                  {device === 'ios' ? <Apple size={16} /> : <Globe size={16} />}
+                  {device === 'ios' ? 'Instalar en iPhone' : 'Versión Web'}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="text-left">
-            <p className={`text-[6px] font-black uppercase tracking-widest leading-none mb-0.5 ${platform === 'ios' ? 'text-[#1a1f36]/40' : 'text-emerald-400'}`}>
-              {platform === 'ios' ? 'iPhone' : 'Android'}
-            </p>
-            <p className="text-[9px] font-black uppercase tracking-tight leading-none">
-              {platform === 'ios' ? 'Instalar' : 'Descargar'}
-            </p>
-          </div>
-        </button>
+        </div>
         {showIosModal && <IosInstructions onClose={() => setShowIosModal(false)} />}
-      </>
+      </div>
     );
   }
 
+  // Mantener compatibilidad con otras variantes si existen
   return (
     <div className="w-full flex flex-col items-center justify-center py-6 px-4">
+      {/* Botón Simple (Android por defecto) */}
       <div className="relative group w-full max-w-[280px]">
-        {/* Efecto de resplandor */}
-        <div className={`absolute -inset-1 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 ${
-          platform === 'ios' ? 'bg-gradient-to-r from-gray-200 to-gray-400' : 'bg-gradient-to-r from-emerald-500 to-blue-600'
-        }`}></div>
-        
+        <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
         <button
-          onClick={handleDownload}
-          className={`relative w-full flex items-center justify-between px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 active:scale-95 border border-white/10 group ${
-            platform === 'ios' ? 'bg-white text-[#1a1f36]' : 'bg-[#1a1f36] text-white'
-          }`}
+          onClick={handleAndroidDownload}
+          className="relative w-full flex items-center justify-between px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 active:scale-95 border border-white/10 group bg-[#1a1f36] text-white"
         >
           <div className="flex items-center gap-4">
-            <div className={`p-2 rounded-xl shadow-lg transition-transform duration-500 group-hover:rotate-12 ${
-              platform === 'ios' ? 'bg-[#1a1f36] text-white' : 'bg-emerald-500 text-white shadow-emerald-500/20'
-            }`}>
-              {platform === 'ios' ? <Apple size={24} strokeWidth={2.5} /> : <DownloadCloud size={24} strokeWidth={2.5} />}
+            <div className="bg-emerald-500 p-2 rounded-xl shadow-lg transition-transform duration-500 group-hover:rotate-12">
+              <DownloadCloud size={24} className="text-white" strokeWidth={2.5} />
             </div>
             <div className="text-left">
-              <p className={`text-[10px] font-black uppercase tracking-widest leading-none mb-1 ${
-                platform === 'ios' ? 'text-[#1a1f36]/40' : 'text-emerald-400'
-              }`}>
-                {platform === 'ios' ? 'Apple iOS' : 'Android App'}
-              </p>
-              <p className="text-sm font-black uppercase tracking-tight leading-none">
-                {platform === 'ios' ? 'Instalar SAV 🍎' : 'Descargar SAV 📲'}
-              </p>
+              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1">Android App</p>
+              <p className="text-sm font-black text-white uppercase tracking-tight leading-none">Descargar SAV 📲</p>
             </div>
           </div>
-          <Smartphone size={18} className={`transition-colors ${
-            platform === 'ios' ? 'text-[#1a1f36]/20 group-hover:text-blue-500' : 'text-white/20 group-hover:text-emerald-400'
-          }`} />
+          <Smartphone size={18} className="text-white/20 group-hover:text-emerald-400 transition-colors" />
         </button>
       </div>
-      
-      <p className="mt-4 text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-        <AlertCircle size={10} className={platform === 'ios' ? 'text-blue-500' : 'text-emerald-500'} />
-        {platform === 'ios' ? 'Versión Web Optimizada' : 'Versión Oficial v1.0.0 (APK)'}
-      </p>
-
       {showIosModal && <IosInstructions onClose={() => setShowIosModal(false)} />}
     </div>
   );
@@ -116,17 +130,17 @@ const IosInstructions = ({ onClose }) => (
           <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100 group">
             <div className="w-10 h-10 rounded-xl bg-[#1a1f36] text-white flex items-center justify-center font-black shrink-0 shadow-lg">1</div>
             <div className="flex-1">
-              <p className="text-[11px] font-black text-[#1a1f36] uppercase tracking-tight leading-none mb-1">Abre en Chrome/Safari</p>
-              <p className="text-[10px] font-medium text-gray-500">Asegúrate de estar en esta web.</p>
+              <p className="text-[11px] font-black text-[#1a1f36] uppercase tracking-tight leading-none mb-1">Abre en Safari</p>
+              <p className="text-[10px] font-medium text-gray-500">Asegúrate de estar usando Safari.</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
             <div className="w-10 h-10 rounded-xl bg-[#1a1f36] text-white flex items-center justify-center font-black shrink-0 shadow-lg">2</div>
             <div className="flex-1">
-              <p className="text-[11px] font-black text-[#1a1f36] uppercase tracking-tight leading-none mb-1">Toca los 3 puntitos</p>
+              <p className="text-[11px] font-black text-[#1a1f36] uppercase tracking-tight leading-none mb-1">Toca Compartir</p>
               <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1.5">
-                Busca el menú <MoreVertical size={12} className="text-emerald-500" /> o Compartir <Share size={12} className="text-blue-500" />
+                Busca el icono de compartir <Share size={12} className="text-blue-500" /> en la barra inferior.
               </p>
             </div>
           </div>

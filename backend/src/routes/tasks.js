@@ -34,14 +34,16 @@ router.get('/', authenticate, async (req, res) => {
       });
     }
     
-    // Obtener actividad REAL del usuario (auditada por movimientos_saldo si es posible, o actividad_tareas)
+    // Obtener actividad REAL del usuario
     const activity = await getTaskActivity(user.id);
-    
     const todayStr = boliviaTime.todayStr();
     
-    // Contar intentos de hoy (solo los que coincidan con la fecha de hoy en Bolivia)
-    const todayActivity = activity.filter(a => boliviaTime.getDateString(a.created_at) === todayStr);
-    const todayCompletedCount = todayActivity.length;
+    // Contar SOLO las tareas completadas EXITOSAMENTE hoy para el cupo diario
+    const todaySuccessfulActivity = activity.filter(a => 
+      boliviaTime.getDateString(a.created_at) === todayStr && 
+      a.respuesta_correcta === true
+    );
+    const todayCompletedCount = todaySuccessfulActivity.length;
 
     // Lógica especial para Pasante: 3 días desde el REGISTRO
     const isPasante = String(level.codigo).toLowerCase() === 'pasante';
@@ -49,7 +51,8 @@ router.get('/', authenticate, async (req, res) => {
       const fechaRegistro = user.created_at || user.fecha_registro;
       if (fechaRegistro) {
         const regDate = new Date(fechaRegistro);
-        const diffTime = Math.abs(now - regDate);
+        const boliviaNow = boliviaTime.now();
+        const diffTime = Math.abs(boliviaNow - regDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
         if (diffDays > 3) {
@@ -64,7 +67,7 @@ router.get('/', authenticate, async (req, res) => {
         }
       }
     }
-
+    
     const numTareasDiarias = Number(level.num_tareas_diarias || level.tareas_diarias) || 0;
     const remaining = Math.max(0, numTareasDiarias - todayCompletedCount);
     
@@ -77,37 +80,22 @@ router.get('/', authenticate, async (req, res) => {
       // Obtener todas las tareas del nivel actual
       const allTasks = await getTasks(level.id);
       
-      // Filtrar tareas que NO se han intentado hoy (ni bien ni mal)
-      const attemptedTaskIdsToday = new Set(todayActivity.map(a => String(a.tarea_id)));
+      // Ya NO filtramos por intentos. El usuario puede ver todas las tareas de su nivel.
+      // Pero identificamos cuáles ya completó exitosamente para que no gane doble.
+      const successfulTaskIdsToday = new Set(todaySuccessfulActivity.map(a => String(a.tarea_id)));
       
-    // FILTRO DE INTEGRIDAD ESTRICTO: Solo tareas que tengan video, pregunta, opciones y respuesta correcta
-    const pool = allTasks.filter(t => {
-      const hasVideo = t.video_url && String(t.video_url).trim().length > 0;
-      const hasQuestion = t.pregunta && String(t.pregunta).trim().length > 0;
-      const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0 && t.opciones.every(o => String(o).trim().length > 0);
-      const hasAnswer = t.respuesta_correcta && String(t.respuesta_correcta).trim().length > 0;
-      const isNotAttempted = !attemptedTaskIdsToday.has(String(t.id));
+      // FILTRO DE INTEGRIDAD ESTRICTO
+      const pool = allTasks.filter(t => {
+        const hasVideo = t.video_url && String(t.video_url).trim().length > 0;
+        const hasQuestion = t.pregunta && String(t.pregunta).trim().length > 0;
+        const hasOptions = Array.isArray(t.opciones) && t.opciones.length > 0;
+        const hasAnswer = t.respuesta_correcta && String(t.respuesta_correcta).trim().length > 0;
+        
+        return hasVideo && hasQuestion && hasOptions && hasAnswer;
+      });
       
-      // LOG TEMPORAL PARA DEPURAR FILTRADO
-      if (!hasVideo || !hasQuestion || !hasOptions || !hasAnswer) {
-        console.warn(`[FILTRO TAREA] ${t.id} ("${t.nombre}") EXCLUIDA:`, {
-          hasVideo: !!hasVideo,
-          hasQuestion: !!hasQuestion,
-          hasOptions: !!hasOptions,
-          hasAnswer: !!hasAnswer,
-          video_url: t.video_url,
-          pregunta: t.pregunta,
-          opcionesCount: Array.isArray(t.opciones) ? t.opciones.length : 0,
-          respuesta_correcta: t.respuesta_correcta
-        });
-        return false;
-      }
-      
-      return isNotAttempted;
-    });
-      
-      // Selección aleatoria
-      availableTasks = pool.sort(() => 0.5 - Math.random()).slice(0, remaining);
+      // Selección aleatoria de las tareas disponibles
+      availableTasks = pool.sort(() => 0.5 - Math.random()).slice(0, remaining + 5); // Mostramos un poco más por si acaso
     }
 
     res.json({
@@ -115,17 +103,24 @@ router.get('/', authenticate, async (req, res) => {
       nivel_id: level.id,
       tareas_restantes: remaining,
       tareas_completadas: todayCompletedCount,
-      tareas: availableTasks.map(t => ({
-        id: t.id,
-        nombre: t.nombre,
-        recompensa: t.recompensa,
-        video_url: t.video_url,
-        descripcion: t.descripcion,
-        comentario_ingles: t.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.',
-        pregunta: t.pregunta,
-        opciones: t.opciones,
-        respuesta_correcta: t.respuesta_correcta
-      })),
+      tareas: availableTasks.map(t => {
+        const completada = activity.some(a => 
+          String(a.tarea_id) === String(t.id) && 
+          boliviaTime.getDateString(a.created_at) === todayStr && 
+          a.respuesta_correcta === true
+        );
+        
+        return {
+          id: t.id,
+          nombre: t.nombre,
+          recompensa: t.recompensa,
+          video_url: t.video_url,
+          descripcion: t.descripcion,
+          pregunta: t.pregunta,
+          opciones: t.opciones,
+          completada_hoy: completada // Informamos al frontend
+        };
+      }),
       mensaje
     });
   } catch (err) {
@@ -187,15 +182,13 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     const activity = await getTaskActivity(user.id);
     const todayStr = boliviaTime.todayStr();
 
-    const yaIntentadaHoy = activity.some(
+    // Verificamos si YA la completó exitosamente hoy
+    const yaGanadaHoy = activity.some(
       a => String(a.tarea_id) === String(task.id) && 
-           boliviaTime.getDateString(a.created_at) === todayStr
+           boliviaTime.getDateString(a.created_at) === todayStr &&
+           a.respuesta_correcta === true
     );
     
-    if (yaIntentadaHoy) {
-      return res.status(400).json({ error: 'Ya intentaste esta tarea hoy' });
-    }
-
     // --- LÓGICA DE VALIDACIÓN ULTRA-REFORZADA ---
     const normalizeStr = (s) => {
       if (!s) return '';
@@ -262,24 +255,28 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       }
 
       if (esCorrectaReal) {
-        console.log(`  - [STEP 2] Tarea correcta. Iniciando acreditación de ${recompensa} BOB...`);
-        
-        // 1. Registrar ganancia y actualizar saldo (addUserEarnings centraliza todo ahora)
-        try {
-          await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
-          console.log(`  - [OK] Ganancia, saldo y movimiento contable registrados.`);
-        } catch (e) {
-          console.error(`  - [ERROR] Fallo al acreditar ganancia:`, e.message);
-          throw new Error(`Fallo contable: ${e.message}`);
-        }
-        
-        // 2. Distribuir comisiones (No bloqueante para el usuario)
-        try {
-          console.log(`  - [STEP 3] Procesando comisiones de red...`);
-          await distributeCommissions(user.id, recompensa);
-          console.log(`  - [OK] Comisiones enviadas a cola de procesamiento.`);
-        } catch (e) {
-          console.error(`  - [AVISO] Fallo no crítico en comisiones:`, e.message);
+        if (yaGanadaHoy) {
+          console.log(`  - [AVISO] Tarea correcta pero YA FUE GANADA HOY. No se acredita saldo duplicado.`);
+        } else {
+          console.log(`  - [STEP 2] Tarea correcta. Iniciando acreditación de ${recompensa} BOB...`);
+          
+          // 1. Registrar ganancia y actualizar saldo
+          try {
+            await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
+            console.log(`  - [OK] Ganancia, saldo y movimiento contable registrados.`);
+          } catch (e) {
+            console.error(`  - [ERROR] Fallo al acreditar ganancia:`, e.message);
+            throw new Error(`Fallo contable: ${e.message}`);
+          }
+          
+          // 2. Distribuir comisiones (No bloqueante para el usuario)
+          try {
+            console.log(`  - [STEP 3] Procesando comisiones de red...`);
+            await distributeCommissions(user.id, recompensa);
+            console.log(`  - [OK] Comisiones enviadas a cola de procesamiento.`);
+          } catch (e) {
+            console.error(`  - [AVISO] Fallo no crítico en comisiones:`, e.message);
+          }
         }
       } else {
         console.log(`  - [STEP 2] Tarea incorrecta. No se acredita recompensa.`);

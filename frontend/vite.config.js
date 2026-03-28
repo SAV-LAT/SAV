@@ -10,8 +10,9 @@ export default defineConfig({
   plugins: [react()],
   build: {
     target: 'esnext',
-    minify: 'esbuild', // Cambiado de 'terser' a 'esbuild' para evitar el error en Vercel
+    minify: 'esbuild',
     cssMinify: true,
+    // Comentario para forzar commit 1774728
     rollupOptions: {
       output: {
         manualChunks(id) {

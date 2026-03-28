@@ -195,18 +195,28 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/20 shadow-inner backdrop-blur-md">
-            <span className="text-sm">🇧🇴</span>
-            <span className="text-[11px] font-black text-white uppercase tracking-widest">BOB</span>
-          </div>
+        <div className="flex-1 flex justify-end max-w-[200px]">
           <button
-            type="button"
-            onClick={onInstallApp}
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#1a1f36] active:scale-90 transition-all shadow-[0_5px_15px_rgba(255,255,255,0.3)] relative overflow-hidden group"
+            onClick={() => {
+              const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+              if (isIOS) {
+                alert('📲 La aplicación nativa está disponible actualmente solo para Android.');
+              } else {
+                window.location.href = 'https://github.com/SAV-LAT/SAV/releases/download/v1.0.0/app-release.apk';
+              }
+            }}
+            className="relative w-full bg-[#1a1f36] hover:bg-[#242a45] text-white flex items-center justify-between px-4 py-2 rounded-xl shadow-2xl transition-all duration-300 active:scale-95 border border-white/10 group"
           >
-            <DownloadCloud size={18} className="relative z-10" />
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#1a1f36]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-3">
+              <div className="bg-emerald-500 p-1.5 rounded-lg shadow-lg shadow-emerald-500/20 group-hover:rotate-12 transition-transform duration-500">
+                <DownloadCloud size={16} className="text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left">
+                <p className="text-[7px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-0.5">Android</p>
+                <p className="text-[10px] font-black text-white uppercase tracking-tight leading-none">Descargar</p>
+              </div>
+            </div>
+            <Smartphone size={14} className="text-white/20 group-hover:text-emerald-400 transition-colors" />
           </button>
         </div>
       </header>

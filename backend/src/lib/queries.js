@@ -338,12 +338,15 @@ export async function distributeCommissions(userId, baseAmount) {
         const commission = Number((baseAmount * config.percent).toFixed(2));
         if (commission > 0) {
           console.log(`[Comisiones] Red Nivel ${config.key}: Otorgando ${commission} BOB a ${upline.nombre_usuario} (Rango ${uplineRank} >= ${userRank})`);
-          await updateUser(upline.id, {
-            saldo_comisiones: (Number(upline.saldo_comisiones) || 0) + commission
-          });
           
-          // Registrar en estadísticas persistentes del invitador
-          await addUserEarnings(upline.id, commission, 'comision_subordinado', user.id, `Comisión por tarea de ${user.nombre_usuario} (Nivel ${config.key})`);
+          // Registrar ganancia y actualizar saldo (addUserEarnings maneja todo de forma atómica)
+          await addUserEarnings(
+            upline.id, 
+            commission, 
+            'comision_subordinado', 
+            user.id, 
+            `Comisión por tarea de ${user.nombre_usuario} (Nivel ${config.key})`
+          );
         }
       } else {
         console.log(`[Comisiones] Red Nivel ${config.key}: No se paga a ${upline.nombre_usuario} (Rango ${uplineRank} < Subordinado ${userRank})`);
@@ -454,53 +457,77 @@ export async function getUserEarningsSummary(userId) {
 
 /**
  * Registra ganancias en las estadísticas persistentes del usuario y crea un evento contable
+ * Ahora utiliza una función RPC en la base de datos para garantizar atomicidad
  */
 export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', origenId = null, descripcion = null) {
   if (!amount || amount <= 0) return;
   
-  const user = await findUserById(userId);
-  if (!user) throw new Error(`Usuario ${userId} no encontrado para acreditar ganancias.`);
+  const referencia = `EARN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const desc = descripcion || (tipo === 'ganancia_tarea' ? 'Ganancia por tarea completada' : 'Comisión de red');
 
-  const nuevoSaldo = Number((Number(user.saldo_principal) || 0) + amount).toFixed(2);
+  console.log(`[Earnings] Intentando acreditar ${amount} a ${userId} via RPC...`);
 
-  // 1. Crear el movimiento contable (Obligatorio)
-  const movimiento = {
-    usuario_id: userId,
-    tipo_movimiento: tipo,
-    origen_id: origenId,
-    monto: amount,
-    saldo_anterior: user.saldo_principal,
-    saldo_nuevo: nuevoSaldo,
-    nivel_id_momento: user.nivel_id,
-    descripcion: descripcion || (tipo === 'ganancia_tarea' ? 'Ganancia por tarea completada' : 'Comisión de red'),
-    referencia: `EARN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    fecha: boliviaTime.now().toISOString()
-  };
+  // Intentamos usar la función RPC que maneja todo en una sola transacción SQL
+  const { data, error } = await supabase.rpc('acreditar_ganancia', {
+    p_usuario_id: userId,
+    p_monto: amount,
+    p_tipo: tipo,
+    p_origen_id: origenId,
+    p_descripcion: desc,
+    p_referencia: referencia
+  });
 
-  // Intentar crear movimiento, si falla lanzamos error para revertir flujo lógico
-  const { error: moveError } = await trySupabase(() => supabase.from('movimientos_saldo').insert([movimiento]));
-  if (moveError) {
-    console.error(`[Earnings] Error al insertar en movimientos_saldo:`, moveError);
-    throw new Error(`Fallo en registro contable: ${moveError.message}`);
-  }
+  if (error) {
+    console.error(`[Earnings] Error RPC 'acreditar_ganancia':`, error);
+    
+    // FALLBACK: Si el RPC falla (ej. no existe aún la función), usamos el método manual anterior
+    console.warn(`[Earnings] RPC falló. Iniciando fallback manual...`);
+    
+    const user = await findUserById(userId);
+    if (!user) throw new Error(`Usuario ${userId} no encontrado para acreditar ganancias.`);
 
-  // 2. Actualizar el caché en la tabla usuarios y el saldo REAL (Obligatorio)
-  const updates = {
-    saldo_principal: nuevoSaldo,
-    ganancias_totales: Number((Number(user.ganancias_totales) || 0) + amount).toFixed(2),
-    tareas_completadas_exito: tipo === 'ganancia_tarea' ? (user.tareas_completadas_exito || 0) + 1 : user.tareas_completadas_exito,
-    ganancias_hoy: Number((Number(user.ganancias_hoy) || 0) + amount).toFixed(2),
-    ganancias_semana: Number((Number(user.ganancias_semana) || 0) + amount).toFixed(2),
-    ganancias_mes: Number((Number(user.ganancias_mes) || 0) + amount).toFixed(2)
-  };
+    const nuevoSaldo = Number((Number(user.saldo_principal) || 0) + amount).toFixed(2);
 
-  const { error: updateError } = await trySupabase(() => supabase.from('usuarios').update(updates).eq('id', userId));
-  if (updateError) {
-    console.error(`[Earnings] Error al actualizar tabla usuarios:`, updateError);
-    throw new Error(`Fallo en actualización de saldo: ${updateError.message}`);
+    // 1. Crear el movimiento contable
+    const { error: moveError } = await trySupabase(() => supabase.from('movimientos_saldo').insert([{
+      usuario_id: userId,
+      tipo_movimiento: tipo,
+      origen_id: origenId,
+      monto: amount,
+      saldo_anterior: user.saldo_principal,
+      saldo_nuevo: nuevoSaldo,
+      nivel_id_momento: user.nivel_id,
+      descripcion: desc,
+      referencia: referencia,
+      fecha: boliviaTime.now().toISOString()
+    }]));
+
+    if (moveError) {
+      console.error(`[Earnings] Fallback: Error al insertar en movimientos_saldo:`, moveError);
+      throw new Error(`Fallo en registro contable (fallback): ${moveError.message}`);
+    }
+
+    // 2. Actualizar el caché en la tabla usuarios
+    const updates = {
+      saldo_principal: nuevoSaldo,
+      ganancias_totales: Number((Number(user.ganancias_totales) || 0) + amount).toFixed(2),
+      tareas_completadas_exito: tipo === 'ganancia_tarea' ? (user.tareas_completadas_exito || 0) + 1 : user.tareas_completadas_exito,
+      ganancias_hoy: Number((Number(user.ganancias_hoy) || 0) + amount).toFixed(2),
+      ganancias_semana: Number((Number(user.ganancias_semana) || 0) + amount).toFixed(2),
+      ganancias_mes: Number((Number(user.ganancias_mes) || 0) + amount).toFixed(2)
+    };
+
+    const { error: updateError } = await trySupabase(() => supabase.from('usuarios').update(updates).eq('id', userId));
+    if (updateError) {
+      console.error(`[Earnings] Fallback: Error al actualizar tabla usuarios:`, updateError);
+      throw new Error(`Fallo en actualización de saldo (fallback): ${updateError.message}`);
+    }
+  } else if (data && !data.success) {
+    console.error(`[Earnings] Error lógico en RPC:`, data.error);
+    throw new Error(`Error de negocio en acreditación: ${data.error}`);
   }
   
-  console.log(`[Earnings] SUCCESS: +${amount} registrado para ${user.nombre_usuario} tipo: ${tipo}`);
+  console.log(`[Earnings] SUCCESS: +${amount} acreditado correctamente.`);
 }
 
 /**

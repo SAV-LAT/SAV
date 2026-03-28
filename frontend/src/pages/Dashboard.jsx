@@ -195,29 +195,9 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="flex-1 flex justify-end max-w-[200px]">
-          <button
-            onClick={() => {
-              const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-              if (isIOS) {
-                alert('📲 La aplicación nativa está disponible actualmente solo para Android.');
-              } else {
-                window.location.href = 'https://github.com/SAV-LAT/SAV/releases/download/v1.0.0/app-release.apk';
-              }
-            }}
-            className="relative w-full bg-[#1a1f36] hover:bg-[#242a45] text-white flex items-center justify-between px-4 py-2 rounded-xl shadow-2xl transition-all duration-300 active:scale-95 border border-white/10 group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-500 p-1.5 rounded-lg shadow-lg shadow-emerald-500/20 group-hover:rotate-12 transition-transform duration-500">
-                <DownloadCloud size={16} className="text-white" strokeWidth={2.5} />
-              </div>
-              <div className="text-left">
-                <p className="text-[7px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-0.5">Android</p>
-                <p className="text-[10px] font-black text-white uppercase tracking-tight leading-none">Descargar</p>
-              </div>
-            </div>
-            <Smartphone size={14} className="text-white/20 group-hover:text-emerald-400 transition-colors" />
-          </button>
+        <div className="flex items-center gap-2">
+          <DownloadButton platform="android" variant="header" />
+          <DownloadButton platform="ios" variant="header" />
         </div>
       </header>
 
@@ -376,8 +356,9 @@ export default function Dashboard() {
         </div>
 
         {/* Sección de Descarga App Nativa */}
-        <div className="mt-4">
-          <DownloadButton />
+        <div className="mt-4 flex flex-col gap-2">
+          <DownloadButton platform="android" />
+          <DownloadButton platform="ios" />
         </div>
 
         {/* Footer Info sutil */}

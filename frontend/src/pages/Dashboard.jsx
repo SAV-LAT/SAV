@@ -26,7 +26,7 @@ const gridItems = [
 const defaultBanners = [
   { id: 1, imagen_url: '/imag/carrusel1.jpeg', titulo: 'SAV Global' },
   { id: 2, imagen_url: '/imag/carrusel2.jpeg', titulo: 'Activos Virtuales' },
-  { id: 3, imagen_url: '/imag/carrusel3.jpeg', titulo: 'Libertad Financiera' },
+  { id: 3, imagen_url: '/imag/banner_sav_3.jpeg', titulo: 'Libertad Financiera' },
 ];
 
 export default function Dashboard() {

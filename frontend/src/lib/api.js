@@ -33,9 +33,14 @@ async function request(url, options = {}, retries = 3) {
 
     // 304 Not Modified es un éxito (usando caché del navegador)
     if (res.status === 304) {
-      console.log(`[API Cache] 304 Not Modified para ${url}. Recuperando de local...`);
-      const cachedUser = localStorage.getItem('user');
-      return cachedUser ? JSON.parse(cachedUser) : {};
+      console.log(`[API Cache] 304 Not Modified para ${url}.`);
+      // Si es la ruta de usuario, devolvemos lo que hay en local
+      if (normalizedUrl === '/users/me') {
+        const cachedUser = localStorage.getItem('user');
+        return cachedUser ? JSON.parse(cachedUser) : {};
+      }
+      // Para otras rutas, devolvemos un objeto vacío para forzar un nuevo fetch si es necesario
+      return {};
     }
 
     if (!res.ok) {

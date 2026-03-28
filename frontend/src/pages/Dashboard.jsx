@@ -24,7 +24,7 @@ const gridItems = [
 ];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [banners, setBanners] = useState([]);
   const [slide, setSlide] = useState(0);
   const [stats, setStats] = useState(null);
@@ -34,13 +34,15 @@ export default function Dashboard() {
   const [popup, setPopup] = useState({ popup_enabled: false, popup_title: '', popup_message: '' });
   const [showPopup, setShowPopup] = useState(false);
   const [publicConfig, setPublicConfig] = useState(null);
-  const [installPrompt, setInstallPrompt] = useState(null);
-  const [isInstalled, setIsInstalled] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const fetchStats = () => {
+    api.users.stats().then(setStats).catch(() => {});
+  };
 
   useEffect(() => {
     if (!isMounted) return;
@@ -75,9 +77,10 @@ export default function Dashboard() {
 
     fetchBanners();
     fetchPublicConfig();
-    api.users.stats().then(setStats).catch(() => {});
+    fetchStats();
 
-    // Realtime para cambios globales del Admin
+    // --- SINCRONIZACIÓN REALTIME MEJORADA ---
+    // 1. Cambios globales del Admin
     const adminChannel = supabase.channel('admin_global_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banners' }, () => {
         console.log('[Realtime] Banners actualizados por admin');
@@ -89,10 +92,37 @@ export default function Dashboard() {
       })
       .subscribe();
 
+    // 2. Cambios específicos del Usuario (Saldo y Ganancias)
+    let userChannel = null;
+    if (user?.id) {
+      userChannel = supabase.channel(`user_sync_${user.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'usuarios', 
+          filter: `id=eq.${user.id}` 
+        }, (payload) => {
+          console.log('[Realtime] Datos de usuario actualizados:', payload.new);
+          refreshUser(); // Actualiza el contexto global (Activos, Comisión)
+          fetchStats(); // Actualiza las estadísticas (Hoy, Semana, Mes)
+        })
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'movimientos_saldo', 
+          filter: `usuario_id=eq.${user.id}` 
+        }, () => {
+          console.log('[Realtime] Nuevo movimiento detectado. Refrescando estadísticas...');
+          fetchStats();
+        })
+        .subscribe();
+    }
+
     return () => {
       supabase.removeChannel(adminChannel);
+      if (userChannel) supabase.removeChannel(userChannel);
     };
-  }, [isMounted]);
+  }, [isMounted, user?.id]);
 
   useEffect(() => {
     if (!isMounted || banners.length <= 1) return;
@@ -100,76 +130,10 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, [isMounted, banners.length]);
 
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    // Detectar si ya está instalada la App
-    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-      setIsInstalled(true);
-    }
-
-    const handler = (e) => {
-      e.preventDefault();
-      console.log('[PWA] beforeinstallprompt capturado correctamente');
-      setInstallPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-    
-    // Si el evento ya ocurrió antes de que se monte el componente
-    if (window.deferredPrompt) {
-      setInstallPrompt(window.deferredPrompt);
-    }
-
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, [isMounted]);
-
   const imgUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('/')) return url;
     return url;
-  };
-
-  const onInstallApp = async () => {
-    console.log('[Dashboard] Intentando descargar/instalar app...');
-    // Si ya está instalado o estamos en modo nativo
-    if (isInstalled) {
-      alert('¡SAV ya está instalado en tu dispositivo!');
-      return;
-    }
-
-    // Intentar descarga del APK real configurado
-    try {
-      console.log('[Dashboard] Iniciando descarga de APK:', CONFIG.APK_DOWNLOAD_URL);
-      window.location.href = CONFIG.APK_DOWNLOAD_URL;
-      return;
-    } catch (e) {
-      console.warn('[Dashboard] Fallo descarga directa APK, intentando PWA:', e);
-    }
-
-    if (installPrompt) {
-      try {
-        // Activar la ventana oficial de instalación (equivale a los 3 puntos -> Instalar)
-        if (typeof installPrompt.prompt === 'function') {
-          installPrompt.prompt();
-          const { outcome } = await installPrompt.userChoice;
-          if (outcome === 'accepted') {
-            setInstallPrompt(null);
-            setIsInstalled(true);
-          }
-        }
-      } catch (e) {
-        console.error('PWA install prompt error:', e);
-      }
-      return;
-    }
-    
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIOS) {
-      alert('Instalación en iPhone:\n1. Toca el botón central de abajo (Compartir)\n2. Selecciona "Agregar a inicio"');
-    } else {
-      alert('Para instalar directamente:\n1. Asegúrate de usar Google Chrome\n2. Navega unos segundos por la App\n3. Si el botón no se activa, usa los 3 puntos de Chrome -> Instalar');
-    }
   };
 
   if (!isMounted) {

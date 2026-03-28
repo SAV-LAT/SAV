@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -57,6 +57,7 @@ export default function Profile() {
           }, 
           (payload) => {
             console.log('[Realtime] Cambio en tabla usuarios detectado:', payload.eventType);
+            refreshUser(); // Actualiza el contexto global (Activos, Comisión)
             fetchStats();
           }
         )

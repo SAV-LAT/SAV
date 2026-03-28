@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     target: 'esnext',
-    minify: 'terser',
+    minify: 'esbuild', // Cambiado de 'terser' a 'esbuild' para evitar el error en Vercel
     cssMinify: true,
     rollupOptions: {
       output: {

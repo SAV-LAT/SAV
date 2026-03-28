@@ -7,8 +7,7 @@
     "allowNavigation": [
       "sav-lat.vercel.app",
       "sav-zhyg.onrender.com",
-      "*.supabase.co",
-      "github.com"
+      "*.supabase.co"
     ]
   },
   "plugins": {

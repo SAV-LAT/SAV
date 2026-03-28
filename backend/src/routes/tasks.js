@@ -277,26 +277,16 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       if (esCorrectaReal) {
         console.log(`  - [STEP 2] Tarea correcta. Iniciando acreditación de ${recompensa} BOB...`);
         
-        // 1. Registrar ganancia y movimiento contable (addUserEarnings ya maneja movimientos_saldo)
+        // 1. Registrar ganancia y actualizar saldo (addUserEarnings centraliza todo ahora)
         try {
           await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
-          console.log(`  - [OK] Ganancia y movimiento contable registrados.`);
+          console.log(`  - [OK] Ganancia, saldo y movimiento contable registrados.`);
         } catch (e) {
-          console.error(`  - [ERROR] Fallo al registrar ganancia contable:`, e.message);
+          console.error(`  - [ERROR] Fallo al acreditar ganancia:`, e.message);
           throw new Error(`Fallo contable: ${e.message}`);
         }
-
-        // 2. Actualizar saldo real del usuario
-        try {
-          const nuevoSaldo = Number((Number(user.saldo_principal) || 0) + recompensa).toFixed(2);
-          await updateUser(user.id, { saldo_principal: nuevoSaldo });
-          console.log(`  - [OK] Saldo principal actualizado a ${nuevoSaldo}.`);
-        } catch (e) {
-          console.error(`  - [ERROR] Fallo al actualizar saldo principal:`, e.message);
-          throw new Error(`Fallo de saldo: ${e.message}`);
-        }
         
-        // 3. Distribuir comisiones (No bloqueante para el usuario)
+        // 2. Distribuir comisiones (No bloqueante para el usuario)
         try {
           console.log(`  - [STEP 3] Procesando comisiones de red...`);
           await distributeCommissions(user.id, recompensa);

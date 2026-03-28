@@ -218,13 +218,20 @@ export default function TaskRoom() {
     refreshUser();
   };
 
+  // Loader optimizado y elegante
   if (loading && !activeTask) {
     return (
       <Layout>
         <Header title="SALA DE TAREAS" />
-        <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <div className="w-16 h-16 border-4 border-[#1a1f36] border-t-emerald-500 rounded-full animate-spin" />
-          <p className="text-[#1a1f36] font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Sincronizando con SAV Cloud...</p>
+        <div className="p-8 flex flex-col items-center justify-center min-h-[70vh] space-y-8 animate-fade-in">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-[#1a1f36]/5 border-t-emerald-500 rounded-full animate-spin shadow-2xl shadow-emerald-500/10"></div>
+            <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-[#1a1f36] font-black uppercase tracking-[0.4em] text-[11px] animate-pulse">Sincronizando</p>
+            <p className="text-[#1a1f36]/40 text-[9px] uppercase tracking-widest font-black">Global Activos Virtuales</p>
+          </div>
         </div>
       </Layout>
     );

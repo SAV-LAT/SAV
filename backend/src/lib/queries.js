@@ -202,7 +202,15 @@ export async function getTaskById(id) {
 }
 
 export async function getTaskActivity(userId) {
-  const { data } = await trySupabase(() => supabase.from('actividad_tareas').select('*').eq('usuario_id', userId));
+  // Optimizamos la consulta para traer solo lo necesario de hoy
+  const { data } = await trySupabase(() => 
+    supabase
+      .from('actividad_tareas')
+      .select('id, created_at, tarea_id, respuesta_correcta')
+      .eq('usuario_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50) // Suficiente para validar tareas diarias
+  );
   return data || [];
 }
 
@@ -442,9 +450,10 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
       // No lanzamos error para no bloquear la actualización de saldo del usuario
     }
 
-    // 2. Actualizar el caché en la tabla usuarios
-    // Nota: Aunque recalculamos desde movimientos, tener el caché ayuda a la UI inmediata
+    // 2. Actualizar el caché en la tabla usuarios y el saldo REAL
+    const nuevoSaldo = Number((Number(user.saldo_principal) || 0) + amount).toFixed(2);
     const updates = {
+      saldo_principal: nuevoSaldo,
       ganancias_totales: Number((Number(user.ganancias_totales) || 0) + amount).toFixed(2),
       tareas_completadas_exito: tipo === 'ganancia_tarea' ? (user.tareas_completadas_exito || 0) + 1 : user.tareas_completadas_exito
     };

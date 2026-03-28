@@ -21,7 +21,7 @@ import { mergePublicContent } from './data/publicContentDefaults.js';
 import { startTelegramPolling } from './lib/telegram_polling.js';
 
 console.log('\n[SERVER] Proceso de servidor iniciado. BUILD_ID: ' + Date.now());
-console.log('[SERVER] Versión: 3.0.1 - MIME Fix');
+console.log('[SERVER] Versión: 4.2.0 - Telegram Polling & Secure Recharges');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();

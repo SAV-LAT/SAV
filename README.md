@@ -1,4 +1,6 @@
-# SAV (v4.1.0)
+# SAV (v4.2.0 - Despliegue Final)
+
+🚀 **Actualización Crítica**: Sistema de Recargas Seleccionables, Reembolso Automático de Inversión y Botones de Telegram (Polling) implementados.
 
 Plataforma profesional de Activos Virtuales con sistema de tareas por video, niveles VIP, gestión financiera y panel administrativo en tiempo real.
 

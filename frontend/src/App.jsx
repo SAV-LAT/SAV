@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react';
+// SAV v4.2.0 - Despliegue Final
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 

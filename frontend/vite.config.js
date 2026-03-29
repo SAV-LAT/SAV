@@ -8,6 +8,9 @@ const __dirname = path.dirname(__filename)
 
 export default defineConfig({
   plugins: [react()],
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   build: {
     target: 'esnext',
     minify: 'esbuild',
@@ -26,17 +29,11 @@ export default defineConfig({
       }
     },
     chunkSizeWarningLimit: 1000,
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    }
   },
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:4000'
+      '/api': 'http://localhost:4001'
     }
   },
   resolve: {

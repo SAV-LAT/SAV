@@ -282,6 +282,35 @@ export async function getDailyWithdrawalSummary(dateStr) {
   return Object.values(summary);
 }
 
+export async function getAdminsInShift() {
+  const now = new Date();
+  const boliviaNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+  const currentMinutes = boliviaNow.getHours() * 60 + boliviaNow.getMinutes();
+
+  const { data: admins } = await trySupabase(() => 
+    supabase.from('admins')
+      .select('*')
+      .eq('activo', true)
+      .eq('recibe_notificaciones', true)
+  );
+
+  if (!admins) return [];
+
+  return admins.filter(admin => {
+    const [startH, startM] = admin.hora_inicio_turno.split(':').map(Number);
+    const [endH, endM] = admin.hora_fin_turno.split(':').map(Number);
+    const startMin = startH * 60 + startM;
+    const endMin = endH * 60 + endM;
+
+    if (startMin <= endMin) {
+      return currentMinutes >= startMin && currentMinutes <= endMin;
+    } else {
+      // Turno que cruza medianoche
+      return currentMinutes >= startMin || currentMinutes <= endMin;
+    }
+  });
+}
+
 export async function getTarjetasByUser(userId) {
   const { data } = await trySupabase(() => supabase.from('tarjetas_bancarias').select('*').eq('usuario_id', userId));
   return data || [];

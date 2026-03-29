@@ -503,10 +503,55 @@ router.put('/niveles/:id', async (req, res) => {
 
 router.get('/public-content', async (req, res) => {
   const config = await getPublicContent();
-  res.json(config);
+  res.json(mergePublicContent(config));
 });
 
-router.put('/public-content', async (req, res) => {
+// --- GESTIÓN DE ADMINISTRADORES Y TURNOS ---
+
+router.get('/admins', async (req, res) => {
+  const { data: admins } = await trySupabase(() => 
+    supabase.from('admins').select('*').order('nombre', { ascending: true })
+  );
+  res.json(admins || []);
+});
+
+router.post('/admins', async (req, res) => {
+  const { nombre, telegram_user_id, telegram_username, rol, activo, hora_inicio_turno, hora_fin_turno, recibe_notificaciones } = req.body;
+  const { data, error } = await trySupabase(() => 
+    supabase.from('admins').insert([{
+      nombre,
+      telegram_user_id,
+      telegram_username,
+      rol: rol || 'admin',
+      activo: activo ?? true,
+      hora_inicio_turno: hora_inicio_turno || '00:00',
+      hora_fin_turno: hora_fin_turno || '23:59',
+      recibe_notificaciones: recibe_notificaciones ?? true
+    }]).select().maybeSingle()
+  );
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+router.put('/admins/:id', async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const { data, error } = await trySupabase(() => 
+    supabase.from('admins').update(updates).eq('id', id).select().maybeSingle()
+  );
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+router.delete('/admins/:id', async (req, res) => {
+  const { id } = req.params;
+  await trySupabase(() => supabase.from('admins').delete().eq('id', id));
+  res.json({ ok: true });
+});
+
+// --- FIN GESTIÓN DE ADMINISTRADORES ---
+
+router.post('/public-content', async (req, res) => {
   const updates = req.body;
   
   // Guardar en Supabase (tabla configuraciones clave-valor)

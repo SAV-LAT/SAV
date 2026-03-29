@@ -36,6 +36,7 @@ const AdminTareas = lazy(() => import('./pages/admin/AdminTareas.jsx'));
 const AdminBanners = lazy(() => import('./pages/admin/AdminBanners.jsx'));
 const AdminNiveles = lazy(() => import('./pages/admin/AdminNiveles.jsx'));
 const AdminRecompensas = lazy(() => import('./pages/admin/AdminRecompensas.jsx'));
+const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins.jsx'));
 
 const GlobalLoader = () => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0c1a] space-y-6">
@@ -75,6 +76,7 @@ function AppRoutes() {
           <Route path="banners" element={<AdminBanners />} />
           <Route path="metodos-qr" element={<AdminMetodosQr />} />
           <Route path="recompensas" element={<AdminRecompensas />} />
+          <Route path="admins" element={<AdminAdmins />} />
           <Route path="contenido-home" element={<AdminContenidoHome />} />
         </Route>
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

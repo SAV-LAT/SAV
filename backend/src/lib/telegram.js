@@ -1,19 +1,47 @@
-import { getPublicContent } from './queries.js';
+import { getPublicContent, getAdminsInShift } from './queries.js';
 
 const getRecargasConfig = async () => {
   const config = await getPublicContent();
+  const adminsInShift = await getAdminsInShift();
+  
+  // Si hay admins en turno, priorizamos sus IDs personales de chat si los tienen,
+  // pero según el requerimiento, enviamos al grupo pero solo si el admin está en turno.
+  // Para simplificar y cumplir con "solo a él le llegue", si hay un admin en turno,
+  // enviamos a su ID de Telegram personal si lo tenemos, de lo contrario al grupo.
+  
+  let targetChatId = config.telegram_recargas_chat_id || process.env.TELEGRAM_RECARGAS_CHAT_ID;
+  
+  if (adminsInShift.length > 0) {
+    // Si hay admins en turno, enviamos a sus IDs personales concatenados por coma
+    const adminIds = adminsInShift.map(a => a.telegram_user_id).filter(id => id);
+    if (adminIds.length > 0) {
+      targetChatId = adminIds.join(',');
+    }
+  }
+
   return {
     token: config.telegram_recargas_token || process.env.TELEGRAM_RECARGAS_TOKEN,
-    chatId: config.telegram_recargas_chat_id || process.env.TELEGRAM_RECARGAS_CHAT_ID,
+    chatId: targetChatId,
     enabled: config.telegram_recargas_enabled !== 'false'
   };
 };
 
 const getRetirosConfig = async () => {
   const config = await getPublicContent();
+  const adminsInShift = await getAdminsInShift();
+  
+  let targetChatId = config.telegram_retiros_chat_id || process.env.TELEGRAM_RETIROS_CHAT_ID;
+  
+  if (adminsInShift.length > 0) {
+    const adminIds = adminsInShift.map(a => a.telegram_user_id).filter(id => id);
+    if (adminIds.length > 0) {
+      targetChatId = adminIds.join(',');
+    }
+  }
+
   return {
     token: config.telegram_retiros_token || process.env.TELEGRAM_RETIROS_TOKEN,
-    chatId: config.telegram_retiros_chat_id || process.env.TELEGRAM_RETIROS_CHAT_ID,
+    chatId: targetChatId,
     enabled: config.telegram_retiros_enabled !== 'false'
   };
 };

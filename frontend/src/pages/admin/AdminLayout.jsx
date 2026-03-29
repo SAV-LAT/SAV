@@ -35,6 +35,7 @@ export default function AdminLayout() {
     { to: '/admin/tareas', icon: Play, label: 'Tareas' },
     { to: '/admin/metodos-qr', icon: QrCode, label: 'Imágenes Recarga' },
     { to: '/admin/recompensas', icon: Gift, label: 'Premios y Recompensas' },
+    { to: '/admin/admins', icon: ShieldCheck, label: 'Gestión Admins y Turnos' },
     { to: '/admin/banners', icon: Image, label: 'Banners' },
     { to: '/admin/contenido-home', icon: Bell, label: 'Contenido y horarios' },
   ];

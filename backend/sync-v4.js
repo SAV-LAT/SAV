@@ -1,0 +1,89 @@
+
+import 'dotenv/config';
+import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { v4_tasks } from './src/data/v4_tasks.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Error: SUPABASE_URL o SUPABASE_SERVICE_KEY no definidos en .env');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function syncV4() {
+  console.log('🚀 Iniciando Sincronización SAV v4.0.0...');
+  console.log(`📡 Conectando a Supabase: ${supabaseUrl}`);
+
+  // 1. Obtener Niveles para mapear IDs
+  const { data: niveles, error: errNiv } = await supabase.from('niveles').select('id, codigo');
+  if (errNiv) throw errNiv;
+
+  const levelMap = {};
+  niveles.forEach(n => levelMap[n.codigo] = n.id);
+
+  // 2. Limpiar tareas actuales (Opcional, pero recomendado para v4.0.0 limpia)
+  console.log('🧹 Limpiando tareas antiguas...');
+  const { error: errDel } = await supabase.from('tareas').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (errDel) console.warn('Aviso limpieza:', errDel.message);
+
+  // 3. Insertar nuevas tareas v4
+  for (const task of v4_tasks) {
+    const levelId = levelMap[task.nivel_codigo];
+    if (!levelId) {
+      console.warn(`⚠️ Nivel no encontrado para: ${task.nivel_codigo}`);
+      continue;
+    }
+
+    const taskData = {
+      nombre: task.nombre,
+      nivel_id: levelId,
+      recompensa: task.recompensa,
+      video_url: task.video_url,
+      descripcion: task.descripcion,
+      pregunta: task.pregunta,
+      respuesta_correcta: task.respuesta_correcta,
+      opciones: task.opciones,
+      comentario_ingles: task.comentario_ingles || 'Verification: Watch the video carefully to answer correctly.'
+    };
+
+    // Validar que el video existe localmente antes de sincronizar
+    const videoFileName = task.video_url.split('/').pop();
+    const videoPath = path.join(__dirname, '../video', videoFileName);
+    const videoPathAlt = path.join(__dirname, '../frontend/public/video', videoFileName);
+    
+    if (!fs.existsSync(videoPath) && !fs.existsSync(videoPathAlt)) {
+      console.warn(`⚠️ Aviso: El video para "${task.nombre}" (${videoFileName}) no se encontró en la carpeta video/.`);
+      // Opcional: podrías decidir no insertar la tarea si el video no existe
+    }
+
+    let { error: errIns } = await supabase.from('tareas').upsert(taskData, { onConflict: 'nombre,nivel_id' });
+    
+    // Fallback si la columna comentario_ingles no existe aún
+    if (errIns && errIns.message?.includes('comentario_ingles')) {
+      console.warn(`⚠️ Aviso: La columna 'comentario_ingles' no existe. Reintentando sin ella...`);
+      delete taskData.comentario_ingles;
+      const { error: errRetry } = await supabase.from('tareas').upsert(taskData, { onConflict: 'nombre,nivel_id' });
+      errIns = errRetry;
+    }
+
+    if (errIns) {
+      console.error(`❌ Error insertando ${task.nombre}:`, errIns.message);
+    } else {
+      console.log(`✅ Tarea sincronizada: ${task.nombre}`);
+    }
+  }
+
+  console.log('\n✨ Sincronización v4.0.0 Finalizada.');
+}
+
+syncV4().catch(err => console.error('Error Fatal:', err));

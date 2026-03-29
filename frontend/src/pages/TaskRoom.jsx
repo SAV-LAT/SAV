@@ -188,12 +188,12 @@ export default function TaskRoom() {
         setCorrectAnswerFromServer(res.respuesta_correcta);
       }
       
-      if (res.correcta || res.success) {
+      if (res.correcta) {
         setIsCorrect(true);
         refreshUser();
       } else {
         setIsCorrect(false);
-        setErrorMessage(res.mensaje || res.error || 'La respuesta seleccionada no coincide con el registro.');
+        setErrorMessage(res.mensaje || 'Respuesta incorrecta. Inténtalo de nuevo.');
       }
     } catch (err) {
       console.error('[TaskRoom] Error en onConfirmResponse:', err);

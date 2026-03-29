@@ -46,11 +46,12 @@ router.post('/', authenticate, async (req, res) => {
   const todayStr = boliviaTime.todayStr();
   
   const hasWithdrawalToday = userWithdrawals.some(w => {
-    return boliviaTime.getDateString(w.created_at) === todayStr;
+    // Solo contamos retiros que no estén rechazados
+    return w.estado !== 'rechazado' && boliviaTime.getDateString(w.created_at) === todayStr;
   });
 
   if (hasWithdrawalToday) {
-    return res.status(400).json({ error: 'Solo puedes realizar un retiro por día' });
+    return res.status(400).json({ error: 'Solo puedes realizar un retiro por día. Si tu retiro previo fue rechazado, contacta a soporte.' });
   }
 
   const m = parseFloat(monto);

@@ -25,6 +25,7 @@ export default function Withdrawal() {
   const [pc, setPc] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationDone, setOptimizationDone] = useState(false);
+  const [hasWithdrawalToday, setHasWithdrawalToday] = useState(false);
 
   useEffect(() => {
     // Flujo de validación: Contraseña de fondo -> Vincular tarjeta
@@ -43,6 +44,18 @@ export default function Withdrawal() {
       if (list[0]) setTarjetaId(list[0].id);
     }).catch(() => setTarjetas([]));
     api.publicContent().then(setPc).catch(() => {});
+
+    // Verificar si ya retiró hoy
+    const checkLimit = async () => {
+      try {
+        const retiros = await api.withdrawals.list();
+        const now = new Date();
+        const todayStr = new Date(now.toLocaleString('en-US', { timeZone: 'America/La_Paz' })).toISOString().split('T')[0];
+        const exists = retiros.some(r => r.estado !== 'rechazado' && r.created_at.split('T')[0] === todayStr);
+        setHasWithdrawalToday(exists);
+      } catch (err) {}
+    };
+    checkLimit();
   }, [user, navigate]);
 
   const saldoPrincipal = user?.saldo_principal ?? 0;
@@ -132,6 +145,13 @@ export default function Withdrawal() {
           {error && (
             <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-500 text-xs font-bold text-center animate-shake">
               {error}
+            </div>
+          )}
+
+          {hasWithdrawalToday && (
+            <div className="p-5 bg-amber-50 border border-amber-100 rounded-2xl text-amber-600 text-center shadow-sm">
+              <p className="text-[10px] font-black uppercase tracking-widest mb-1">Límite Diario Alcanzado</p>
+              <p className="text-xs font-bold leading-relaxed">Solo se permite un retiro por día. Ya has realizado una solicitud hoy.</p>
             </div>
           )}
           
@@ -298,10 +318,10 @@ export default function Withdrawal() {
 
           <button
             type="submit"
-            disabled={loading || fueraHorario}
+            disabled={loading || fueraHorario || hasWithdrawalToday}
             className="w-full py-5 rounded-2xl bg-[#1a1f36] text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-[#1a1f36]/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale mt-4"
           >
-            {loading ? 'Procesando Retiro...' : 'Solicitar Retiro Ahora'}
+            {loading ? 'Procesando Retiro...' : hasWithdrawalToday ? 'Límite de Retiro Alcanzado' : 'Solicitar Retiro Ahora'}
           </button>
         </form>
 

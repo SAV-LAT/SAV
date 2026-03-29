@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import { findUserById, getRetirosByUser, createRetiro, updateRetiro, getTarjetasByUser, getPublicContent, updateUser, boliviaTime } from '../lib/queries.js';
+import { findUserById, getRetirosByUser, createRetiro, updateRetiro, getTarjetasByUser, getPublicContent, updateUser, boliviaTime, trySupabase } from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
 import { mergePublicContent } from '../data/publicContentDefaults.js';
 import { isScheduleOpen } from '../lib/schedule.js';
 import { telegram } from '../lib/telegram.js';
+import { supabase } from '../lib/db.js';
 
 const router = Router();
 
@@ -27,16 +28,47 @@ router.get('/', authenticate, async (req, res) => {
 router.post('/', authenticate, async (req, res) => {
   try {
     const { monto, tipo_billetera, password_fondo, qr_retiro, tarjeta_id } = req.body;
-    const config = await getPublicContent();
-    const pc = mergePublicContent(config);
-    const sched = isScheduleOpen(pc.horario_retiro);
-    if (!sched.ok) {
-      return res.status(400).json({
-        error: `Intento de retiro fuera del horario: ${sched.message}`,
-      });
-    }
     const user = await findUserById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Validar horario por nivel
+    const { data: niveles } = await trySupabase(() => supabase.from('niveles').select('*'));
+    const userLevel = niveles?.find(n => n.id === user.nivel_id);
+    
+    let sched;
+    if (userLevel && userLevel.retiro_horario_habilitado) {
+      // Generar array de días desde inicio a fin
+      const diasHabilitados = [];
+      let currentDay = userLevel.retiro_dia_inicio;
+      const endDay = userLevel.retiro_dia_fin;
+      
+      if (currentDay <= endDay) {
+        for (let i = currentDay; i <= endDay; i++) diasHabilitados.push(i);
+      } else {
+        // Rango que cruza el fin de semana (ej: Viernes a Lunes)
+        for (let i = currentDay; i <= 6; i++) diasHabilitados.push(i);
+        for (let i = 0; i <= endDay; i++) diasHabilitados.push(i);
+      }
+
+      sched = isScheduleOpen({
+        enabled: true,
+        dias_semana: diasHabilitados,
+        hora_inicio: userLevel.retiro_hora_inicio?.substring(0, 5), // Quitar segundos si los tiene
+        hora_fin: userLevel.retiro_hora_fin?.substring(0, 5)
+      });
+    } else {
+      // Usar horario global
+      const config = await getPublicContent();
+      const pc = mergePublicContent(config);
+      sched = isScheduleOpen(pc.horario_retiro);
+    }
+
+    if (!sched.ok) {
+      return res.status(400).json({
+        error: `Intento de retiro fuera del horario permitido para tu nivel: ${sched.message}`,
+      });
+    }
+
     if (!user.password_fondo_hash) return res.status(400).json({ error: 'Debes configurar la contraseña del fondo' });
     const ok = await bcrypt.compare(password_fondo || '', user.password_fondo_hash);
     if (!ok) return res.status(400).json({ error: 'La contraseña de fondos es incorrecta, por favor confirma' });

@@ -94,6 +94,80 @@ export default function AdminNiveles() {
                       onChange={e => setEditing({...editing, ganancia_tarea: parseFloat(e.target.value)})}
                     />
                   </div>
+                  <div className="space-y-1 sm:col-span-2 border-t border-gray-100 pt-4 mt-2">
+                    <h4 className="text-[10px] font-black text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Clock size={14} className="text-sav-primary" /> Configuración de Horario de Retiro
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="flex items-center gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-100 transition-colors">
+                          <input
+                            type="checkbox"
+                            className="w-5 h-5 rounded-lg border-gray-300 text-sav-primary focus:ring-sav-primary"
+                            checked={editing.retiro_horario_habilitado === true}
+                            onChange={e => setEditing({...editing, retiro_horario_habilitado: e.target.checked})}
+                          />
+                          <span className="text-xs font-black text-gray-700 uppercase tracking-widest">Habilitar horario específico para este nivel</span>
+                        </label>
+                      </div>
+                      
+                      {editing.retiro_horario_habilitado && (
+                        <>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Día de Inicio (0=Dom, 1=Lun...)</label>
+                            <select
+                              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-black text-gray-800"
+                              value={editing.retiro_dia_inicio ?? 1}
+                              onChange={e => setEditing({...editing, retiro_dia_inicio: parseInt(e.target.value)})}
+                            >
+                              <option value={0}>Domingo</option>
+                              <option value={1}>Lunes</option>
+                              <option value={2}>Martes</option>
+                              <option value={3}>Miércoles</option>
+                              <option value={4}>Jueves</option>
+                              <option value={5}>Viernes</option>
+                              <option value={6}>Sábado</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Día de Fin (0=Dom, 1=Lun...)</label>
+                            <select
+                              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-black text-gray-800"
+                              value={editing.retiro_dia_fin ?? 5}
+                              onChange={e => setEditing({...editing, retiro_dia_fin: parseInt(e.target.value)})}
+                            >
+                              <option value={0}>Domingo</option>
+                              <option value={1}>Lunes</option>
+                              <option value={2}>Martes</option>
+                              <option value={3}>Miércoles</option>
+                              <option value={4}>Jueves</option>
+                              <option value={5}>Viernes</option>
+                              <option value={6}>Sábado</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Hora de Inicio</label>
+                            <input
+                              type="time"
+                              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-black text-gray-800"
+                              value={editing.retiro_hora_inicio || '09:00'}
+                              onChange={e => setEditing({...editing, retiro_hora_inicio: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Hora de Fin</label>
+                            <input
+                              type="time"
+                              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-black text-gray-800"
+                              value={editing.retiro_hora_fin || '18:00'}
+                              onChange={e => setEditing({...editing, retiro_hora_fin: e.target.value})}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="space-y-1 sm:col-span-2">
                     <label className="flex items-center gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-100 transition-colors">
                       <input
@@ -129,6 +203,12 @@ export default function AdminNiveles() {
                       <p className="text-[10px] font-bold text-sav-primary uppercase tracking-wide">Costo: {(nivel.deposito || nivel.costo || 0).toFixed(2)} BOB</p>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{nivel.tareas_diarias} Tareas / día</p>
                       <p className="text-[10px] font-bold text-green-600 uppercase tracking-wide">Ganancia: {(nivel.ganancia_tarea || 0).toFixed(2)} / tarea</p>
+                      {nivel.retiro_horario_habilitado && (
+                        <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide flex items-center gap-1">
+                          <Clock size={12} />
+                          Retiros: {['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'][nivel.retiro_dia_inicio]}-{['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'][nivel.retiro_dia_fin]} ({nivel.retiro_hora_inicio?.substring(0, 5)} - {nivel.retiro_hora_fin?.substring(0, 5)})
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

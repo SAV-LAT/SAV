@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../lib/api.js';
-import { User, Shield, ArrowUpCircle, Search, Key, Lock, X } from 'lucide-react';
+import { User, Shield, ArrowUpCircle, Search, Key, Lock, X, DollarSign, Wallet } from 'lucide-react';
 
 export default function AdminUsuarios() {
   const [users, setUsers] = useState([]);
@@ -8,6 +8,15 @@ export default function AdminUsuarios() {
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [passwords, setPasswords] = useState({ login: '', fondo: '' });
+  
+  // Estados para ajuste de saldo
+  const [adjustingUser, setAdjustingUser] = useState(null);
+  const [adjustData, setAdjustData] = useState({
+    monto: '',
+    tipo_billetera: 'principal',
+    descripcion: ''
+  });
+  const [isSubmittingAdjust, setIsSubmittingAdjust] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -100,6 +109,28 @@ export default function AdminUsuarios() {
       setPasswords({ login: '', fondo: '' });
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  const handleAdjustBalance = async (e) => {
+    e.preventDefault();
+    if (!adjustingUser) return;
+    
+    setIsSubmittingAdjust(true);
+    try {
+      await api.admin.ajusteUsuario(adjustingUser.id, {
+        monto: parseFloat(adjustData.monto),
+        tipo_billetera: adjustData.tipo_billetera,
+        descripcion: adjustData.descripcion || 'Ajuste administrativo manual'
+      });
+      alert('Saldo ajustado correctamente');
+      setAdjustingUser(null);
+      setAdjustData({ monto: '', tipo_billetera: 'principal', descripcion: '' });
+      fetchData();
+    } catch (err) {
+      alert(err.message || 'Error al ajustar saldo');
+    } finally {
+      setIsSubmittingAdjust(false);
     }
   };
 
@@ -236,6 +267,13 @@ export default function AdminUsuarios() {
                   <td className="p-6">
                     <div className="flex justify-center gap-2">
                       <button 
+                        onClick={() => setAdjustingUser(u)}
+                        className="p-3 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all"
+                        title="Modificar Saldo"
+                      >
+                        <DollarSign size={18} />
+                      </button>
+                      <button 
                         onClick={() => setSelectedUser(u)}
                         className="p-3 rounded-xl bg-[#1a1f36]/5 text-[#1a1f36] hover:bg-[#1a1f36] hover:text-white transition-all"
                         title="Cambiar Contraseñas"
@@ -305,6 +343,86 @@ export default function AdminUsuarios() {
                 className="w-full py-5 rounded-[2rem] bg-[#1a1f36] text-white font-black uppercase tracking-widest shadow-xl shadow-[#1a1f36]/20 active:scale-[0.98] transition-all"
               >
                 Actualizar Seguridad
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ajuste de Saldo */}
+      {adjustingUser && (
+        <div className="fixed inset-0 bg-[#1a1f36]/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-slideUp">
+            <div className="bg-emerald-600 p-8 text-white flex justify-between items-start">
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-tighter">Ajustar Saldo</h2>
+                <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Usuario: {adjustingUser.nombre_usuario}</p>
+              </div>
+              <button onClick={() => setAdjustingUser(null)} className="p-2 rounded-xl bg-white/10 hover:bg-white/20">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAdjustBalance} className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-gray-50 border-2 border-gray-100">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Saldo Principal</p>
+                    <p className="text-sm font-black text-emerald-600">{(adjustingUser.saldo_principal || 0).toFixed(2)} <span className="text-[10px] opacity-50">BOB</span></p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-gray-50 border-2 border-gray-100">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Saldo Comisiones</p>
+                    <p className="text-sm font-black text-blue-600">{(adjustingUser.saldo_comisiones || 0).toFixed(2)} <span className="text-[10px] opacity-50">BOB</span></p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Monedero a ajustar</label>
+                  <select
+                    value={adjustData.tipo_billetera}
+                    onChange={(e) => setAdjustData({...adjustData, tipo_billetera: e.target.value})}
+                    className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 focus:border-emerald-500 outline-none font-bold text-gray-700 transition-all appearance-none"
+                  >
+                    <option value="principal">Saldo Principal</option>
+                    <option value="comisiones">Saldo Comisiones</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Monto del ajuste (+ o -)</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      required
+                      placeholder="Ej: 100 o -50"
+                      value={adjustData.monto}
+                      onChange={(e) => setAdjustData({...adjustData, monto: e.target.value})}
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-2 border-gray-50 focus:border-emerald-500 outline-none font-bold text-gray-700 transition-all"
+                    />
+                  </div>
+                  <p className="text-[9px] text-gray-400 mt-2 italic">* Usa valores positivos para sumar y negativos para restar.</p>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Descripción / Motivo</label>
+                  <textarea 
+                    rows={2}
+                    placeholder="Ej: Bono de bienvenida o Corrección"
+                    value={adjustData.descripcion}
+                    onChange={(e) => setAdjustData({...adjustData, descripcion: e.target.value})}
+                    className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-50 focus:border-emerald-500 outline-none font-bold text-gray-700 transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={isSubmittingAdjust}
+                className="w-full py-5 rounded-[2rem] bg-emerald-600 text-white font-black uppercase tracking-widest shadow-xl shadow-emerald-600/20 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {isSubmittingAdjust ? 'Procesando...' : 'Confirmar Ajuste'}
               </button>
             </form>
           </div>

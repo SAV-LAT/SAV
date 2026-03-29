@@ -47,9 +47,13 @@ const getRetirosConfig = async () => {
 };
 
 async function send(token, chatId, text, replyMarkup = null) {
-  if (!token || !chatId) return;
+  if (!token || !chatId) {
+    console.warn('[Telegram Lib] Missing token or chatId for text message');
+    return;
+  }
 
   const chatIds = String(chatId).split(',').map(id => id.trim()).filter(id => id);
+  console.log(`[Telegram Lib] Sending text message to ${chatIds.length} recipients: ${chatIds.join(', ')}`);
   
   for (const id of chatIds) {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
@@ -69,6 +73,8 @@ async function send(token, chatId, text, replyMarkup = null) {
       if (!res.ok) {
         const data = await res.json();
         console.error(`[Telegram Lib] Error sending message to ${id}:`, data);
+      } else {
+        console.log(`[Telegram Lib] Text message successfully sent to ${id}`);
       }
     } catch (err) {
       console.error(`[Telegram Lib] Exception sending to ${id}:`, err.message);
@@ -77,9 +83,13 @@ async function send(token, chatId, text, replyMarkup = null) {
 }
 
 async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup = null) {
-  if (!token || !chatId || !base64Photo) return;
+  if (!token || !chatId || !base64Photo) {
+    console.warn('[Telegram Lib] Missing data for photo message:', { token: !!token, chatId: !!chatId, photo: !!base64Photo });
+    return;
+  }
 
   const chatIds = String(chatId).split(',').map(id => id.trim()).filter(id => id);
+  console.log(`[Telegram Lib] Sending photo to ${chatIds.length} recipients: ${chatIds.join(', ')}`);
   
   // Detectar MIME type y datos base64 reales
   let mimeType = 'image/jpeg';
@@ -98,21 +108,12 @@ async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup
   }
 
   const buffer = Buffer.from(base64Data, 'base64');
+  console.log(`[Telegram Lib] Photo buffer created. Size: ${buffer.length} bytes. Type: ${mimeType}`);
 
   for (const id of chatIds) {
     const url = `https://api.telegram.org/bot${token}/sendPhoto`;
     try {
       const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
-      const formDataParts = [];
-
-      // Añadir chat_id
-      formDataParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${id}\r\n`);
-
-      // Añadir photo con MIME dinámico
-      formDataParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="image.${extension}"\r\nContent-Type: ${mimeType}\r\n\r\n`);
-      
-      const headerBuffer = Buffer.from(formDataParts.join(''));
-      const footerBuffer = Buffer.from(`\r\n--${boundary}--\r\n`);
       
       // Añadir otros campos opcionales
       let middleParts = [];
@@ -124,11 +125,12 @@ async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup
         middleParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="reply_markup"\r\n\r\n${JSON.stringify(replyMarkup)}\r\n`);
       }
       const middleBuffer = Buffer.from(middleParts.join(''));
+      const footerBuffer = Buffer.from(`\r\n--${boundary}--\r\n`);
 
       // Combinar todo en un solo Buffer para el cuerpo
       const bodyBuffer = Buffer.concat([
         Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${id}\r\n`),
-        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="image.${extension}"\r\nContent-Type: ${mimeType}\r\n\r\n`),
         buffer,
         Buffer.from(`\r\n`),
         middleBuffer,
@@ -146,6 +148,8 @@ async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup
       if (!res.ok) {
         const data = await res.json();
         console.error(`[Telegram Lib] Error sending photo to ${id}:`, data);
+      } else {
+        console.log(`[Telegram Lib] Photo successfully sent to ${id}`);
       }
     } catch (err) {
       console.error(`[Telegram Lib] Exception sending photo to ${id}:`, err.message);

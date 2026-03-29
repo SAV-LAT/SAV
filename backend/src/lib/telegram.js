@@ -138,7 +138,7 @@ export const telegram = {
     if (!config.enabled) return;
     const markup = {
       inline_keyboard: [[
-        { text: '✅ Aceptar', callback_data: `retiro_aprobar_${id}` },
+        { text: '🔒 Tomar Retiro', callback_data: `retiro_tomar_${id}` },
         { text: '❌ Rechazar', callback_data: `retiro_rechazar_${id}` }
       ]]
     };
@@ -149,7 +149,7 @@ export const telegram = {
     if (!config.enabled) return;
     const markup = {
       inline_keyboard: [[
-        { text: '✅ Aceptar', callback_data: `retiro_aprobar_${id}` },
+        { text: '🔒 Tomar Retiro', callback_data: `retiro_tomar_${id}` },
         { text: '❌ Rechazar', callback_data: `retiro_rechazar_${id}` }
       ]]
     };

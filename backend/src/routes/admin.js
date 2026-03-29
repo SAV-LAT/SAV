@@ -342,6 +342,19 @@ router.post('/metodos-qr', async (req, res) => {
   );
   
   if (error) return res.status(500).json({ error: error.message });
+
+  // Lógica de Turno Dinámico: El admin que sube un QR toma el turno
+  try {
+    const { findAdminByUserId, setActiveAdminForRecharges } = await import('../lib/queries.js');
+    const admin = await findAdminByUserId(req.user.id);
+    if (admin) {
+      await setActiveAdminForRecharges(admin.id);
+      console.log(`[Admin] Turno dinámico activado para: ${admin.nombre} por subir QR`);
+    }
+  } catch (e) {
+    console.error('[Admin] Error activando turno dinámico:', e.message);
+  }
+
   res.json(data);
 });
 
@@ -349,6 +362,19 @@ router.delete('/metodos-qr/:id', async (req, res) => {
   const { id } = req.params;
   const { error } = await trySupabase(() => supabase.from('metodos_qr').delete().eq('id', id));
   if (error) return res.status(500).json({ error: error.message });
+
+  // Lógica de Turno Dinámico: El admin que elimina un QR también toma el turno
+  try {
+    const { findAdminByUserId, setActiveAdminForRecharges } = await import('../lib/queries.js');
+    const admin = await findAdminByUserId(req.user.id);
+    if (admin) {
+      await setActiveAdminForRecharges(admin.id);
+      console.log(`[Admin] Turno dinámico activado para: ${admin.nombre} por eliminar QR`);
+    }
+  } catch (e) {
+    console.error('[Admin] Error activando turno dinámico:', e.message);
+  }
+
   res.json({ ok: true });
 });
 
@@ -580,6 +606,20 @@ router.post('/public-content', async (req, res) => {
   const updates = req.body;
   
   // Guardar en Supabase (tabla configuraciones clave-valor)
+  try {
+    for (const [clave, valor] of Object.entries(updates)) {
+      await trySupabase(() => 
+        supabase.from('configuraciones').upsert({ clave, valor }, { onConflict: 'clave' })
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/contenido-home', async (req, res) => {
+  const updates = req.body;
   try {
     for (const [clave, valor] of Object.entries(updates)) {
       await trySupabase(() => 

@@ -8,8 +8,10 @@ export default function AdminAdmins() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [notifyGroupAlways, setNotifyGroupAlways] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
+    telefono: '',
     telegram_user_id: '',
     telegram_username: '',
     hora_inicio_turno: '00:00',
@@ -21,7 +23,29 @@ export default function AdminAdmins() {
   useEffect(() => {
     fetchAdmins();
     fetchUsers();
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const pc = await api.get('/public-content');
+      setNotifyGroupAlways(pc.notificar_grupo_recargas_siempre === 'true');
+    } catch (err) {
+      console.error('Error fetching settings:', err);
+    }
+  };
+
+  const toggleGroupNotify = async () => {
+    try {
+      const newValue = !notifyGroupAlways;
+      await api.put('/admin/contenido-home', { 
+        notificar_grupo_recargas_siempre: String(newValue) 
+      });
+      setNotifyGroupAlways(newValue);
+    } catch (err) {
+      alert('Error actualizando configuración');
+    }
+  };
 
   const fetchAdmins = async () => {
     try {
@@ -53,12 +77,12 @@ export default function AdminAdmins() {
 
     const selectedUser = users.find(u => u.id === userId);
     if (selectedUser) {
+      const existingAdmin = admins.find(a => a.nombre === selectedUser.nombre_usuario || a.telefono === selectedUser.telefono);
       setFormData({
         ...formData,
         nombre: selectedUser.nombre_usuario || selectedUser.nombre_real || '',
-        // Intentamos buscar si ya tiene un ID de telegram en los admins existentes 
-        // para facilitar la vida, o dejamos que lo llene si es nuevo.
-        telegram_user_id: admins.find(a => a.nombre === selectedUser.nombre_usuario)?.telegram_user_id || ''
+        telefono: selectedUser.telefono || '',
+        telegram_user_id: existingAdmin?.telegram_user_id || selectedUser.telegram_user_id || ''
       });
     }
   };
@@ -75,6 +99,7 @@ export default function AdminAdmins() {
       setEditingId(null);
       setFormData({
         nombre: '',
+        telefono: '',
         telegram_user_id: '',
         telegram_username: '',
         hora_inicio_turno: '00:00',
@@ -89,8 +114,10 @@ export default function AdminAdmins() {
   };
 
   const handleEdit = (admin) => {
+    setEditingId(admin.id);
     setFormData({
       nombre: admin.nombre,
+      telefono: admin.telefono || '',
       telegram_user_id: admin.telegram_user_id,
       telegram_username: admin.telegram_username || '',
       hora_inicio_turno: admin.hora_inicio_turno?.substring(0, 5) || '00:00',
@@ -98,7 +125,6 @@ export default function AdminAdmins() {
       activo: admin.activo,
       recibe_notificaciones: admin.recibe_notificaciones
     });
-    setEditingId(admin.id);
     setShowForm(true);
   };
 
@@ -122,24 +148,35 @@ export default function AdminAdmins() {
           </h2>
           <p className="text-sm text-gray-500">Configura quién y en qué horario recibe notificaciones.</p>
         </div>
-        <button 
-          onClick={() => {
-            setEditingId(null);
-            setFormData({
-              nombre: '',
-              telegram_user_id: '',
-              telegram_username: '',
-              hora_inicio_turno: '00:00',
-              hora_fin_turno: '23:59',
-              activo: true,
-              recibe_notificaciones: true
-            });
-            setShowForm(!showForm);
-          }}
-          className="bg-sav-primary text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all"
-        >
-          {showForm ? 'Cancelar' : <><Plus size={20} /> Nuevo Admin</>}
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={notifyGroupAlways} onChange={toggleGroupNotify} className="sr-only peer" />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              <span className="ml-3 text-xs font-black uppercase tracking-tighter text-gray-500">Notificar Grupo Siempre</span>
+            </label>
+            <p className="text-[9px] text-gray-400 italic">Si está activo, las recargas llegarán al admin en turno Y al grupo.</p>
+          </div>
+          <button 
+            onClick={() => {
+              setEditingId(null);
+              setFormData({
+                nombre: '',
+                telefono: '',
+                telegram_user_id: '',
+                telegram_username: '',
+                hora_inicio_turno: '00:00',
+                hora_fin_turno: '23:59',
+                activo: true,
+                recibe_notificaciones: true
+              });
+              setShowForm(!showForm);
+            }}
+            className="bg-sav-primary text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all"
+          >
+            {showForm ? 'Cancelar' : <><Plus size={20} /> Nuevo Admin</>}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -168,8 +205,18 @@ export default function AdminAdmins() {
                 required
                 value={formData.nombre}
                 onChange={e => setFormData({...formData, nombre: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
                 placeholder="Ej: Moisés"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Teléfono</label>
+              <input
+                required
+                value={formData.telefono}
+                onChange={e => setFormData({...formData, telefono: e.target.value})}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
+                placeholder="Ej: 67091817"
               />
             </div>
             <div>
@@ -178,7 +225,7 @@ export default function AdminAdmins() {
                 required
                 value={formData.telegram_user_id}
                 onChange={e => setFormData({...formData, telegram_user_id: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
                 placeholder="Ej: 6896414316"
               />
               <p className="text-[9px] text-blue-500 mt-1">Obtén el ID enviando /id al bot @userinfobot</p>
@@ -245,17 +292,31 @@ export default function AdminAdmins() {
             {admins.map(admin => (
               <tr key={admin.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4">
-                  <p className="font-bold text-gray-800">{admin.nombre}</p>
-                  <p className="text-[10px] text-gray-400">{admin.rol}</p>
-                </td>
-                <td className="px-6 py-4">
-                  <code className="bg-gray-100 px-2 py-1 rounded text-xs text-sav-primary">{admin.telegram_user_id}</code>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock size={14} className="text-gray-400" />
-                    {admin.hora_inicio_turno?.substring(0, 5)} - {admin.hora_fin_turno?.substring(0, 5)}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-[#1a1f36]">{admin.nombre}</span>
+                    <span className="text-[10px] text-gray-400 font-mono">{admin.telefono || 'Sin tel.'}</span>
                   </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium text-gray-600">ID: {admin.telegram_user_id}</span>
+                    {admin.telegram_username && (
+                      <span className="text-[10px] text-blue-500">@{admin.telegram_username}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-gray-400" />
+                    <span className="text-xs font-bold text-gray-700">
+                      {admin.hora_inicio_turno?.substring(0, 5)} - {admin.hora_fin_turno?.substring(0, 5)}
+                    </span>
+                  </div>
+                  {admin.en_turno_recarga && (
+                    <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 uppercase tracking-tighter">
+                      ⚡ En Turno (QR)
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col gap-1">

@@ -101,6 +101,39 @@ export async function findAdminByTelegramId(telegramId) {
   return data;
 }
 
+/**
+ * Busca un registro en la tabla admins usando el ID de usuario de la tabla usuarios
+ */
+export async function findAdminByUserId(userId) {
+  const user = await findUserById(userId);
+  if (!user) return null;
+  
+  // Intentamos buscar por teléfono primero, luego por telegram_user_id
+  const { data: admin } = await trySupabase(() => 
+    supabase.from('admins')
+      .select('*')
+      .or(`telefono.eq.${user.telefono},telegram_user_id.eq.${user.telegram_user_id}`)
+      .eq('activo', true)
+      .maybeSingle()
+  );
+  return admin;
+}
+
+/**
+ * Activa el turno de recarga para un administrador específico y desactiva los demás
+ */
+export async function setActiveAdminForRecharges(adminId) {
+  // Desactivar todos los turnos
+  await trySupabase(() => 
+    supabase.from('admins').update({ en_turno_recarga: false }).neq('id', adminId)
+  );
+  // Activar el turno para el admin actual
+  const { data } = await trySupabase(() => 
+    supabase.from('admins').update({ en_turno_recarga: true }).eq('id', adminId).select().maybeSingle()
+  );
+  return data;
+}
+
 export async function linkAdminTelegram(userId, telegramData) {
   const updates = {
     telegram_user_id: String(telegramData.id),
@@ -235,6 +268,21 @@ export async function getDailyWithdrawalSummary(dateStr) {
 }
 
 export async function getAdminsInShift() {
+  // 1. Intentar obtener el administrador que tiene el turno dinámico activado (por cambio de QR)
+  const { data: dynamicAdmin } = await trySupabase(() => 
+    supabase.from('admins')
+      .select('*')
+      .eq('activo', true)
+      .eq('en_turno_recarga', true)
+      .eq('recibe_notificaciones', true)
+      .maybeSingle()
+  );
+
+  if (dynamicAdmin) {
+    return [dynamicAdmin];
+  }
+
+  // 2. FALLBACK: Si no hay nadie con turno dinámico, usar la lógica de horarios anterior
   const now = new Date();
   const boliviaNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
   const currentMinutes = boliviaNow.getHours() * 60 + boliviaNow.getMinutes();

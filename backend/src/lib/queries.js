@@ -1,21 +1,36 @@
 import { supabase, hasDb } from './db.js';
 
-export async function trySupabase(operation) {
+export async function trySupabase(operation, retries = 3) {
   if (!supabase || !hasDb()) {
     console.error('[CRITICAL] No se pudo conectar con la base de datos de Supabase. El modo memoria (demo) está DESACTIVADO.');
     throw new Error('Error crítico de conexión: No hay base de datos disponible.');
   }
-  try {
-    const { data, error } = await operation();
-    if (error) {
-      console.error('[Supabase Error Logged]:', JSON.stringify(error, null, 2));
-      throw error;
+  
+  let lastError;
+  for (let i = 0; i < retries; i++) {
+    try {
+      const { data, error } = await operation();
+      if (error) {
+        console.error(`[Supabase Error Logged] (Intento ${i + 1}/${retries}):`, JSON.stringify(error, null, 2));
+        lastError = error;
+        if (i < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff simple
+          continue;
+        }
+        throw error;
+      }
+      return { data, error: null, fallback: false };
+    } catch (err) {
+      console.error(`[Supabase Critical Logged] (Intento ${i + 1}/${retries}):`, err.message || err);
+      lastError = err;
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        continue;
+      }
+      throw err;
     }
-    return { data, error: null, fallback: false };
-  } catch (err) {
-    console.error('[Supabase Critical Logged]:', err);
-    throw err;
   }
+  throw lastError;
 }
 
 export async function getUsers() {

@@ -46,11 +46,17 @@ router.get('/me', authenticate, async (req, res) => {
     res.setHeader('Expires', '0');
     
     const user = await findUserById(req.user.id);
-    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (!user) {
+      console.warn(`[Users] Usuario con ID ${req.user.id} no encontrado en la base de datos.`);
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
     const levels = await getLevels();
     res.json(sanitizeUser(user, levels));
   } catch (err) {
     console.error('[Users] Error en /me:', err);
+    // Log details if it's a Supabase error
+    if (err.message) console.error('[Users] Error message:', err.message);
+    if (err.stack) console.error('[Users] Error stack:', err.stack);
     res.status(500).json({ error: 'Error al recuperar perfil' });
   }
 });

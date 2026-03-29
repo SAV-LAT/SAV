@@ -89,26 +89,37 @@ router.post('/', authenticate, async (req, res) => {
   else updates.saldo_principal = user.saldo_principal - m;
   await updateUser(user.id, updates);
 
-  // Notificar por Telegram (Bot de Retiros)
-  const msg = `<b>💸 SOLICITUD DE RETIRO PENDIENTE</b>\n\n` +
-    `<b>👤 Usuario:</b> ${user.nombre_usuario}\n` +
-    `<b>📛 Nombre Real:</b> ${user.nombre_real || 'No especificado'}\n` +
-    `<b>📱 Teléfono:</b> ${user.telefono || 'No disponible'}\n\n` +
-    `<b>💰 MONTO SOLICITADO:</b> ${retiro.monto.toFixed(2)} BOB\n` +
-    `<b>🧾 Comisión (10%):</b> -${retiro.comision.toFixed(2)} BOB\n` +
-    `<b>💵 NETO A PAGAR:</b> <u>${retiro.monto_a_recibir.toFixed(2)} BOB</u>\n\n` +
-    `<b>🏦 Banco/Billetera:</b> ${tarjetaElegida?.tipo || 'N/A'}\n` +
-    `<b>👤 Titular:</b> ${tarjetaElegida?.nombre_banco || 'N/A'}\n` +
-    `<b>🔢 Nro. Cuenta:</b> <code>${tarjetaElegida?.numero_masked || 'N/A'}</code>\n\n` +
-    `<b>🕒 Fecha:</b> ${new Date(retiro.created_at).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}`;
-  
-  if (retiro.qr_retiro && retiro.qr_retiro.startsWith('data:image')) {
-    telegram.sendRetiroConFoto(msg, retiro.qr_retiro, retiro.id).catch(console.error);
-  } else {
-    telegram.sendRetiro(msg, retiro.id).catch(console.error);
-  }
-  
+  // Responder inmediatamente al cliente
   res.json(retiro);
+
+  // Notificar por Telegram (Bot de Retiros) en segundo plano
+  (async () => {
+    try {
+      const msg = `<b>💸 SOLICITUD DE RETIRO PENDIENTE</b>\n\n` +
+        `<b>👤 Usuario:</b> ${user.nombre_usuario}\n` +
+        `<b>📛 Nombre Real:</b> ${user.nombre_real || 'No especificado'}\n` +
+        `<b>📱 Teléfono:</b> ${user.telefono || 'No disponible'}\n\n` +
+        `<b>💰 MONTO SOLICITADO:</b> ${retiro.monto.toFixed(2)} BOB\n` +
+        `<b>🧾 Comisión (10%):</b> -${retiro.comision.toFixed(2)} BOB\n` +
+        `<b>💵 NETO A PAGAR:</b> <u>${retiro.monto_a_recibir.toFixed(2)} BOB</u>\n\n` +
+        `<b>🏦 Banco/Billetera:</b> ${tarjetaElegida?.tipo || 'N/A'}\n` +
+        `<b>👤 Titular:</b> ${tarjetaElegida?.nombre_banco || 'N/A'}\n` +
+        `<b>🔢 Nro. Cuenta:</b> <code>${tarjetaElegida?.numero_masked || 'N/A'}</code>\n\n` +
+        `<b>🕒 Fecha:</b> ${new Date(retiro.created_at).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}`;
+      
+      if (retiro.qr_retiro && retiro.qr_retiro.startsWith('data:image')) {
+        console.log(`[Withdrawal] Sending Telegram with photo for ${retiro.id}`);
+        await telegram.sendRetiroConFoto(msg, retiro.qr_retiro, retiro.id);
+        console.log(`[Withdrawal] Telegram with photo sent for ${retiro.id}`);
+      } else {
+        console.log(`[Withdrawal] Sending Telegram text only for ${retiro.id}`);
+        await telegram.sendRetiro(msg, retiro.id);
+        console.log(`[Withdrawal] Telegram text sent for ${retiro.id}`);
+      }
+    } catch (tgErr) {
+      console.error(`[Withdrawal] Error en notificación de Telegram:`, tgErr);
+    }
+  })();
 });
 
 export default router;

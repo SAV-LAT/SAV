@@ -58,21 +58,46 @@ async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup
   for (const id of chatIds) {
     const url = `https://api.telegram.org/bot${token}/sendPhoto`;
     try {
-      const formData = new FormData();
-      formData.append('chat_id', id);
-      
-      const blob = new Blob([buffer], { type: 'image/jpeg' });
-      formData.append('photo', blob, 'image.jpg');
+      // Usar un enfoque más compatible con Buffer para enviar la foto
+      const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
+      const formDataParts = [];
 
+      // Añadir chat_id
+      formDataParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${id}\r\n`);
+
+      // Añadir photo
+      formDataParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`);
+      
+      const headerBuffer = Buffer.from(formDataParts.join(''));
+      const footerBuffer = Buffer.from(`\r\n--${boundary}--\r\n`);
+      
+      // Añadir otros campos opcionales
+      let middleParts = [];
       if (caption) {
-        formData.append('caption', caption);
-        formData.append('parse_mode', 'HTML');
+        middleParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="caption"\r\n\r\n${caption}\r\n`);
+        middleParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="parse_mode"\r\n\r\nHTML\r\n`);
       }
-      if (replyMarkup) formData.append('reply_markup', JSON.stringify(replyMarkup));
+      if (replyMarkup) {
+        middleParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="reply_markup"\r\n\r\n${JSON.stringify(replyMarkup)}\r\n`);
+      }
+      const middleBuffer = Buffer.from(middleParts.join(''));
+
+      // Combinar todo en un solo Buffer para el cuerpo
+      const bodyBuffer = Buffer.concat([
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${id}\r\n`),
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+        buffer,
+        Buffer.from(`\r\n`),
+        middleBuffer,
+        footerBuffer
+      ]);
 
       const res = await fetch(url, {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`
+        },
+        body: bodyBuffer
       });
 
       if (!res.ok) {

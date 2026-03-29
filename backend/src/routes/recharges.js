@@ -85,31 +85,38 @@ router.post('/', authenticate, async (req, res) => {
     };
     
     console.log(`[Recharge] Creating recharge for ${user?.nombre_usuario} - Amount: ${recarga.monto}`);
+    const startDb = Date.now();
     await createRecarga(recarga);
-    console.log(`[Recharge] Recharge created in DB: ${recarga.id}`);
+    console.log(`[Recharge] Recharge created in DB in ${Date.now() - startDb}ms: ${recarga.id}`);
 
-    // Notificar por Telegram (Bot de Recargas)
-    const msg = `<b>🔔 NUEVA RECARGA PENDIENTE</b>\n\n` +
-      `<b>👤 Usuario:</b> ${user?.nombre_usuario || req.user.id}\n` +
-      `<b>📛 Nombre Real:</b> ${user?.nombre_real || 'No especificado'}\n` +
-      `<b>📱 Teléfono:</b> ${user?.telefono || 'No disponible'}\n\n` +
-      `<b>💰 MONTO:</b> <u>${recarga.monto.toFixed(2)} BOB</u>\n` +
-      `<b>🛠 MODO:</b> ${recarga.modo}\n\n` +
-      `<b>🕒 Fecha:</b> ${new Date(recarga.created_at).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}`;
-    
-    if (recarga.comprobante_url && recarga.comprobante_url.startsWith('data:image')) {
-      console.log(`[Recharge] Sending Telegram with photo for ${recarga.id}`);
-      telegram.sendRecargaConFoto(msg, recarga.comprobante_url, recarga.id).catch(err => {
-        console.error(`[Recharge] Telegram sendPhoto error:`, err);
-      });
-    } else {
-      console.log(`[Recharge] Sending Telegram text only for ${recarga.id}`);
-      telegram.sendRecarga(msg, recarga.id).catch(err => {
-        console.error(`[Recharge] Telegram send error:`, err);
-      });
-    }
-
+    // Responder inmediatamente al cliente para evitar timeouts, 
+    // y procesar las notificaciones en segundo plano.
     res.json(recarga);
+
+    // Notificar por Telegram (Bot de Recargas) en segundo plano
+    (async () => {
+      try {
+        const msg = `<b>🔔 NUEVA RECARGA PENDIENTE</b>\n\n` +
+          `<b>👤 Usuario:</b> ${user?.nombre_usuario || req.user.id}\n` +
+          `<b>📛 Nombre Real:</b> ${user?.nombre_real || 'No especificado'}\n` +
+          `<b>📱 Teléfono:</b> ${user?.telefono || 'No disponible'}\n\n` +
+          `<b>💰 MONTO:</b> <u>${recarga.monto.toFixed(2)} BOB</u>\n` +
+          `<b>🛠 MODO:</b> ${recarga.modo}\n\n` +
+          `<b>🕒 Fecha:</b> ${new Date(recarga.created_at).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}`;
+        
+        if (recarga.comprobante_url && recarga.comprobante_url.startsWith('data:image')) {
+          console.log(`[Recharge] Sending Telegram with photo for ${recarga.id}`);
+          await telegram.sendRecargaConFoto(msg, recarga.comprobante_url, recarga.id);
+          console.log(`[Recharge] Telegram with photo sent for ${recarga.id}`);
+        } else {
+          console.log(`[Recharge] Sending Telegram text only for ${recarga.id}`);
+          await telegram.sendRecarga(msg, recarga.id);
+          console.log(`[Recharge] Telegram text sent for ${recarga.id}`);
+        }
+      } catch (tgErr) {
+        console.error(`[Recharge] Error en notificación de Telegram:`, tgErr);
+      }
+    })();
   } catch (err) {
     console.error('[Recharge] Error fatal en POST /:', err);
     res.status(500).json({ error: 'Error interno al procesar la recarga' });

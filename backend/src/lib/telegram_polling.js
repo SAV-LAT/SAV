@@ -35,8 +35,16 @@ export async function startTelegramPolling() {
 
       for (const token of tokens) {
         const updates = await getUpdates(token);
+        if (updates.length > 0) {
+          console.log(`[Telegram Polling] Recibidas ${updates.length} actualizaciones para el bot ${token.substring(0, 10)}...`);
+        }
         for (const update of updates) {
           lastUpdateIds.set(token, update.update_id);
+          
+          if (update.callback_query) {
+            console.log(`[Telegram Polling] CLICK DETECTADO: ${update.callback_query.data} de ${update.callback_query.from.username || update.callback_query.from.id}`);
+          }
+          
           await processTelegramUpdate(update);
         }
       }

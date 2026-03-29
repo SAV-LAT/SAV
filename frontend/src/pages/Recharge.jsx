@@ -5,7 +5,8 @@ import Header from '../components/Header';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { isScheduleOpen } from '../lib/schedule';
-import { Upload, CheckCircle2, Lock, Info, Clock, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle2, Lock, Info, Clock, AlertCircle, Sparkles } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 
 export default function Recharge() {
   const { user } = useAuth();
@@ -25,6 +26,8 @@ export default function Recharge() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
   const [teamStats, setTeamStats] = useState(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationDone, setOptimizationDone] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -120,23 +123,54 @@ export default function Recharge() {
     setError('');
   };
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
-    
-    // Limitar tamaño a 2MB para evitar errores de red en móviles
-    if (file.size > 2 * 1024 * 1024) {
-      setError('La imagen es muy pesada. Máximo 2MB.');
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Por favor selecciona un archivo de imagen válido (JPG, PNG, WEBP)');
       return;
     }
+    
+    setError('');
+    setIsOptimizing(true);
+    setOptimizationDone(false);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setComprobante(reader.result);
-      setError('');
-    };
-    reader.onerror = () => setError('Error al leer el archivo');
-    reader.readAsDataURL(file);
+    try {
+      // Opciones de compresión para mantener legibilidad de vouchers
+      const options = {
+        maxSizeMB: 0.8, // Apuntamos a menos de 1MB para seguridad
+        maxWidthOrHeight: 1600, // Redimensionar si es muy grande pero mantener detalle
+        useWebWorker: true,
+        fileType: 'image/jpeg', // Forzar conversión a JPEG para mejor compatibilidad y peso
+        initialQuality: 0.8
+      };
+
+      const compressedFile = await imageCompression(file, options);
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        setComprobante(reader.result);
+        setIsOptimizing(false);
+        setOptimizationDone(true);
+        // Limpiar el mensaje de éxito después de unos segundos
+        setTimeout(() => setOptimizationDone(false), 4000);
+      };
+      reader.onerror = () => {
+        setError('Error al procesar la imagen optimizada');
+        setIsOptimizing(false);
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (err) {
+      console.error('Error optimizando imagen:', err);
+      // Si falla la optimización, intentamos cargar la original como fallback
+      const reader = new FileReader();
+      reader.onload = () => {
+        setComprobante(reader.result);
+        setIsOptimizing(false);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -434,23 +468,36 @@ export default function Recharge() {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
+              disabled={isOptimizing}
               className={`w-full min-h-[12rem] rounded-[2rem] border-2 border-dashed transition-all flex flex-col items-center justify-center gap-4 overflow-hidden group ${
                 comprobante ? 'border-[#00C853] bg-[#00C853]/5' : 'border-gray-100 bg-gray-50 hover:border-[#1a1f36]/50'
-              }`}
+              } ${isOptimizing ? 'opacity-50 cursor-wait' : ''}`}
             >
-              {comprobante ? (
+              {isOptimizing ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-10 h-10 border-4 border-[#1a1f36] border-t-transparent rounded-full animate-spin" />
+                  <p className="text-[10px] font-black text-[#1a1f36] uppercase tracking-widest animate-pulse">Optimizando imagen...</p>
+                </div>
+              ) : comprobante ? (
                 <>
                   <img src={comprobante} alt="Comprobante" className="max-h-40 object-contain rounded-xl shadow-lg" />
-                  <span className="text-[10px] font-black text-[#00C853] uppercase tracking-widest animate-pulse">¡Captura lista!</span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-black text-[#00C853] uppercase tracking-widest">¡Captura lista!</span>
+                    {optimizationDone && (
+                      <span className="flex items-center gap-1 text-[8px] text-emerald-600 font-bold uppercase tracking-tighter bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <Sparkles size={10} /> Imagen optimizada para mejor envío
+                      </span>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>
                   <div className="w-16 h-16 rounded-[1.5rem] bg-white flex items-center justify-center text-[#1a1f36] group-hover:scale-110 transition-transform border border-gray-100 shadow-sm">
                     <Upload size={32} />
                   </div>
-                  <div className="text-center">
+                  <div className="text-center px-4">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#1a1f36] transition-colors">Sube tu captura de pantalla</p>
-                    <p className="text-[8px] text-gray-300 font-bold uppercase mt-1">Máximo 5MB • Formatos JPG, PNG</p>
+                    <p className="text-[8px] text-gray-300 font-bold uppercase mt-1">Sin límite de tamaño • JPG, PNG, WEBP</p>
                   </div>
                 </>
               )}

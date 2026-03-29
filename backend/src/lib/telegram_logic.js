@@ -253,7 +253,7 @@ async function answerCallback(callbackQueryId, text) {
   for (const token of tokens) {
     if (!token) continue;
     try {
-      await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+      const res = await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -262,6 +262,7 @@ async function answerCallback(callbackQueryId, text) {
           show_alert: false
         })
       });
+      if (res.ok) break; // Si tuvo éxito con un token, ya está respondido
     } catch (e) {}
   }
 }

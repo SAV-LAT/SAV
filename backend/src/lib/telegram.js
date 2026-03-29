@@ -80,21 +80,36 @@ async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup
   if (!token || !chatId || !base64Photo) return;
 
   const chatIds = String(chatId).split(',').map(id => id.trim()).filter(id => id);
-  const base64Data = base64Photo.split(',')[1] || base64Photo;
+  
+  // Detectar MIME type y datos base64 reales
+  let mimeType = 'image/jpeg';
+  let extension = 'jpg';
+  let base64Data = base64Photo;
+
+  if (base64Photo.includes(';base64,')) {
+    const parts = base64Photo.split(';base64,');
+    mimeType = parts[0].split(':')[1];
+    base64Data = parts[1];
+    
+    // Mapear extensiones comunes
+    if (mimeType === 'image/png') extension = 'png';
+    else if (mimeType === 'image/webp') extension = 'webp';
+    else if (mimeType === 'image/gif') extension = 'gif';
+  }
+
   const buffer = Buffer.from(base64Data, 'base64');
 
   for (const id of chatIds) {
     const url = `https://api.telegram.org/bot${token}/sendPhoto`;
     try {
-      // Usar un enfoque más compatible con Buffer para enviar la foto
       const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
       const formDataParts = [];
 
       // Añadir chat_id
       formDataParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${id}\r\n`);
 
-      // Añadir photo
-      formDataParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`);
+      // Añadir photo con MIME dinámico
+      formDataParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="image.${extension}"\r\nContent-Type: ${mimeType}\r\n\r\n`);
       
       const headerBuffer = Buffer.from(formDataParts.join(''));
       const footerBuffer = Buffer.from(`\r\n--${boundary}--\r\n`);

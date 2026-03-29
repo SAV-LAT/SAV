@@ -4,8 +4,9 @@ import Layout from '../components/Layout';
 import Header from '../components/Header';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Check, Upload, Info, AlertCircle, Clock, Wallet } from 'lucide-react';
+import { Eye, EyeOff, Check, Upload, Info, AlertCircle, Clock, Wallet, Sparkles } from 'lucide-react';
 import { isScheduleOpen } from '../lib/schedule';
+import imageCompression from 'browser-image-compression';
 
 export default function Withdrawal() {
   const { user } = useAuth();
@@ -22,6 +23,8 @@ export default function Withdrawal() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [pc, setPc] = useState(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationDone, setOptimizationDone] = useState(false);
 
   useEffect(() => {
     // Flujo de validación: Contraseña de fondo -> Vincular tarjeta
@@ -49,23 +52,52 @@ export default function Withdrawal() {
   const fueraHorario = horarioRet?.enabled && !schedRet.ok;
   const msgHorario = !schedRet.ok ? schedRet.message : '';
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
-    
-    // Limitar tamaño a 2MB para evitar errores de red
-    if (file.size > 2 * 1024 * 1024) {
-      setError('La imagen es muy pesada. Máximo 2MB.');
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Por favor selecciona un archivo de imagen válido (JPG, PNG, WEBP)');
       return;
     }
+    
+    setError('');
+    setIsOptimizing(true);
+    setOptimizationDone(false);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setQrImage(reader.result);
-      setError(''); // Limpiar error si se sube correctamente
-    };
-    reader.onerror = () => setError('Error al leer el archivo.');
-    reader.readAsDataURL(file);
+    try {
+      // Opciones de compresión para mantener legibilidad de QR
+      const options = {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1200, // Un poco más pequeño para QR pero nítido
+        useWebWorker: true,
+        fileType: 'image/jpeg',
+        initialQuality: 0.85 // Un poco más de calidad para asegurar escaneo de QR
+      };
+
+      const compressedFile = await imageCompression(file, options);
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        setQrImage(reader.result);
+        setIsOptimizing(false);
+        setOptimizationDone(true);
+        setTimeout(() => setOptimizationDone(false), 4000);
+      };
+      reader.onerror = () => {
+        setError('Error al procesar la imagen optimizada');
+        setIsOptimizing(false);
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (err) {
+      console.error('Error optimizando imagen:', err);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setQrImage(reader.result);
+        setIsOptimizing(false);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -230,19 +262,35 @@ export default function Withdrawal() {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className={`w-full min-h-[10rem] rounded-[2rem] border-2 border-dashed transition-all flex flex-col items-center justify-center gap-4 overflow-hidden group ${qrImage ? 'border-[#00C853] bg-[#00C853]/5' : 'border-gray-100 bg-gray-50/50 hover:border-[#1a1f36]/50'}`}
+              disabled={isOptimizing}
+              className={`w-full min-h-[10rem] rounded-[2rem] border-2 border-dashed transition-all flex flex-col items-center justify-center gap-4 overflow-hidden group ${qrImage ? 'border-[#00C853] bg-[#00C853]/5' : 'border-gray-100 bg-gray-50/50 hover:border-[#1a1f36]/50'} ${isOptimizing ? 'opacity-50 cursor-wait' : ''}`}
             >
-              {qrImage ? (
+              {isOptimizing ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-4 border-[#1a1f36] border-t-transparent rounded-full animate-spin" />
+                  <p className="text-[10px] font-black text-[#1a1f36] uppercase tracking-widest animate-pulse">Optimizando QR...</p>
+                </div>
+              ) : qrImage ? (
                 <>
                   <img src={qrImage} alt="QR" className="max-h-32 object-contain rounded-xl shadow-lg" />
-                  <span className="text-[10px] font-black text-[#00C853] uppercase tracking-widest">QR Listo</span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-black text-[#00C853] uppercase tracking-widest">QR Listo</span>
+                    {optimizationDone && (
+                      <span className="flex items-center gap-1 text-[8px] text-emerald-600 font-bold uppercase tracking-tighter bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <Sparkles size={10} /> Optimizado para mejor escaneo
+                      </span>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>
                   <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-[#1a1f36] group-hover:scale-110 transition-transform border border-gray-100 shadow-sm">
                     <Upload size={24} />
                   </div>
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#1a1f36] transition-colors">Subir código QR</span>
+                  <div className="text-center px-4">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#1a1f36] transition-colors">Subir código QR</span>
+                    <p className="text-[8px] text-gray-300 font-bold uppercase mt-1">Cualquier tamaño • JPG, PNG, WEBP</p>
+                  </div>
                 </>
               )}
             </button>

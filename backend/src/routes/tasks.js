@@ -340,7 +340,7 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       }
 
       res.json({
-        success: true,
+        success: esCorrectaReal,
         correcta: esCorrectaReal,
         monto: recompensa,
         respuesta_correcta: task.respuesta_correcta, // Devolvemos la respuesta correcta para el feedback

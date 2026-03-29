@@ -602,6 +602,22 @@ router.delete('/admins/:id', async (req, res) => {
 
 // --- FIN GESTIÓN DE ADMINISTRADORES ---
 
+router.put('/public-content', async (req, res) => {
+  const updates = req.body;
+  
+  // Guardar en Supabase (tabla configuraciones clave-valor)
+  try {
+    for (const [clave, valor] of Object.entries(updates)) {
+      await trySupabase(() => 
+        supabase.from('configuraciones').upsert({ clave, valor }, { onConflict: 'clave' })
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/public-content', async (req, res) => {
   const updates = req.body;
   

@@ -120,6 +120,18 @@ export default function Withdrawal() {
       setError('Agrega una cuenta bancaria en Seguridad de la cuenta antes de retirar.');
       return;
     }
+    if (!password) {
+      setError('Por favor ingresa tu contraseña de fondo.');
+      setLoading(false);
+      return;
+    }
+
+    if (!qrImage) {
+      setError('Por favor sube tu código QR para el retiro.');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       await api.withdrawals.create({

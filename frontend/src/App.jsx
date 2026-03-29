@@ -55,8 +55,25 @@ function PrivateRoute({ children, adminOnly }) {
   const { user, loading } = useAuth();
   if (loading) return <GlobalLoader />;
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && user.rol !== 'admin') return <Navigate to="/" replace />;
+  
+  // Si la ruta es solo para admin y el usuario no es admin, redirigir al home de usuario
+  if (adminOnly && user.rol !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  // Si la ruta NO es para admin (es de usuario) pero el usuario ES admin,
+  // redirigir al panel de administración para evitar confusión
+  if (!adminOnly && user.rol === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+
   return children;
+}
+
+function CatchAll() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={user.rol === 'admin' ? "/admin" : "/"} replace />;
 }
 
 function AppRoutes() {
@@ -100,7 +117,7 @@ function AppRoutes() {
         <Route path="/registro-facturacion" element={<PrivateRoute><BillingRecord /></PrivateRoute>} />
         
         {/* Ruta 404 por defecto */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<CatchAll />} />
       </Routes>
     </Suspense>
   );

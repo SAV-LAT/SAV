@@ -190,58 +190,10 @@ export async function createRetiro(retiroData) {
   return data;
 }
 
-export async function updateRetiro(id, updates) {
-  const { data } = await trySupabase(() => supabase.from('retiros').update(updates).eq('id', id).select().maybeSingle());
-  return data;
-}
-
 export async function getRetirosByUser(userId) {
   const { data } = await trySupabase(() => supabase.from('retiros').select('*').eq('usuario_id', userId).order('created_at', { ascending: false }));
   return data || [];
 }
-
-// --- NUEVAS QUERIES TELEGRAM V2 ---
-
-export async function findAdminByTelegramId(telegramId) {
-  const { data } = await trySupabase(() => 
-    supabase.from('admins')
-      .select('*')
-      .eq('telegram_user_id', String(telegramId))
-      .eq('activo', true)
-      .maybeSingle()
-  );
-  return data;
-}
-
-export async function getDailyWithdrawalSummary(dateStr) {
-  // Obtenemos los retiros finalizados (pagados) del día
-  const startOfDay = `${dateStr}T00:00:00Z`;
-  const endOfDay = `${dateStr}T23:59:59Z`;
-
-  const { data } = await trySupabase(() => 
-    supabase.from('retiros')
-      .select('monto, processed_by_admin_name')
-      .eq('estado', 'pagado')
-      .gte('procesado_at', startOfDay)
-      .lte('procesado_at', endOfDay)
-  );
-
-  if (!data || data.length === 0) return [];
-
-  const summary = data.reduce((acc, curr) => {
-    const admin = curr.processed_by_admin_name || 'Admin Desconocido';
-    if (!acc[admin]) {
-      acc[admin] = { name: admin, count: 0, total: 0 };
-    }
-    acc[admin].count += 1;
-    acc[admin].total += Number(curr.monto);
-    return acc;
-  }, {});
-
-  return Object.values(summary);
-}
-
-// --- FIN NUEVAS QUERIES TELEGRAM V2 ---
 
 export async function getRetiroById(id) {
   const { data } = await trySupabase(() => supabase.from('retiros').select('*').eq('id', id).maybeSingle());

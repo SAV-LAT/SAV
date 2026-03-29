@@ -349,7 +349,23 @@ export async function deleteTarjeta(id, userId) {
 
 export async function getPublicContent() {
   const { data } = await trySupabase(() => supabase.from('configuraciones').select('*'));
-  return (data || []).reduce((acc, curr) => ({ ...acc, [curr.clave]: curr.valor }), {});
+  return (data || []).reduce((acc, curr) => {
+    let valor = curr.valor;
+    // Intentar parsear CUALQUIER valor que pueda ser JSON (objetos, arrays, booleans, números)
+    try {
+      if (valor === 'true') valor = true;
+      else if (valor === 'false') valor = false;
+      else if (valor && (valor.startsWith('{') || valor.startsWith('['))) {
+        valor = JSON.parse(valor);
+      } else if (!isNaN(valor) && valor.trim() !== '') {
+        // Si es un número puro, parsearlo (opcional, pero útil para recompensas_amigos_cantidad)
+        valor = parseFloat(valor);
+      }
+    } catch (e) {
+      // Si falla, mantener como string
+    }
+    return { ...acc, [curr.clave]: valor };
+  }, {});
 }
 
 export async function getBanners() {

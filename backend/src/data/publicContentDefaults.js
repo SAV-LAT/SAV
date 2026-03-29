@@ -28,6 +28,10 @@ export const publicContentDefaults = {
   recompensa_amigos_activa: true,
   recompensa_amigos_cantidad: 10,
   recompensa_amigos_nivel_minimo: 'S1', // S1 o superior
+  telegram_global_enabled: true,
+  telegram_recargas_enabled: true,
+  telegram_retiros_enabled: true,
+  task_allowed_days: '1,2,3,4,5',
 };
 
 export function mergePublicContent(pc) {

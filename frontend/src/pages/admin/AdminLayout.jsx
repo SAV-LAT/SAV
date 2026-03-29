@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Component } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
@@ -16,9 +16,57 @@ import {
   LogOut,
   ChevronRight,
   Layers,
-  Sparkles
+  Sparkles,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 import Logo from '../../components/Logo.jsx';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Admin Error Boundary caught:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#1a1f36] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
+            <div className="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <AlertTriangle className="text-red-600" size={40} />
+            </div>
+            <h2 className="text-2xl font-black text-[#1a1f36] mb-4 uppercase tracking-tight">Error en el Panel</h2>
+            <p className="text-slate-600 mb-8 font-medium">
+              Ha ocurrido un error inesperado en esta sección del panel de administración.
+            </p>
+            <div className="bg-slate-50 rounded-xl p-4 mb-8 text-left overflow-auto max-h-40">
+              <code className="text-xs text-red-500 font-mono">
+                {this.state.error?.message || 'Error desconocido'}
+              </code>
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-[#1a1f36] text-white rounded-2xl font-bold hover:bg-[#2d3558] transition-all active:scale-95 shadow-lg shadow-indigo-900/20"
+            >
+              Recargar Panel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -134,7 +182,9 @@ export default function AdminLayout() {
       {/* Contenido principal */}
       <main className="flex-1 overflow-x-hidden p-4 md:p-8">
         <div className="max-w-7xl mx-auto page-transition">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
     </div>

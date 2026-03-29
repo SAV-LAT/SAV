@@ -4,25 +4,23 @@ const getRecargasConfig = async () => {
   const config = await getPublicContent();
   const adminsInShift = await getAdminsInShift();
   
-  const groupChatId = config.telegram_recargas_chat_id || process.env.TELEGRAM_RECARGAS_CHAT_ID;
-  const notifyGroupAlways = config.notificar_grupo_recargas_siempre === 'true';
+  const groupChatId = config.telegram_recargas_chat_id || process.env.TELEGRAM_RECARGAS_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
   
   let targetChatIds = [];
 
-  if (adminsInShift.length > 0) {
-    // Si hay admins en turno, obtenemos sus IDs personales
-    const adminChatIds = adminsInShift.map(a => a.telegram_user_id).filter(id => id);
-    targetChatIds.push(...adminChatIds);
+  // 1. Siempre añadir el ID del grupo (para que todos lo vean)
+  if (groupChatId) {
+    targetChatIds.push(groupChatId);
   }
 
-  // Si no hay admins en turno, O si la opción de notificar al grupo siempre está activa
-  if (targetChatIds.length === 0 || notifyGroupAlways) {
-    if (groupChatId) {
-      // Evitar duplicados si el admin personal es el mismo que el grupo (raro pero posible)
-      if (!targetChatIds.includes(groupChatId)) {
-        targetChatIds.push(groupChatId);
+  // 2. Si hay admins en turno, añadir sus IDs personales (para alerta privada)
+  if (adminsInShift.length > 0) {
+    const adminChatIds = adminsInShift.map(a => a.telegram_user_id).filter(id => id);
+    adminChatIds.forEach(id => {
+      if (!targetChatIds.includes(id)) {
+        targetChatIds.push(id);
       }
-    }
+    });
   }
 
   return {
@@ -36,18 +34,28 @@ const getRetirosConfig = async () => {
   const config = await getPublicContent();
   const adminsInShift = await getAdminsInShift();
   
-  let targetChatId = config.telegram_retiros_chat_id || process.env.TELEGRAM_RETIROS_CHAT_ID;
+  const groupChatId = config.telegram_retiros_chat_id || process.env.TELEGRAM_RETIROS_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
   
+  let targetChatIds = [];
+
+  // 1. Siempre añadir el ID del grupo
+  if (groupChatId) {
+    targetChatIds.push(groupChatId);
+  }
+
+  // 2. Si hay admins en turno, añadir sus IDs personales
   if (adminsInShift.length > 0) {
-    const adminIds = adminsInShift.map(a => a.telegram_user_id).filter(id => id);
-    if (adminIds.length > 0) {
-      targetChatId = adminIds.join(',');
-    }
+    const adminChatIds = adminsInShift.map(a => a.telegram_user_id).filter(id => id);
+    adminChatIds.forEach(id => {
+      if (!targetChatIds.includes(id)) {
+        targetChatIds.push(id);
+      }
+    });
   }
 
   return {
     token: config.telegram_retiros_token || process.env.TELEGRAM_RETIROS_TOKEN,
-    chatId: targetChatId,
+    chatId: targetChatIds.join(','),
     enabled: config.telegram_retiros_enabled !== 'false'
   };
 };
@@ -55,12 +63,13 @@ const getRetirosConfig = async () => {
 async function send(token, chatId, text, replyMarkup = null) {
   if (!token || !chatId) {
     console.warn('[Telegram Lib] Missing token or chatId for text message');
-    return;
+    return [];
   }
 
   const chatIds = String(chatId).split(',').map(id => id.trim()).filter(id => id);
   console.log(`[Telegram Lib] Sending text message to ${chatIds.length} recipients: ${chatIds.join(', ')}`);
   
+  const results = [];
   for (const id of chatIds) {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     try {
@@ -76,22 +85,24 @@ async function send(token, chatId, text, replyMarkup = null) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         console.error(`[Telegram Lib] Error sending message to ${id}:`, data);
       } else {
         console.log(`[Telegram Lib] Text message successfully sent to ${id}`);
+        results.push({ chat_id: String(id), message_id: String(data.result.message_id) });
       }
     } catch (err) {
       console.error(`[Telegram Lib] Exception sending to ${id}:`, err.message);
     }
   }
+  return results;
 }
 
 async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup = null) {
   if (!token || !chatId || !base64Photo) {
     console.warn('[Telegram Lib] Missing data for photo message:', { token: !!token, chatId: !!chatId, photo: !!base64Photo });
-    return;
+    return [];
   }
 
   const chatIds = String(chatId).split(',').map(id => id.trim()).filter(id => id);
@@ -116,6 +127,7 @@ async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup
   const buffer = Buffer.from(base64Data, 'base64');
   console.log(`[Telegram Lib] Photo buffer created. Size: ${buffer.length} bytes. Type: ${mimeType}`);
 
+  const results = [];
   for (const id of chatIds) {
     const url = `https://api.telegram.org/bot${token}/sendPhoto`;
     try {
@@ -151,16 +163,18 @@ async function sendPhoto(token, chatId, base64Photo, caption = null, replyMarkup
         body: bodyBuffer
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         console.error(`[Telegram Lib] Error sending photo to ${id}:`, data);
       } else {
         console.log(`[Telegram Lib] Photo successfully sent to ${id}`);
+        results.push({ chat_id: String(id), message_id: String(data.result.message_id) });
       }
     } catch (err) {
       console.error(`[Telegram Lib] Exception sending photo to ${id}:`, err.message);
     }
   }
+  return results;
 }
 
 export const telegram = {

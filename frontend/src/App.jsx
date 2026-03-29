@@ -3,40 +3,60 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 
-// Lazy Loading para optimizar carga inicial
-const Login = lazy(() => import('./pages/Login.jsx'));
-const Register = lazy(() => import('./pages/Register.jsx'));
-const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
-const TaskRoom = lazy(() => import('./pages/TaskRoom.jsx'));
-const Profile = lazy(() => import('./pages/Profile.jsx'));
-const Withdrawal = lazy(() => import('./pages/Withdrawal.jsx'));
-const Recharge = lazy(() => import('./pages/Recharge.jsx'));
-const VIP = lazy(() => import('./pages/VIP.jsx'));
-const Ganancias = lazy(() => import('./pages/Ganancias.jsx'));
-const Movimientos = lazy(() => import('./pages/Movimientos.jsx'));
-const NoticiasConferencia = lazy(() => import('./pages/NoticiasConferencia.jsx'));
-const Team = lazy(() => import('./pages/Team.jsx'));
-const Invite = lazy(() => import('./pages/Invite.jsx'));
-const Security = lazy(() => import('./pages/Security.jsx'));
-const VincularTarjeta = lazy(() => import('./pages/VincularTarjeta.jsx'));
-const CambiarContrasena = lazy(() => import('./pages/CambiarContrasena.jsx'));
-const CambiarContrasenaFondo = lazy(() => import('./pages/CambiarContrasenaFondo.jsx'));
-const BillingRecord = lazy(() => import('./pages/BillingRecord.jsx'));
-const Recompensas = lazy(() => import('./pages/Recompensas.jsx'));
+/**
+ * Helper para manejar errores de carga de módulos dinámicos (Chunks).
+ * Esto ocurre cuando se despliega una nueva versión y el navegador intenta
+ * cargar un archivo .js que ya no existe en el servidor.
+ */
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      console.error('Error cargando componente:', error);
+      // Solo recargar si es un error de carga de módulo
+      if (error.message?.includes('Failed to fetch dynamically imported module') || 
+          error.message?.includes('Importing a module script failed')) {
+        window.location.reload();
+      }
+      throw error;
+    }
+  });
+
+// Lazy Loading para optimizar carga inicial con reintento automático
+const Login = lazyWithRetry(() => import('./pages/Login.jsx'));
+const Register = lazyWithRetry(() => import('./pages/Register.jsx'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard.jsx'));
+const TaskRoom = lazyWithRetry(() => import('./pages/TaskRoom.jsx'));
+const Profile = lazyWithRetry(() => import('./pages/Profile.jsx'));
+const Withdrawal = lazyWithRetry(() => import('./pages/Withdrawal.jsx'));
+const Recharge = lazyWithRetry(() => import('./pages/Recharge.jsx'));
+const VIP = lazyWithRetry(() => import('./pages/VIP.jsx'));
+const Ganancias = lazyWithRetry(() => import('./pages/Ganancias.jsx'));
+const Movimientos = lazyWithRetry(() => import('./pages/Movimientos.jsx'));
+const NoticiasConferencia = lazyWithRetry(() => import('./pages/NoticiasConferencia.jsx'));
+const Team = lazyWithRetry(() => import('./pages/Team.jsx'));
+const Invite = lazyWithRetry(() => import('./pages/Invite.jsx'));
+const Security = lazyWithRetry(() => import('./pages/Security.jsx'));
+const VincularTarjeta = lazyWithRetry(() => import('./pages/VincularTarjeta.jsx'));
+const CambiarContrasena = lazyWithRetry(() => import('./pages/CambiarContrasena.jsx'));
+const CambiarContrasenaFondo = lazyWithRetry(() => import('./pages/CambiarContrasenaFondo.jsx'));
+const BillingRecord = lazyWithRetry(() => import('./pages/BillingRecord.jsx'));
+const Recompensas = lazyWithRetry(() => import('./pages/Recompensas.jsx'));
 
 // Admin
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout.jsx'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
-const AdminUsuarios = lazy(() => import('./pages/admin/AdminUsuarios.jsx'));
-const AdminRecargas = lazy(() => import('./pages/admin/AdminRecargas.jsx'));
-const AdminRetiros = lazy(() => import('./pages/admin/AdminRetiros.jsx'));
-const AdminMetodosQr = lazy(() => import('./pages/admin/AdminMetodosQr.jsx'));
-const AdminContenidoHome = lazy(() => import('./pages/admin/AdminContenidoHome.jsx'));
-const AdminTareas = lazy(() => import('./pages/admin/AdminTareas.jsx'));
-const AdminBanners = lazy(() => import('./pages/admin/AdminBanners.jsx'));
-const AdminNiveles = lazy(() => import('./pages/admin/AdminNiveles.jsx'));
-const AdminRecompensas = lazy(() => import('./pages/admin/AdminRecompensas.jsx'));
-const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins.jsx'));
+const AdminLayout = lazyWithRetry(() => import('./pages/admin/AdminLayout.jsx'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard.jsx'));
+const AdminUsuarios = lazyWithRetry(() => import('./pages/admin/AdminUsuarios.jsx'));
+const AdminRecargas = lazyWithRetry(() => import('./pages/admin/AdminRecargas.jsx'));
+const AdminRetiros = lazyWithRetry(() => import('./pages/admin/AdminRetiros.jsx'));
+const AdminMetodosQr = lazyWithRetry(() => import('./pages/admin/AdminMetodosQr.jsx'));
+const AdminContenidoHome = lazyWithRetry(() => import('./pages/admin/AdminContenidoHome.jsx'));
+const AdminTareas = lazyWithRetry(() => import('./pages/admin/AdminTareas.jsx'));
+const AdminBanners = lazyWithRetry(() => import('./pages/admin/AdminBanners.jsx'));
+const AdminNiveles = lazyWithRetry(() => import('./pages/admin/AdminNiveles.jsx'));
+const AdminRecompensas = lazyWithRetry(() => import('./pages/admin/AdminRecompensas.jsx'));
+const AdminAdmins = lazyWithRetry(() => import('./pages/admin/AdminAdmins.jsx'));
 
 const GlobalLoader = () => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0c1a] space-y-6">

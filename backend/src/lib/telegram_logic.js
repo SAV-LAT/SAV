@@ -21,6 +21,8 @@ export async function processTelegramUpdate(update) {
   const chatId = message.chat.id;
   const messageId = message.message_id;
 
+  console.log(`[Telegram Logic] Procesando click: ${data} de usuario ${telegramUser.id} (${telegramUser.username || 'sin user'})`);
+
   try {
     const parts = data.split('_');
     const type = parts[0];
@@ -30,15 +32,21 @@ export async function processTelegramUpdate(update) {
     // 2. VALIDACIÓN DE ADMINISTRADOR
     const admin = await findAdminByTelegramId(telegramUser.id);
     if (!admin) {
+      console.warn(`[Telegram Logic] Usuario no autorizado intentó click: ${telegramUser.id}`);
       return answerCallback(callbackQueryId, '❌ No tienes permisos para realizar esta acción.');
     }
 
     const adminName = admin.nombre;
+    console.log(`[Telegram Logic] Admin identificado: ${adminName} (${admin.id})`);
 
     // --- MÓDULO DE RETIROS ---
     if (type === 'retiro') {
+      console.log(`[Telegram Logic] Acción de Retiro: ${action} para ID: ${id}`);
       const retiro = await getRetiroById(id);
-      if (!retiro) return answerCallback(callbackQueryId, 'Retiro no encontrado.');
+      if (!retiro) {
+        console.error(`[Telegram Logic] Retiro no encontrado: ${id}`);
+        return answerCallback(callbackQueryId, 'Retiro no encontrado.');
+      }
 
       // ACCIÓN: TOMAR RETIRO
       if (action === 'tomar') {
@@ -64,7 +72,17 @@ export async function processTelegramUpdate(update) {
           ]]
         };
         
-        await editTelegramMessage(chatId, messageId, message.text || message.caption, statusMsg, buttons);
+        // Sincronizar todos los mensajes
+        const metadata = retiro.telegram_metadata || [];
+        if (metadata.length > 0) {
+          for (const item of metadata) {
+            await editTelegramMessage(item.chat_id, item.message_id, message.text || message.caption, statusMsg, buttons);
+          }
+        } else {
+          await editTelegramMessage(chatId, messageId, message.text || message.caption, statusMsg, buttons);
+        }
+        
+        console.log(`[Telegram Logic] Retiro ${id} tomado por ${adminName}`);
         return answerCallback(callbackQueryId, '✅ Retiro asignado. Procede con el pago.');
       }
 
@@ -82,7 +100,18 @@ export async function processTelegramUpdate(update) {
             processed_by_admin_name: adminName,
             processed_at: new Date().toISOString()
           });
-          await editTelegramMessage(chatId, messageId, message.text || message.caption, `✅ PAGADO por ${adminName}`);
+          
+          const statusMsg = `✅ PAGADO por ${adminName}`;
+          const metadata = retiro.telegram_metadata || [];
+          if (metadata.length > 0) {
+            for (const item of metadata) {
+              await editTelegramMessage(item.chat_id, item.message_id, message.text || message.caption, statusMsg);
+            }
+          } else {
+            await editTelegramMessage(chatId, messageId, message.text || message.caption, statusMsg);
+          }
+          
+          console.log(`[Telegram Logic] Retiro ${id} pagado por ${adminName}`);
         } else {
           // VALIDACIÓN DE ESTADO: Evitar reembolsos dobles
           if (retiro.estado === 'rechazado') {
@@ -117,7 +146,17 @@ export async function processTelegramUpdate(update) {
             fecha: new Date().toISOString()
           });
 
-          await editTelegramMessage(chatId, messageId, message.text || message.caption, `❌ RECHAZADO por ${adminName} (Saldo devuelto)`);
+          const statusMsg = `❌ RECHAZADO por ${adminName} (Saldo devuelto)`;
+          const metadata = retiro.telegram_metadata || [];
+          if (metadata.length > 0) {
+            for (const item of metadata) {
+              await editTelegramMessage(item.chat_id, item.message_id, message.text || message.caption, statusMsg);
+            }
+          } else {
+            await editTelegramMessage(chatId, messageId, message.text || message.caption, statusMsg);
+          }
+          
+          console.log(`[Telegram Logic] Retiro ${id} rechazado por ${adminName}`);
         }
         return answerCallback(callbackQueryId, 'Operación finalizada.');
       }
@@ -125,8 +164,10 @@ export async function processTelegramUpdate(update) {
 
     // --- MÓDULO DE RECARGAS ---
     if (type === 'recarga') {
+      console.log(`[Telegram Logic] Acción de Recarga: ${action} para ID: ${id}`);
       const recarga = await getRecargaById(id);
       if (!recarga || (recarga.estado !== 'pendiente' && recarga.estado !== 'pendiente_ascenso')) {
+        console.error(`[Telegram Logic] Recarga no encontrada o no pendiente: ${id}`);
         return answerCallback(callbackQueryId, 'Esta solicitud ya no está pendiente.');
       }
 
@@ -136,6 +177,7 @@ export async function processTelegramUpdate(update) {
         const nivelDestino = niveles.find(n => (n.deposito || n.costo) === recarga.monto);
         const nivelActual = niveles.find(n => n.id === user.nivel_id);
 
+        let statusMsg = '';
         if (recarga.modo === 'Compra VIP' && nivelDestino) {
           const updates = { nivel_id: nivelDestino.id };
           if (nivelActual && (nivelActual.deposito > 0 || nivelActual.costo > 0)) {
@@ -158,7 +200,8 @@ export async function processTelegramUpdate(update) {
             procesado_at: new Date().toISOString() 
           });
           await handleLevelUpRewards(user.id, user.nivel_id, nivelDestino.id);
-          await editTelegramMessage(chatId, messageId, message.text || message.caption, `✅ Ascenso Aprobado por ${adminName} a ${nivelDestino.nombre}`);
+          statusMsg = `✅ Ascenso Aprobado por ${adminName} a ${nivelDestino.nombre}`;
+          console.log(`[Telegram Logic] Recarga (VIP) ${id} aprobada por ${adminName}`);
         } else {
           await createMovimiento({
             usuario_id: user.id,
@@ -176,7 +219,17 @@ export async function processTelegramUpdate(update) {
             procesado_por_admin_name: adminName,
             procesado_at: new Date().toISOString() 
           });
-          await editTelegramMessage(chatId, messageId, message.text || message.caption, `✅ Recarga Aprobada por ${adminName}`);
+          statusMsg = `✅ Recarga Aprobada por ${adminName}`;
+          console.log(`[Telegram Logic] Recarga (Saldo) ${id} aprobada por ${adminName}`);
+        }
+
+        const metadata = recarga.telegram_metadata || [];
+        if (metadata.length > 0) {
+          for (const item of metadata) {
+            await editTelegramMessage(item.chat_id, item.message_id, message.text || message.caption, statusMsg);
+          }
+        } else {
+          await editTelegramMessage(chatId, messageId, message.text || message.caption, statusMsg);
         }
       } else {
         await updateRecarga(id, { 
@@ -185,12 +238,24 @@ export async function processTelegramUpdate(update) {
           procesado_por_admin_name: adminName,
           procesado_at: new Date().toISOString() 
         });
-        await editTelegramMessage(chatId, messageId, message.text || message.caption, `❌ Rechazada por ${adminName}`);
+        
+        const statusMsg = `❌ Rechazada por ${adminName}`;
+        const metadata = recarga.telegram_metadata || [];
+        if (metadata.length > 0) {
+          for (const item of metadata) {
+            await editTelegramMessage(item.chat_id, item.message_id, message.text || message.caption, statusMsg);
+          }
+        } else {
+          await editTelegramMessage(chatId, messageId, message.text || message.caption, statusMsg);
+        }
+        
+        console.log(`[Telegram Logic] Recarga ${id} rechazada por ${adminName}`);
       }
       await answerCallback(callbackQueryId, 'Operación procesada.');
     }
   } catch (err) {
-    console.error('Error in processTelegramUpdate:', err);
+    console.error('[Telegram Logic Error]:', err);
+    return answerCallback(callbackQueryId, '❌ Error interno al procesar.');
   }
 }
 

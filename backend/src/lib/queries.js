@@ -91,14 +91,35 @@ export async function findUserByCodigo(codigo) {
 }
 
 export async function findAdminByTelegramId(telegramId) {
-  const { data } = await trySupabase(() => 
+  // 1. Buscar primero en la tabla de admins gestionados (la más importante para permisos de bot)
+  const { data: admin } = await trySupabase(() => 
+    supabase.from('admins')
+      .select('*')
+      .eq('telegram_user_id', String(telegramId))
+      .eq('activo', true)
+      .maybeSingle()
+  );
+  
+  if (admin) return admin;
+
+  // 2. FALLBACK: Buscar en la tabla de usuarios con rol admin (compatibilidad anterior)
+  const { data: userAdmin } = await trySupabase(() => 
     supabase.from('usuarios')
       .select('*')
       .eq('telegram_user_id', String(telegramId))
       .eq('rol', 'admin')
       .maybeSingle()
   );
-  return data;
+  
+  // Mapear para que tenga el campo 'nombre' que espera la lógica
+  if (userAdmin) {
+    return {
+      ...userAdmin,
+      nombre: userAdmin.nombre_usuario || userAdmin.nombre_real
+    };
+  }
+
+  return null;
 }
 
 /**

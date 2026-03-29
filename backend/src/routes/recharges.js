@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { getMetodosQr, getRecargasByUser, createRecarga, getPublicContent, findUserById, getLevels, boliviaTime } from '../lib/queries.js';
+import { getMetodosQr, getRecargasByUser, createRecarga, updateRecarga, getPublicContent, findUserById, getLevels, boliviaTime } from '../lib/queries.js';
 import { supabase } from '../lib/db.js';
 import { authenticate } from '../middleware/auth.js';
 import { mergePublicContent } from '../data/publicContentDefaults.js';
@@ -104,14 +104,20 @@ router.post('/', authenticate, async (req, res) => {
           `<b>🛠 MODO:</b> ${recarga.modo}\n\n` +
           `<b>🕒 Fecha:</b> ${new Date(recarga.created_at).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}`;
         
+        let results = [];
         if (recarga.comprobante_url && recarga.comprobante_url.startsWith('data:image')) {
           console.log(`[Recharge] Sending Telegram with photo for ${recarga.id}`);
-          await telegram.sendRecargaConFoto(msg, recarga.comprobante_url, recarga.id);
+          results = await telegram.sendRecargaConFoto(msg, recarga.comprobante_url, recarga.id);
           console.log(`[Recharge] Telegram with photo sent for ${recarga.id}`);
         } else {
           console.log(`[Recharge] Sending Telegram text only for ${recarga.id}`);
-          await telegram.sendRecarga(msg, recarga.id);
+          results = await telegram.sendRecarga(msg, recarga.id);
           console.log(`[Recharge] Telegram text sent for ${recarga.id}`);
+        }
+
+        if (results && results.length > 0) {
+          await updateRecarga(recarga.id, { telegram_metadata: results });
+          console.log(`[Recharge] Metadata stored for ${recarga.id}: ${results.length} messages`);
         }
       } catch (tgErr) {
         console.error(`[Recharge] Error en notificación de Telegram:`, tgErr);

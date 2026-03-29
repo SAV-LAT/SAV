@@ -221,31 +221,56 @@ router.post('/retiros/:id/rechazar', async (req, res) => {
   const { id } = req.params;
   const { motivo } = req.body;
   
-  const retiro = await getRetiroById(id);
-  if (!retiro) return res.status(404).json({ error: 'Retiro no encontrado en el sistema' });
+  try {
+    const retiro = await getRetiroById(id);
+    if (!retiro) return res.status(404).json({ error: 'Retiro no encontrado en el sistema' });
 
-  const updates = {
-    estado: 'rechazado',
-    procesado_at: new Date().toISOString(),
-    admin_notas: motivo || ''
-  };
+    // VALIDACIÓN DE ESTADO: Evitar reembolsos dobles
+    if (retiro.estado === 'rechazado') {
+      return res.status(400).json({ error: 'Este retiro ya fue rechazado previamente' });
+    }
 
-  if (req.user && req.user.id) {
-    const adminExists = await findUserById(req.user.id);
-    if (adminExists) updates.procesado_por = req.user.id;
+    const updates = {
+      estado: 'rechazado',
+      procesado_at: new Date().toISOString(),
+      admin_notas: motivo || ''
+    };
+
+    if (req.user && req.user.id) {
+      const adminExists = await findUserById(req.user.id);
+      if (adminExists) updates.procesado_por = req.user.id;
+    }
+    
+    // Primero marcamos como rechazado para bloquear otras peticiones
+    await updateRetiro(id, updates);
+    
+    const user = await findUserById(retiro.usuario_id);
+    if (user) {
+      const balanceField = retiro.tipo_billetera === 'comisiones' ? 'saldo_comisiones' : 'saldo_principal';
+      const nuevoSaldo = Number((Number(user[balanceField] || 0) + Number(retiro.monto)).toFixed(2));
+      
+      await updateUser(user.id, {
+        [balanceField]: nuevoSaldo
+      });
+
+      // Crear movimiento de auditoría
+      await createMovimiento({
+        usuario_id: user.id,
+        tipo_movimiento: 'ajuste_admin',
+        monto: Number(retiro.monto),
+        saldo_anterior: Number(user[balanceField]),
+        saldo_nuevo: Number(nuevoSaldo),
+        descripcion: `Reembolso por retiro rechazado (Panel Web - ${id.substring(0,8)})`,
+        referencia: `REJ-WEB-${id.substring(0,8)}`,
+        fecha: new Date().toISOString()
+      });
+    }
+    
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[Admin Reject Error]:', err);
+    res.status(500).json({ error: err.message });
   }
-  
-  await updateRetiro(id, updates);
-  
-  const user = await findUserById(retiro.usuario_id);
-  if (user) {
-    const balanceField = retiro.tipo_billetera === 'comisiones' ? 'saldo_comisiones' : 'saldo_principal';
-    await updateUser(user.id, {
-      [balanceField]: (user[balanceField] || 0) + retiro.monto
-    });
-  }
-  
-  res.json({ ok: true });
 });
 
 router.get('/tareas', async (req, res) => {

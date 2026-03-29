@@ -261,18 +261,20 @@ export default function AdminUsuarios() {
                     </button>
                   </td>
                   <td className="p-6">
-                    <p className="text-[10px] font-black text-emerald-600">{(u.saldo_principal || 0).toFixed(2)}</p>
-                    <p className="text-[10px] font-black text-blue-600">{(u.saldo_comisiones || 0).toFixed(2)}</p>
+                    <button 
+                      onClick={() => setAdjustingUser(u)}
+                      className="flex flex-col items-start hover:bg-emerald-50 p-2 rounded-xl transition-all w-full group/balance"
+                      title="Click para ajustar saldo"
+                    >
+                      <p className="text-[10px] font-black text-emerald-600 flex items-center gap-1">
+                        {(u.saldo_principal || 0).toFixed(2)}
+                        <DollarSign size={10} className="opacity-0 group-hover/balance:opacity-100 transition-opacity" />
+                      </p>
+                      <p className="text-[10px] font-black text-blue-600">{(u.saldo_comisiones || 0).toFixed(2)}</p>
+                    </button>
                   </td>
                   <td className="p-6">
                     <div className="flex justify-center gap-2">
-                      <button 
-                        onClick={() => setAdjustingUser(u)}
-                        className="p-3 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all"
-                        title="Modificar Saldo"
-                      >
-                        <DollarSign size={18} />
-                      </button>
                       <button 
                         onClick={() => setSelectedUser(u)}
                         className="p-3 rounded-xl bg-[#1a1f36]/5 text-[#1a1f36] hover:bg-[#1a1f36] hover:text-white transition-all"

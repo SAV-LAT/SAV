@@ -4,7 +4,7 @@ import Layout from '../components/Layout.jsx';
 import Header from '../components/Header.jsx';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Crown, CheckCircle2, Lock, TrendingUp, Users, Info, Sparkles, Award } from 'lucide-react';
+import { Crown, CheckCircle2, Lock, TrendingUp, Users, Info, Sparkles, Award, Clock } from 'lucide-react';
 
 export default function VIP() {
   const { user } = useAuth();
@@ -148,6 +148,20 @@ export default function VIP() {
                       <span className="text-[10px] font-bold ml-1 uppercase">BOB</span>
                     </p>
                   </div>
+
+                  {nivel.retiro_horario_habilitado && (
+                    <div className="col-span-2 bg-amber-50/50 backdrop-blur-sm rounded-2xl p-4 border border-amber-100/50 transition-all group-hover:bg-white group-hover:border-amber-200/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock size={12} className="text-amber-600" />
+                        <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Horario de Retiro Especial</p>
+                      </div>
+                      <p className="text-[10px] font-bold text-amber-700">
+                        {['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'][nivel.retiro_dia_inicio]} - {['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'][nivel.retiro_dia_fin]}
+                        <span className="mx-2 opacity-30">|</span>
+                        {nivel.retiro_hora_inicio?.substring(0, 5)} - {nivel.retiro_hora_fin?.substring(0, 5)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             );

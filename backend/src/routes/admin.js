@@ -10,6 +10,7 @@ import {
 import { getStore } from '../data/store.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { supabase } from '../lib/db.js';
+import { mergePublicContent } from '../data/publicContentDefaults.js';
 
 const router = Router();
 router.use(authenticate);

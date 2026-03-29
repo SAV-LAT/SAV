@@ -23,6 +23,7 @@ export default function Withdrawal() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [pc, setPc] = useState(null);
+  const [userLevel, setUserLevel] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationDone, setOptimizationDone] = useState(false);
   const [hasWithdrawalToday, setHasWithdrawalToday] = useState(false);
@@ -44,6 +45,12 @@ export default function Withdrawal() {
       if (list[0]) setTarjetaId(list[0].id);
     }).catch(() => setTarjetas([]));
     api.publicContent().then(setPc).catch(() => {});
+    api.levels.list().then((list) => {
+      if (user?.nivel_id) {
+        const found = list.find(l => l.id === user.nivel_id);
+        if (found) setUserLevel(found);
+      }
+    }).catch(() => {});
 
     // Verificar si ya retiró hoy
     const checkLimit = async () => {
@@ -60,8 +67,33 @@ export default function Withdrawal() {
 
   const saldoPrincipal = user?.saldo_principal ?? 0;
   const saldoComisiones = user?.saldo_comisiones ?? 0;
-  const horarioRet = pc?.horario_retiro;
-  const schedRet = horarioRet ? isScheduleOpen(horarioRet) : { ok: true };
+  
+  // Lógica de horario: Priorizar el horario por nivel si está habilitado
+  let horarioRet;
+  let schedRet = { ok: true };
+  
+  if (userLevel && userLevel.retiro_horario_habilitado) {
+    const diasHabilitados = [];
+    let currentDay = userLevel.retiro_dia_inicio;
+    const endDay = userLevel.retiro_dia_fin;
+    if (currentDay <= endDay) {
+      for (let i = currentDay; i <= endDay; i++) diasHabilitados.push(i);
+    } else {
+      for (let i = currentDay; i <= 6; i++) diasHabilitados.push(i);
+      for (let i = 0; i <= endDay; i++) diasHabilitados.push(i);
+    }
+    horarioRet = {
+      enabled: true,
+      dias_semana: diasHabilitados,
+      hora_inicio: userLevel.retiro_hora_inicio?.substring(0, 5),
+      hora_fin: userLevel.retiro_hora_fin?.substring(0, 5)
+    };
+    schedRet = isScheduleOpen(horarioRet);
+  } else if (pc?.horario_retiro) {
+    horarioRet = pc.horario_retiro;
+    schedRet = isScheduleOpen(horarioRet);
+  }
+
   const fueraHorario = horarioRet?.enabled && !schedRet.ok;
   const msgHorario = !schedRet.ok ? schedRet.message : '';
 

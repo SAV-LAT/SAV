@@ -84,19 +84,39 @@ export async function processTelegramUpdate(update) {
           });
           await editTelegramMessage(chatId, messageId, message.text || message.caption, `✅ PAGADO por ${adminName}`);
         } else {
+          // VALIDACIÓN DE ESTADO: Evitar reembolsos dobles
+          if (retiro.estado === 'rechazado') {
+            return answerCallback(callbackQueryId, '⚠️ Este retiro ya fue rechazado anteriormente.');
+          }
+
           const user = await findUserById(retiro.usuario_id);
           const updates = {};
           if (retiro.tipo_billetera === 'comisiones') {
-            updates.saldo_comisiones = (Number(user.saldo_comisiones) || 0) + Number(retiro.monto);
+            updates.saldo_comisiones = Number(((Number(user.saldo_comisiones) || 0) + Number(retiro.monto)).toFixed(2));
           } else {
-            updates.saldo_principal = (Number(user.saldo_principal) || 0) + Number(retiro.monto);
+            updates.saldo_principal = Number(((Number(user.saldo_principal) || 0) + Number(retiro.monto)).toFixed(2));
           }
+          
+          // Primero actualizamos el estado del retiro para bloquear futuros clics
           await updateRetiro(id, { 
             estado: 'rechazado',
             rejected_by_admin_id: admin.id,
             rejected_at: new Date().toISOString()
           });
+          
+          // Luego devolvemos el saldo
           await updateUser(user.id, updates);
+          
+          // Crear movimiento de auditoría
+          await createMovimiento({
+            usuario_id: user.id,
+            tipo_movimiento: 'ajuste_admin',
+            monto: Number(retiro.monto),
+            descripcion: `Reembolso por retiro rechazado (${id.substring(0,8)})`,
+            referencia: `REJ-${id.substring(0,8)}`,
+            fecha: new Date().toISOString()
+          });
+
           await editTelegramMessage(chatId, messageId, message.text || message.caption, `❌ RECHAZADO por ${adminName} (Saldo devuelto)`);
         }
         return answerCallback(callbackQueryId, 'Operación finalizada.');

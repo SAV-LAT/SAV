@@ -4,6 +4,7 @@ import { ShieldCheck, Save, Plus, Trash2, Clock, Bell, BellOff } from 'lucide-re
 
 export default function AdminAdmins() {
   const [admins, setAdmins] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -19,6 +20,7 @@ export default function AdminAdmins() {
 
   useEffect(() => {
     fetchAdmins();
+    fetchUsers();
   }, []);
 
   const fetchAdmins = async () => {
@@ -29,6 +31,35 @@ export default function AdminAdmins() {
       console.error('Error fetching admins:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/admin/usuarios');
+      // Solo nos interesan los que tienen rol admin para el selector, 
+      // pero el usuario pidió poder seleccionar de los guardados.
+      // Si el backend ya filtra por admin en /admin/usuarios (o si queremos todos), 
+      // lo manejamos aquí. Por ahora traemos todos para que el admin elija.
+      setUsers(res);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  const handleUserSelect = (e) => {
+    const userId = e.target.value;
+    if (!userId) return;
+
+    const selectedUser = users.find(u => u.id === userId);
+    if (selectedUser) {
+      setFormData({
+        ...formData,
+        nombre: selectedUser.nombre_usuario || selectedUser.nombre_real || '',
+        // Intentamos buscar si ya tiene un ID de telegram en los admins existentes 
+        // para facilitar la vida, o dejamos que lo llene si es nuevo.
+        telegram_user_id: admins.find(a => a.nombre === selectedUser.nombre_usuario)?.telegram_user_id || ''
+      });
     }
   };
 
@@ -114,8 +145,25 @@ export default function AdminAdmins() {
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Seleccionar de Usuarios Registrados</label>
+              <select 
+                onChange={handleUserSelect}
+                className="w-full bg-blue-50/50 border border-blue-100 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
+              >
+                <option value="">-- Buscar un usuario --</option>
+                {users
+                  .filter(u => u.rol === 'admin' || u.rol === 'superadmin')
+                  .map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.nombre_usuario} ({u.nombre_real || 'Sin nombre real'}) - {u.rol}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-[10px] text-gray-400 mt-1 italic">* Solo se muestran usuarios con rol de administrador o superior.</p>
+            </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre (Confirmar)</label>
               <input
                 required
                 value={formData.nombre}
@@ -133,6 +181,7 @@ export default function AdminAdmins() {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all"
                 placeholder="Ej: 6896414316"
               />
+              <p className="text-[9px] text-blue-500 mt-1">Obtén el ID enviando /id al bot @userinfobot</p>
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Inicio de Turno (Bolivia)</label>

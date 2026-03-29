@@ -67,6 +67,7 @@ export default function Withdrawal() {
 
   const saldoPrincipal = user?.saldo_principal ?? 0;
   const saldoComisiones = user?.saldo_comisiones ?? 0;
+  const comisionPorcentaje = parseFloat(pc?.comision_retiro) || 12;
   
   // Lógica de horario: Priorizar el horario por nivel si está habilitado
   let horarioRet;
@@ -296,7 +297,7 @@ export default function Withdrawal() {
                 </div>
                 <div>
                   <p className="text-[11px] font-black text-amber-700 uppercase tracking-widest">Información de retiro</p>
-                  <p className="text-xs text-amber-600 font-bold mt-0.5">Se aplicará un cargo del 10% sobre el monto total de cada retiro solicitado.</p>
+                  <p className="text-xs text-amber-600 font-bold mt-0.5">Se aplicará un cargo del {comisionPorcentaje}% sobre el monto total de cada retiro solicitado.</p>
                 </div>
               </div>
 

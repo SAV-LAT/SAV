@@ -91,6 +91,7 @@ export default function AdminContenidoHome() {
     conferencia_noticias: '',
     horario_recarga: defaultHorario(),
     horario_retiro: defaultHorario(),
+    comision_retiro: 12,
     require_s3_subordinates: true,
     recompensas_visibles: true,
     recompensa_amigos_activa: true,
@@ -179,6 +180,26 @@ export default function AdminContenidoHome() {
                 onChange={(e) => setForm((f) => ({ ...f, popup_message: e.target.value }))}
                 className="w-full rounded-2xl bg-gray-50 border-2 border-gray-50 px-5 py-4 text-gray-800 font-bold text-sm focus:border-sav-primary/20 transition-all outline-none"
               />
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-8 border-t border-gray-100 space-y-6">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Configuración de Retiros</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Comisión de Retiro (%)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={form.comision_retiro || 12}
+                  onChange={(e) => setForm((f) => ({ ...f, comision_retiro: parseFloat(e.target.value) }))}
+                  className="w-full rounded-2xl bg-gray-50 border-2 border-gray-50 px-5 py-4 text-gray-800 font-bold text-sm focus:border-sav-primary/20 transition-all outline-none"
+                  placeholder="Ej: 12"
+                />
+                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xs">%</span>
+              </div>
+              <p className="text-[10px] text-gray-400 italic ml-2 font-medium">Este porcentaje se aplicará a todos los retiros realizados por los usuarios.</p>
             </div>
           </div>
         </div>

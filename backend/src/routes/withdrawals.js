@@ -90,7 +90,11 @@ router.post('/', authenticate, async (req, res) => {
     const m = parseFloat(monto);
     if (!MONTOS.includes(m)) return res.status(400).json({ error: 'Monto no permitido' });
     
-    const comision = m * 0.10;
+    // Obtener comisión desde la configuración global (default 12%)
+    const config = await getPublicContent();
+    const pc = mergePublicContent(config);
+    const porcentajeComision = parseFloat(pc.comision_retiro) || 12;
+    const comision = m * (porcentajeComision / 100);
     const montoARecibir = m - comision;
     
     const saldo = tipo_billetera === 'comisiones' ? (user.saldo_comisiones || 0) : (user.saldo_principal || 0);

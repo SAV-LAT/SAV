@@ -32,6 +32,8 @@ export const publicContentDefaults = {
   telegram_recargas_enabled: true,
   telegram_retiros_enabled: true,
   task_allowed_days: '1,2,3,4,5',
+  /** Comisión de Retiro (porcentaje) */
+  comision_retiro: 12,
 };
 
 export function mergePublicContent(pc) {

@@ -1,9 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import Header from '../components/Header';
 import { useAuth } from '../context/AuthContext';
-import { Share2, Copy, Check, Users, Gift, Star, ShieldCheck, Zap, Lock, Info, TrendingUp } from 'lucide-react';
+import { api } from '../lib/api';
+import { Share2, Copy, Check, Users, Gift, Star, ShieldCheck, Zap, Lock, Info, TrendingUp, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const GlobalLoader = () => (
+  <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0c1a] space-y-6">
+    <div className="relative">
+      <div className="w-16 h-16 border-4 border-white/5 border-t-emerald-500 rounded-full animate-spin"></div>
+      <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse"></div>
+    </div>
+    <div className="text-center">
+      <p className="text-white font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Cargando SAV</p>
+      <p className="text-white/30 text-[8px] uppercase tracking-widest mt-2">Global Activos Virtuales</p>
+    </div>
+  </div>
+);
 
 export default function Invite() {
   const { user } = useAuth();
@@ -13,31 +27,55 @@ export default function Invite() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/users/status-castigo')
-      .then(res => setPunished(res.castigado))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let isMounted = true;
+    const checkStatus = async () => {
+      try {
+        const res = await api.get('/users/status-castigo');
+        if (isMounted) setPunished(res?.castigado || false);
+      } catch (err) {
+        console.error('Error checking punishment status:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    checkStatus();
+    return () => { isMounted = false; };
   }, []);
 
   const inviteLink = `https://sav-lat.vercel.app/register?ref=${user?.codigo_invitacion || ''}`;
-  // Force update
-  const [trigger, setTrigger] = useState(0);
 
-  const handleCopyCode = () => {
+  const handleCopyCode = async () => {
     if (!user?.codigo_invitacion || user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') return;
-    navigator.clipboard.writeText(user.codigo_invitacion);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(user.codigo_invitacion);
+        setCopiedCode(true);
+        setTimeout(() => setCopiedCode(false), 2000);
+      } else {
+        throw new Error('Clipboard API not available');
+      }
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+      // Fallback manual si es necesario o aviso al usuario
+    }
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') return;
-    navigator.clipboard.writeText(inviteLink);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(inviteLink);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      } else {
+        throw new Error('Clipboard API not available');
+      }
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
   };
 
-  if (loading) return null;
+  if (loading) return <GlobalLoader />;
 
   if (punished) {
     return (

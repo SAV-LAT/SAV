@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 // SAV v4.2.0 - Despliegue Final
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
@@ -59,18 +59,49 @@ const AdminRecompensas = lazyWithRetry(() => import('./pages/admin/AdminRecompen
 const AdminAdmins = lazyWithRetry(() => import('./pages/admin/AdminAdmins.jsx'));
 const AdminCuestionario = lazyWithRetry(() => import('./pages/admin/AdminCuestionario.jsx'));
 
-const GlobalLoader = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0c1a] space-y-6">
-    <div className="relative">
-      <div className="w-16 h-16 border-4 border-white/5 border-t-emerald-500 rounded-full animate-spin"></div>
-      <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse"></div>
+const GlobalLoader = () => {
+  const [showError, setShowError] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowError(true);
+    }, 15000); // 15 segundos de timeout
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleRetry = () => {
+    window.location.reload();
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0c1a] space-y-6 p-6 text-center">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-white/5 border-t-emerald-500 rounded-full animate-spin"></div>
+        <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse"></div>
+      </div>
+      <div className="text-center space-y-4">
+        <div>
+          <p className="text-white font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Cargando SAV</p>
+          <p className="text-white/30 text-[8px] uppercase tracking-widest mt-2">Global Activos Virtuales</p>
+        </div>
+        
+        {showError && (
+          <div className="animate-fade-in space-y-4 max-w-xs mx-auto pt-4">
+            <p className="text-rose-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">
+              El servidor está tardando más de lo esperado en responder.
+            </p>
+            <button 
+              onClick={handleRetry}
+              className="px-6 py-3 rounded-xl bg-white/10 text-white text-[9px] font-black uppercase tracking-[0.2em] border border-white/10 active:scale-95 transition-all hover:bg-white/20"
+            >
+              Reintentar Conexión
+            </button>
+          </div>
+        )}
+      </div>
     </div>
-    <div className="text-center">
-      <p className="text-white font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Cargando SAV</p>
-      <p className="text-white/30 text-[8px] uppercase tracking-widest mt-2">Global Activos Virtuales</p>
-    </div>
-  </div>
-);
+  );
+};
 
 function PrivateRoute({ children, adminOnly }) {
   const { user, loading } = useAuth();

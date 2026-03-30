@@ -11,22 +11,34 @@ export default function BillingRecord() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [resRetiros, resRecargas] = await Promise.all([
           api.withdrawals.list().catch(() => []),
           api.recharges.list().catch(() => [])
         ]);
-        setRetiros(resRetiros);
-        setRecargas(resRecargas);
+        if (isMounted) {
+          setRetiros(resRetiros || []);
+          setRecargas(resRecargas || []);
+        }
       } catch (err) {
         console.error('Error cargando facturación:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     
     fetchData();
+    
+    // Polling de respaldo para facturación cada 30 segundos
+    const interval = setInterval(fetchData, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const items = tab === 'ingresos' 

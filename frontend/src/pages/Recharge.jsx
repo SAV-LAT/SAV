@@ -92,16 +92,25 @@ export default function Recharge() {
     const loadData = async () => {
       try {
         const list = await api.recharges.metodos();
-        setMetodos(list);
+        if (isMounted) setMetodos(list || []);
       } catch (err) {
         console.error('Error cargando métodos:', err);
-        setMetodos([]);
+        if (isMounted) setMetodos([]);
       }
     };
 
     loadData();
-    api.levels.list().then(setNiveles).catch(() => []);
-    api.publicContent().then(setPc).catch(() => {});
+    
+    // Polling de métodos de pago cada 20 segundos
+    const interval = setInterval(loadData, 20000);
+
+    api.levels.list().then(data => {
+      if (isMounted) setNiveles(data || []);
+    }).catch(() => []);
+    
+    api.publicContent().then(data => {
+      if (isMounted) setPc(data || null);
+    }).catch(() => {});
 
     if (location.state?.monto) {
       setMonto(location.state.monto.toString());
@@ -109,6 +118,8 @@ export default function Recharge() {
     if (location.state?.modo) {
       setModo(location.state.modo);
     }
+
+    return () => clearInterval(interval);
   }, [isMounted, location.state]);
 
   const selectLevel = (nivel) => {

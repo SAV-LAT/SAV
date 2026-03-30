@@ -48,11 +48,20 @@ export default function Dashboard() {
   }, []);
 
   const fetchStats = () => {
-    api.users.stats().then(setStats).catch(() => {});
+    api.users.stats()
+      .then(data => {
+        if (isMounted) setStats(data);
+      })
+      .catch((err) => {
+        console.error('Error fetching stats:', err);
+      });
   };
 
   useEffect(() => {
     if (!isMounted) return;
+
+    // Polling de respaldo para estadísticas cada 10 segundos
+    const statsInterval = setInterval(fetchStats, 10000);
     
     const fetchBanners = () => {
       api.banners()
@@ -126,6 +135,7 @@ export default function Dashboard() {
     }
 
     return () => {
+      clearInterval(statsInterval);
       supabase.removeChannel(adminChannel);
       if (userChannel) supabase.removeChannel(userChannel);
     };

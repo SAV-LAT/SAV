@@ -63,7 +63,14 @@ export function AuthProvider({ children }) {
 
     try {
       console.log(`[Auth] Solicitando /me... (Forzado: ${force})`);
-      const u = await api.users.me();
+      
+      // Timeout de seguridad de 15 segundos para la carga del perfil
+      const profilePromise = api.users.me();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('TIMEOUT_PROFILE')), 15000)
+      );
+
+      const u = await Promise.race([profilePromise, timeoutPromise]);
       
       if (u && typeof u === 'object') {
         // Solo actualizar el estado si los datos han cambiado para evitar re-renders innecesarios
@@ -76,7 +83,15 @@ export function AuthProvider({ children }) {
         }
       }
     } catch (err) {
-      if (err.status === 401 || err.status === 404) {
+      if (err.message === 'TIMEOUT_PROFILE') {
+        console.warn('Timeout cargando perfil, usando datos locales si existen...');
+        const savedUser = localStorage.getItem('user');
+        if (savedUser && !user) {
+          try {
+            setUser(JSON.parse(savedUser));
+          } catch (e) { /* ignore */ }
+        }
+      } else if (err.status === 401 || err.status === 404) {
         console.warn('Sesión inválida o usuario no encontrado, cerrando sesión...', err.message);
         logout();
       } else {

@@ -29,15 +29,19 @@ export async function processTelegramUpdate(update) {
     const action = parts[1];
     const id = parts.slice(2).join('_');
 
+    console.log(`[Telegram Logic] Datos parseados - Tipo: ${type}, Acción: ${action}, ID: ${id}`);
+
     // 2. VALIDACIÓN DE ADMINISTRADOR
+    console.log(`[Telegram Logic] Validando admin con Telegram ID: ${telegramUser.id}`);
     const admin = await findAdminByTelegramId(telegramUser.id);
+    
     if (!admin) {
-      console.warn(`[Telegram Logic] Usuario no autorizado intentó click: ${telegramUser.id}`);
+      console.warn(`[Telegram Logic] ACCESO DENEGADO: El usuario ${telegramUser.id} no es un admin registrado.`);
       return answerCallback(callbackQueryId, '❌ No tienes permisos para realizar esta acción.');
     }
 
-    const adminName = admin.nombre;
-    console.log(`[Telegram Logic] Admin identificado: ${adminName} (${admin.id})`);
+    const adminName = admin.nombre || admin.nombre_usuario || admin.nombre_real;
+    console.log(`[Telegram Logic] Admin identificado: ${adminName} (ID DB: ${admin.id})`);
 
     // --- MÓDULO DE RETIROS ---
     if (type === 'retiro') {

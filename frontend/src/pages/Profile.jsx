@@ -28,19 +28,30 @@ export default function Profile() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   useEffect(() => {
     const fetchStats = () => {
       console.log('[Profile] Cargando estadísticas...');
       api.users.stats()
         .then(data => {
-          console.log('[Profile] Estadísticas recibidas:', data);
-          setStats(data);
+          if (isMounted) {
+            console.log('[Profile] Estadísticas recibidas:', data);
+            setStats(data);
+          }
         })
         .catch(err => console.error('[Profile] Error cargando stats:', err));
     };
     
     fetchStats();
+
+    // Polling de respaldo para estadísticas cada 10 segundos
+    const statsInterval = setInterval(fetchStats, 10000);
 
     // Suscripción Realtime para estadísticas y saldo basado en la tabla usuarios
     if (user?.id) {
@@ -80,10 +91,12 @@ export default function Profile() {
         
       return () => {
         console.log('[Realtime] Desuscribiendo canal profile...');
+        clearInterval(statsInterval);
         supabase.removeChannel(channel);
       };
     }
-  }, [user?.id]);
+    return () => clearInterval(statsInterval);
+  }, [user?.id, isMounted]);
 
   const handleCopy = () => {
     if (!user?.codigo_invitacion || user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') return;

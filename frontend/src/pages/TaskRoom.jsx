@@ -49,23 +49,43 @@ export default function TaskRoom() {
   const isYoutube = activeTask?.video_url?.includes('youtube.com') || activeTask?.video_url?.includes('youtu.be');
 
   const fetchTasks = async () => {
+    if (!isMounted) return;
     setLoading(true);
     setError(null);
     api.tasks.list()
       .then(res => {
-        setData(res);
-        // Si hay un mensaje de fin de semana o error de nivel, mostrarlo
-        if (res.error) setError(res.error);
+        if (isMounted) {
+          setData(res);
+          // Si hay un mensaje de fin de semana o error de nivel, mostrarlo
+          if (res.error) setError(res.error);
+        }
       })
       .catch((err) => {
         console.error('Error cargando tareas:', err);
-        setError(err.message || 'Error de conexión.');
+        if (isMounted) setError(err.message || 'Error de conexión.');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
   };
 
+  const [isMounted, setIsMounted] = useState(false);
+
   useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
     fetchTasks();
+
+    // Polling de respaldo para tareas cada 20 segundos
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible' && !activeTask) {
+        fetchTasks();
+      }
+    }, 20000);
 
     // Suscripción Realtime Unificada para TaskRoom
     if (user?.id) {
@@ -114,10 +134,12 @@ export default function TaskRoom() {
 
       return () => {
         console.log('[TaskRoomRealtime] Desuscribiendo...');
+        clearInterval(interval);
         supabase.removeChannel(channel);
       };
     }
-  }, [user?.id]);
+    return () => clearInterval(interval);
+  }, [user?.id, activeTask, isMounted]);
 
   // Efecto para el temporizador de la encuesta
   useEffect(() => {

@@ -10,12 +10,33 @@ export default function Team() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTeamData = () => {
+    if (user?.nivel_codigo !== 'internar' && user?.nivel_codigo !== 'pasante') {
+      setLoading(true);
+      api.users.team()
+        .then(setData)
+        .catch((err) => {
+          console.error('Error fetching team data:', err);
+          setData(null);
+        })
+        .finally(() => setLoading(false));
+    }
+  };
 
   useEffect(() => {
-    if (user?.nivel_codigo !== 'internar' && user?.nivel_codigo !== 'pasante') {
-      api.users.team().then(setData).catch(() => setData(null));
-    }
-  }, [user]);
+    fetchTeamData();
+    
+    // Polling de respaldo para el equipo cada 30 segundos
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchTeamData();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user?.id]);
 
   const handleCopy = () => {
     if (!user?.codigo_invitacion) return;

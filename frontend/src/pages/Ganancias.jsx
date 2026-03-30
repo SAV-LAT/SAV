@@ -30,19 +30,36 @@ export default function Ganancias() {
         api.users.earnings(),
         api.get('/users/status-castigo')
       ]);
-      setData(res);
-      setPunished(statusRes.castigado);
-      setError(null);
+      if (isMounted) {
+        setData(res);
+        setPunished(statusRes.castigado);
+        setError(null);
+      }
     } catch (err) {
       console.error('Error cargando ganancias:', err);
-      setError('No se pudo sincronizar el historial.');
+      if (isMounted) setError('No se pudo sincronizar el historial.');
     } finally {
-      setLoading(false);
+      if (isMounted) setLoading(false);
     }
   };
 
+  const [isMounted, setIsMounted] = useState(false);
+
   useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
     fetchData();
+
+    // Polling de respaldo para ganancias cada 15 segundos
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    }, 15000);
 
     // Suscripción en tiempo real a movimientos_saldo y usuarios
     if (user?.id) {
@@ -74,10 +91,12 @@ export default function Ganancias() {
 
       return () => {
         console.log('[GananciasRealtime] Desuscribiendo...');
+        clearInterval(interval);
         supabase.removeChannel(channel);
       };
     }
-  }, [user?.id]);
+    return () => clearInterval(interval);
+  }, [user?.id, isMounted]);
 
   const getFilteredHistory = () => {
     if (!data?.history) return [];

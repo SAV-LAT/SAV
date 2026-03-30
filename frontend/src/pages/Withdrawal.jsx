@@ -29,24 +29,36 @@ export default function Withdrawal() {
   const [hasWithdrawalToday, setHasWithdrawalToday] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
     // Flujo de validación: Contraseña de fondo -> Vincular tarjeta
     if (user && !user.tiene_password_fondo) {
       navigate('/cambiar-contrasena-fondo');
       return;
     }
 
-    api.withdrawals.montos().then(setMontos).catch(() => {});
+    api.withdrawals.montos().then(data => {
+      if (isMounted) setMontos(data || [25, 100, 500, 1500, 5000, 10000]);
+    }).catch(() => {});
+    
     api.users.tarjetas().then((list) => {
-      setTarjetas(list);
-      if (list.length === 0) {
+      if (!isMounted) return;
+      setTarjetas(list || []);
+      if (list && list.length === 0) {
         navigate('/vincular-tarjeta');
         return;
       }
-      if (list[0]) setTarjetaId(list[0].id);
-    }).catch(() => setTarjetas([]));
-    api.publicContent().then(setPc).catch(() => {});
+      if (list && list[0]) setTarjetaId(list[0].id);
+    }).catch(() => {
+      if (isMounted) setTarjetas([]);
+    });
+
+    api.publicContent().then(data => {
+      if (isMounted) setPc(data || null);
+    }).catch(() => {});
+
     api.levels.list().then((list) => {
-      if (user?.nivel_id) {
+      if (!isMounted) return;
+      if (user?.nivel_id && list) {
         const found = list.find(l => l.id === user.nivel_id);
         if (found) setUserLevel(found);
       }
@@ -56,14 +68,17 @@ export default function Withdrawal() {
     const checkLimit = async () => {
       try {
         const retiros = await api.withdrawals.list();
+        if (!isMounted) return;
         const now = new Date();
         const todayStr = new Date(now.toLocaleString('en-US', { timeZone: 'America/La_Paz' })).toISOString().split('T')[0];
-        const exists = retiros.some(r => r.estado !== 'rechazado' && r.created_at.split('T')[0] === todayStr);
+        const exists = retiros.some(r => r.estado !== 'rechazado' && r.created_at && r.created_at.split('T')[0] === todayStr);
         setHasWithdrawalToday(exists);
       } catch (err) {}
     };
     checkLimit();
-  }, [user, navigate]);
+
+    return () => { isMounted = false; };
+  }, [user?.id, navigate]);
 
   const saldoPrincipal = user?.saldo_principal ?? 0;
   const saldoComisiones = user?.saldo_comisiones ?? 0;

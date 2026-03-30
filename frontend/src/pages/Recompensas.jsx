@@ -32,35 +32,49 @@ export default function Recompensas() {
   const wheelRef = useRef(null);
 
   useEffect(() => {
+    let isMounted = true;
     const loadData = () => {
       Promise.all([
-        api.sorteo.premios(),
-        api.sorteo.historial(),
-        api.sorteo.config(),
-        api.users.team(),
-        api.get('/users/status-castigo')
+        api.sorteo.premios().catch(() => []),
+        api.sorteo.historial().catch(() => []),
+        api.sorteo.config().catch(() => null),
+        api.users.team().catch(() => null),
+        api.get('/users/status-castigo').catch(() => ({ castigado: false }))
       ]).then(([p, h, c, t, statusRes]) => {
-        setPremios(p || []);
-        setHistorial(h || []);
-        setConfig(c);
-        setTeamStats(t);
-        setPunished(statusRes.castigado);
-        setLoading(false);
+        if (isMounted) {
+          setPremios(p || []);
+          setHistorial(h || []);
+          setConfig(c);
+          setTeamStats(t);
+          setPunished(statusRes?.castigado || false);
+          setLoading(false);
+        }
       }).catch(err => {
         console.error('Error cargando datos de ruleta:', err);
-        setLoading(false);
+        if (isMounted) setLoading(false);
       });
     };
 
     loadData();
 
-    // Actualización en tiempo real de ganadores cada 15 segundos
+    // Polling de respaldo para historial y config cada 20 segundos
     const interval = setInterval(() => {
-      api.sorteo.historial().then(setHistorial).catch(() => {});
-    }, 15000);
+      if (document.visibilityState === 'visible' && !spinning) {
+        api.sorteo.historial().then(data => {
+          if (isMounted) setHistorial(data || []);
+        }).catch(() => {});
+        
+        api.sorteo.config().then(data => {
+          if (isMounted) setConfig(data || null);
+        }).catch(() => {});
+      }
+    }, 20000);
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [spinning]);
 
   const spinWheel = async () => {
     if (spinning || premios.length === 0) return;

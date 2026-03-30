@@ -141,6 +141,23 @@ export default function TaskRoom() {
     return () => clearInterval(interval);
   }, [user?.id, activeTask, isMounted]);
 
+  // Efecto para forzar el inicio del video cuando cambia la tarea
+  useEffect(() => {
+    if (activeTask && videoRef.current && !isYoutube) {
+      console.log('[TaskRoom] Forzando inicio de video para:', activeTask.id);
+      videoRef.current.currentTime = 0;
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.log('[TaskRoom] Autoplay bloqueado o error:', error);
+          // Si falla el autoplay con sonido, intentamos silenciado como fallback
+          videoRef.current.muted = true;
+          videoRef.current.play().catch(e => console.error('[TaskRoom] Fallo total de video:', e));
+        });
+      }
+    }
+  }, [activeTask?.id, isYoutube]);
+
   // Efecto para el temporizador de la encuesta
   useEffect(() => {
     let interval;
@@ -360,7 +377,7 @@ export default function TaskRoom() {
 
           <div className="max-w-xl mx-auto w-full px-5 py-6 space-y-6 flex-1 overflow-y-auto">
             {/* ZONA 1: REPRODUCTOR DE VIDEO (SIEMPRE VISIBLE) */}
-            <section className="relative group w-full shrink-0">
+            <section className="relative group w-full shrink-0" key={activeTask?.id || 'no-task'}>
               <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-30 transition duration-1000"></div>
               <div className="relative w-full aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border-[6px] border-white ring-1 ring-black/5 flex items-center justify-center">
                 {isYoutube ? (
@@ -379,13 +396,21 @@ export default function TaskRoom() {
                 ) : (
                   <video 
                     ref={videoRef}
+                    key={`video-${activeTask.id}`}
                     className="w-full h-full object-cover absolute inset-0 z-10" 
                     src={activeTask.video_url} 
                     controls={videoFinished}
                     autoPlay 
                     playsInline 
                     onEnded={() => setVideoFinished(true)} 
-                    onCanPlay={(e) => { e.target.muted = false; e.target.play().catch(()=>{}); }} 
+                    onCanPlay={(e) => { 
+                      e.target.muted = false; 
+                      e.target.play().catch(()=>{
+                        // Fallback silenciado si el navegador bloquea audio inicial
+                        e.target.muted = true;
+                        e.target.play();
+                      }); 
+                    }} 
                   />
                 )}
                 

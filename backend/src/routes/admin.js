@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { 
   getUsers, getRecargas, getRetiros, getLevels, findUserById, updateUser, 
-  getPublicContent, getMetodosQr, getBanners, getAllTasks, getRecargaById, 
+  getPublicContent, getMetodosQr, getAllMetodosQr, getBanners, getAllTasks, getRecargaById, 
   updateRecarga, getRetiroById, updateRetiro, trySupabase, handleLevelUpRewards,
   getUserEarningsSummary, createMovimiento, boliviaTime, getPunishedUsers, unpunishUser 
 } from '../lib/queries.js';
@@ -326,8 +326,13 @@ router.get('/metodos-qr', async (req, res) => {
   res.json(metodos);
 });
 
+router.get('/metodos-qr-all', async (req, res) => {
+  const metodos = await getAllMetodosQr();
+  res.json(metodos);
+});
+
 router.post('/metodos-qr', async (req, res) => {
-  const { nombre_titular, imagen_base64 } = req.body;
+  const { nombre_titular, imagen_base64, dias_semana, hora_inicio, hora_fin } = req.body;
   
   const metodo = {
     id: uuidv4(),
@@ -335,6 +340,9 @@ router.post('/metodos-qr', async (req, res) => {
     imagen_qr_url: imagen_base64 || '',
     activo: true,
     orden: (await getMetodosQr()).length + 1,
+    dias_semana: dias_semana || '0,1,2,3,4,5,6',
+    hora_inicio: hora_inicio || '00:00:00',
+    hora_fin: hora_fin || '23:59:59',
     created_at: new Date().toISOString()
   };
 
@@ -377,6 +385,16 @@ router.delete('/metodos-qr/:id', async (req, res) => {
   }
 
   res.json({ ok: true });
+});
+
+router.put('/metodos-qr/:id', async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const { data, error } = await trySupabase(() => 
+    supabase.from('metodos_qr').update(updates).eq('id', id).select().maybeSingle()
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 router.get('/banners', async (req, res) => {

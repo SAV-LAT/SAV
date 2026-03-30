@@ -225,12 +225,28 @@ export async function getRetiros() {
 
 
 export async function getMetodosQr() {
-  const { data: metodos } = await trySupabase(() => supabase.from('metodos_qr').select('*').eq('activo', true).order('orden', { ascending: true }));
+  const { data: allMetodos } = await trySupabase(() => supabase.from('metodos_qr').select('*').eq('activo', true).order('orden', { ascending: true }));
   
   // OBTENER QR DE ADMINS EN TURNO
   const now = boliviaTime.now();
   const timeStr = boliviaTime.getTimeString(now); // HH:mm
   const day = now.getDay().toString(); // 0-6
+
+  // FILTRAR METODOS_QR POR HORARIO (Si tienen configurado uno)
+  const metodosFiltrados = (allMetodos || []).filter(m => {
+    const dias = (m.dias_semana || '0,1,2,3,4,5,6').split(',');
+    if (!dias.includes(day)) return false;
+    
+    const inicio = m.hora_inicio?.substring(0, 5) || '00:00';
+    const fin = m.hora_fin?.substring(0, 5) || '23:59';
+    
+    if (inicio <= fin) {
+      return timeStr >= inicio && timeStr <= fin;
+    } else {
+      // Turno que cruza medianoche
+      return timeStr >= inicio || timeStr <= fin;
+    }
+  });
 
   const { data: admins } = await trySupabase(() => 
     supabase.from('admins')
@@ -262,7 +278,12 @@ export async function getMetodosQr() {
     es_admin: true
   }));
 
-  return [...(metodos || []), ...metodosAdmins];
+  return [...metodosFiltrados, ...metodosAdmins];
+}
+
+export async function getAllMetodosQr() {
+  const { data } = await trySupabase(() => supabase.from('metodos_qr').select('*').order('created_at', { ascending: false }));
+  return data || [];
 }
 
 export async function getRecargasByUser(userId) {

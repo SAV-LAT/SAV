@@ -70,6 +70,11 @@ export const boliviaTime = {
     return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
   },
 
+  // Obtiene la hora actual en formato HH:mm
+  getTimeString: (date = new Date()) => {
+    return new Date(date).toLocaleTimeString('en-GB', { timeZone: 'America/La_Paz', hour: '2-digit', minute: '2-digit' });
+  },
+
   // Obtiene un objeto Date ajustado a Bolivia para comparaciones
   getBoliviaDate: (date) => {
     if (!date) return null;
@@ -224,7 +229,7 @@ export async function getMetodosQr() {
   
   // OBTENER QR DE ADMINS EN TURNO
   const now = boliviaTime.now();
-  const timeStr = boliviaTime.getDateString(now, true).split(' ')[1].substring(0, 5); // HH:mm
+  const timeStr = boliviaTime.getTimeString(now); // HH:mm
   const day = now.getDay().toString(); // 0-6
 
   const { data: admins } = await trySupabase(() => 

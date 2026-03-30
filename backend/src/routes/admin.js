@@ -641,9 +641,8 @@ router.put('/public-content', async (req, res) => {
   }
 });
 
-router.post('/public-content', async (req, res) => {
+router.put('/contenido-home', async (req, res) => {
   const updates = req.body;
-  
   try {
     for (const [clave, valor] of Object.entries(updates)) {
       const valorFinal = typeof valor === 'object' ? JSON.stringify(valor) : String(valor);
@@ -657,16 +656,6 @@ router.post('/public-content', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-router.put('/contenido-home', async (req, res) => {
-  const updates = req.body;
-  try {
-    for (const [clave, valor] of Object.entries(updates)) {
-      const valorFinal = typeof valor === 'object' ? JSON.stringify(valor) : String(valor);
-      await trySupabase(() => 
-        supabase.from('configuraciones').upsert({ clave, valor: valorFinal }, { onConflict: 'clave' })
-      );
-    }
     const config = await getPublicContent();
     res.json(mergePublicContent(config));
   } catch (err) {

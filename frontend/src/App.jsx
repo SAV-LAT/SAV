@@ -11,24 +11,33 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 function NavigationGuard({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    const handlePopState = (event) => {
-      // Si el usuario está logueado y no está en el inicio (o admin dashboard)
-      // y la historia del navegador parece haberse agotado para la app,
-      // forzamos el regreso al inicio en lugar de cerrar la app.
-      if (user && location.pathname !== '/' && location.pathname !== '/admin') {
-        // Si no hay más estados en la historia, redirigir al home
-        if (window.history.state === null || window.history.state?.idx === 0) {
-          navigate(user.rol === 'admin' ? '/admin' : '/', { replace: true });
-        }
-      }
-    };
+    if (loading) return;
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [location, navigate, user]);
+    // Si el usuario entra directamente a una subpágina (por ejemplo /ganancias)
+    // el historial del navegador está vacío. Al apretar "atrás", el celular cierra la app.
+    // Esta lógica inyecta el "Inicio" en el stack si no existe.
+    if (!initialized && user) {
+      const currentPath = location.pathname + location.search;
+      
+      // Si no estamos en el inicio, inyectamos el inicio antes de la página actual
+      if (currentPath !== '/' && currentPath !== '/admin') {
+        console.log('[NavigationGuard] Inyectando ruta base en el historial...');
+        navigate(user.rol === 'admin' ? '/admin' : '/', { replace: true });
+        
+        // Usamos un pequeño delay para que el historial registre el cambio
+        setTimeout(() => {
+          navigate(currentPath);
+          setInitialized(true);
+        }, 10);
+      } else {
+        setInitialized(true);
+      }
+    }
+  }, [location.pathname, user, loading, initialized, navigate]);
 
   return children;
 }

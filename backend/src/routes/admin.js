@@ -656,12 +656,6 @@ router.put('/contenido-home', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-    const config = await getPublicContent();
-    res.json(mergePublicContent(config));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 router.post('/cuestionario/castigar', async (req, res) => {
   try {

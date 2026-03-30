@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Trash2, Upload, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Upload, Eye, EyeOff, Clock } from 'lucide-react';
 
 export default function AdminMetodosQr() {
   const [metodos, setMetodos] = useState([]);

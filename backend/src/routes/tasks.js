@@ -242,8 +242,9 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     if (yaGanadaHoy) {
       return res.status(400).json({ 
         error: 'Ya has completado esta tarea exitosamente el día de hoy.',
-        success: true, // Para que el frontend lo trate como éxito si ya estaba hecha
-        correcta: true,
+        already_completed: true,
+        success: false,
+        correcta: false,
         monto: 0
       });
     }

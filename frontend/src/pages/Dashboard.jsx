@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import FloatingQuestionnaire from '../components/FloatingQuestionnaire.jsx';
 
 const gridItems = [
   { to: '/vip', icon: TrendingUp, label: 'Fondo Riqueza', color: 'text-amber-500', bg: 'bg-amber-50' },
@@ -152,6 +153,7 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      <FloatingQuestionnaire />
       {/* Header Premium White & Navy */}
       <header className="bg-gradient-to-r from-[#1a1f36] to-[#2a2f46] px-5 py-4 flex items-center justify-between sticky top-0 z-30 border-b border-white/10 shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-3 group cursor-pointer active:scale-95 transition-all">

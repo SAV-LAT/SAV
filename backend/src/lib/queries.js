@@ -825,3 +825,16 @@ export async function isUserPunished(userId) {
   const today = boliviaTime.todayStr();
   return user.castigado_hasta >= today;
 }
+
+export async function getPunishedUsers() {
+  const today = boliviaTime.todayStr();
+  return await trySupabase(() => 
+    supabase.from('usuarios')
+      .select('id, nombre_usuario, telefono, castigado_hasta, nivel_id')
+      .gte('castigado_hasta', today)
+  );
+}
+
+export async function unpunishUser(userId) {
+  return await updateUser(userId, { castigado_hasta: null });
+}

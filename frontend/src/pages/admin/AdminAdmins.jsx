@@ -61,10 +61,6 @@ export default function AdminAdmins() {
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/usuarios');
-      // Solo nos interesan los que tienen rol admin para el selector, 
-      // pero el usuario pidió poder seleccionar de los guardados.
-      // Si el backend ya filtra por admin en /admin/usuarios (o si queremos todos), 
-      // lo manejamos aquí. Por ahora traemos todos para que el admin elija.
       setUsers(res);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -77,12 +73,12 @@ export default function AdminAdmins() {
 
     const selectedUser = users.find(u => u.id === userId);
     if (selectedUser) {
-      const existingAdmin = admins.find(a => a.nombre === selectedUser.nombre_usuario || a.telefono === selectedUser.telefono);
       setFormData({
         ...formData,
         nombre: selectedUser.nombre_usuario || selectedUser.nombre_real || '',
         telefono: selectedUser.telefono || '',
-        telegram_user_id: existingAdmin?.telegram_user_id || selectedUser.telegram_user_id || ''
+        telegram_user_id: selectedUser.telegram_user_id || '',
+        telegram_username: selectedUser.telegram_username || ''
       });
     }
   };
@@ -228,7 +224,16 @@ export default function AdminAdmins() {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
                 placeholder="Ej: 6896414316"
               />
-              <p className="text-[9px] text-blue-500 mt-1">Obtén el ID enviando /id al bot @userinfobot</p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Telegram Username</label>
+              <input
+                value={formData.telegram_username}
+                onChange={e => setFormData({...formData, telegram_username: e.target.value})}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
+                placeholder="Ej: usuario_tg"
+              />
+              <p className="text-[9px] text-blue-500 mt-1">El ID se usa para enviar notificaciones directas.</p>
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Inicio de Turno (Bolivia)</label>
@@ -300,9 +305,7 @@ export default function AdminAdmins() {
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
                     <span className="text-xs font-medium text-gray-600">ID: {admin.telegram_user_id}</span>
-                    {admin.telegram_username && (
-                      <span className="text-[10px] text-blue-500">@{admin.telegram_username}</span>
-                    )}
+                    <span className="text-[10px] text-blue-500">@{admin.telegram_username || 'sin_username'}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">

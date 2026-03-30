@@ -5,7 +5,7 @@ import {
   getUsers, getRecargas, getRetiros, getLevels, findUserById, updateUser, 
   getPublicContent, getMetodosQr, getBanners, getAllTasks, getRecargaById, 
   updateRecarga, getRetiroById, updateRetiro, trySupabase, handleLevelUpRewards,
-  getUserEarningsSummary, createMovimiento, boliviaTime 
+  getUserEarningsSummary, createMovimiento, boliviaTime, getPunishedUsers, unpunishUser 
 } from '../lib/queries.js';
 import { getStore } from '../data/store.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
@@ -683,6 +683,24 @@ router.post('/cuestionario/castigar', async (req, res) => {
     );
 
     res.json({ ok: true, punished: punishedCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/cuestionario/castigados', async (req, res) => {
+  try {
+    const data = await getPunishedUsers();
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/cuestionario/desbloquear/:id', async (req, res) => {
+  try {
+    await unpunishUser(req.params.id);
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

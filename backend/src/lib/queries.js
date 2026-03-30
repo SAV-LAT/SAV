@@ -869,11 +869,12 @@ export async function isUserPunished(userId) {
 
 export async function getPunishedUsers() {
   const today = boliviaTime.todayStr();
-  return await trySupabase(() => 
+  const { data } = await trySupabase(() => 
     supabase.from('usuarios')
       .select('id, nombre_usuario, telefono, castigado_hasta, nivel_id')
       .gte('castigado_hasta', today)
   );
+  return data || [];
 }
 
 export async function unpunishUser(userId) {

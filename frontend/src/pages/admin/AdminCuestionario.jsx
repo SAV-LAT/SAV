@@ -30,9 +30,10 @@ export default function AdminCuestionario() {
   const fetchPunished = async () => {
     try {
       const res = await api.get('/admin/cuestionario/castigados');
-      setPunishedUsers(res || []);
+      setPunishedUsers(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error(err);
+      setPunishedUsers([]);
     }
   };
 

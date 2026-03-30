@@ -156,12 +156,9 @@ function PrivateRoute({ children, adminOnly }) {
     return <Navigate to="/" replace />;
   }
 
-  // Si la ruta NO es para admin (es de usuario) pero el usuario ES admin,
-  // redirigir al panel de administración para evitar confusión.
-  // Excepción: Permitir rutas de autenticación o de salida.
-  if (!adminOnly && user.rol === 'admin') {
-    return <Navigate to="/admin" replace />;
-  }
+  // Se permite que los administradores accedan a las rutas de usuario (como Dashboard, Perfil, etc)
+  // para que puedan visualizar la experiencia del usuario o realizar pruebas.
+  // No redirigimos automáticamente a /admin a menos que sea necesario.
 
   return children;
 }

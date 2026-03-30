@@ -296,7 +296,7 @@ export async function getMetodosQr() {
         };
       });
 
-      // 4. Si los admins en turno no tienen QRs seleccionados, buscar cualquier QR activo de ellos como fallback
+      // 4. Si los admins en turno no tienen QRs seleccionados, buscar cualquier QR activo de ellos
       if (metodosFinales.length === 0) {
         const { data: qrsCualquiera } = await trySupabase(() => 
           supabase.from('metodos_qr')
@@ -305,10 +305,23 @@ export async function getMetodosQr() {
             .in('admin_id', adminIds)
             .limit(1)
         );
-        return qrsCualquiera || [];
+        
+        if (qrsCualquiera && qrsCualquiera.length > 0) {
+          return qrsCualquiera;
+        }
+      } else {
+        return metodosFinales;
       }
 
-      return metodosFinales;
+      // 5. Fallback final a QRs globales si los admins en turno no tienen nada configurado
+      const { data: globales } = await trySupabase(() => 
+        supabase.from('metodos_qr')
+          .select('*')
+          .eq('activo', true)
+          .is('admin_id', null)
+          .order('orden', { ascending: true })
+      );
+      return globales || [];
     } catch (e) {
       // Fallback si las nuevas columnas no existen
       const { data: todo } = await trySupabase(() => 
@@ -914,12 +927,13 @@ export async function checkUserQuestionnaire(userId) {
   return !!data;
 }
 
-export async function submitQuestionnaire(userId) {
+export async function submitQuestionnaire(userId, respuestas = {}) {
   const today = boliviaTime.todayStr();
   return await trySupabase(() => 
     supabase.from('respuestas_cuestionario').insert([{
       usuario_id: userId,
-      fecha: today
+      fecha: today,
+      respuestas: JSON.stringify(respuestas) // Asegurar que se guardan como string JSON si la columna no es JSONB
     }])
   );
 }

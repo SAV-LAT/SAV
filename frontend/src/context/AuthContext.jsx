@@ -68,35 +68,26 @@ export function AuthProvider({ children }) {
     try {
       console.log(`[Auth] Solicitando /me... (Forzado: ${force})`);
       
-      // Timeout de seguridad de 15 segundos para la carga del perfil
+      // Timeout de seguridad de 10 segundos para la carga del perfil
       const profilePromise = api.users.me();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('TIMEOUT_PROFILE')), 15000)
+        setTimeout(() => reject(new Error('TIMEOUT_PROFILE')), 10000)
       );
 
       const u = await Promise.race([profilePromise, timeoutPromise]);
       
       if (u && typeof u === 'object') {
-        // Solo actualizar el estado si los datos han cambiado para evitar re-renders innecesarios
-        const currentUserStr = localStorage.getItem('user');
         const newUserStr = JSON.stringify(u);
-        
-        if (currentUserStr !== newUserStr) {
-          setUser(u);
-          localStorage.setItem('user', newUserStr);
-        }
+        setUser(u);
+        localStorage.setItem('user', newUserStr);
+        localStorage.setItem('lastUserUpdate', Date.now().toString());
       }
     } catch (err) {
       if (err.message === 'TIMEOUT_PROFILE') {
-        console.warn('Timeout cargando perfil, usando datos locales si existen...');
-        const savedUser = localStorage.getItem('user');
-        if (savedUser && !user) {
-          try {
-            setUser(JSON.parse(savedUser));
-          } catch (e) { /* ignore */ }
-        }
-      } else if (err.status === 401 || err.status === 404) {
-        console.warn('Sesión inválida o usuario no encontrado, cerrando sesión...', err.message);
+        console.warn('Timeout cargando perfil, usando datos locales temporalmente...');
+        // El usuario ya está seteado desde el inicio de loadUser si existía en localStorage
+      } else if (err.status === 401 || err.status === 403 || err.status === 404) {
+        console.error('Sesión inválida o expirada, cerrando sesión...', err.message);
         logout();
       } else {
         console.warn('Error de red al cargar usuario, manteniendo sesión previa:', err.message);
@@ -139,15 +130,15 @@ export function AuthProvider({ children }) {
     };
   }, [loadUser]);
 
-  // --- IMPLEMENTACIÓN SUPABASE REALTIME ---
+  // --- IMPLEMENTACIÓN SUPABASE REALTIME UNIFICADA ---
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log(`[Realtime] Suscribiendo a cambios para usuario: ${user.id}`);
+    console.log(`[AuthRealtime] Suscribiendo a cambios para usuario: ${user.id}`);
 
-    // Suscribirse a cambios en la tabla 'usuarios' para el ID del usuario actual
+    // Canal unificado para cambios en el perfil del usuario
     const userChannel = supabase
-      .channel(`public:usuarios:id=eq.${user.id}`)
+      .channel(`user_changes:${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -157,30 +148,22 @@ export function AuthProvider({ children }) {
           filter: `id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('[Realtime] Perfil actualizado:', payload.new);
-          // Actualizamos el usuario localmente con los nuevos datos
-          setUser(prev => ({
-            ...prev,
-            ...payload.new
-          }));
+          console.log('[AuthRealtime] Perfil actualizado en DB:', payload.new);
           
-          // Actualizar localStorage también
-          const savedUser = localStorage.getItem('user');
-          if (savedUser) {
-            try {
-              const parsed = JSON.parse(savedUser);
-              localStorage.setItem('user', JSON.stringify({ ...parsed, ...payload.new }));
-            } catch (e) {
-              // ignore
-            }
-          }
+          // Actualizamos el estado local
+          setUser(prev => {
+            const updated = { ...prev, ...payload.new };
+            // Sincronizar con localStorage para mantener coherencia si hay fallback
+            localStorage.setItem('user', JSON.stringify(updated));
+            return updated;
+          });
         }
       )
       .subscribe();
 
-    // Suscribirse a cambios en 'actividad_tareas' para recargar estadísticas si hay nuevas tareas
+    // Suscribirse a cambios en 'actividad_tareas' para recargar estadísticas
     const activityChannel = supabase
-      .channel(`public:actividad_tareas:usuario_id=eq.${user.id}`)
+      .channel(`task_activity:${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -190,46 +173,18 @@ export function AuthProvider({ children }) {
           filter: `usuario_id=eq.${user.id}`,
         },
         () => {
-          console.log('[Realtime] Nueva tarea detectada, recargando perfil...');
-          loadUser(true); // Forzamos recarga para actualizar contadores complejos
+          console.log('[AuthRealtime] Nueva tarea detectada, refrescando perfil...');
+          loadUser(true);
         }
       )
       .subscribe();
 
     return () => {
-      console.log('[Realtime] Desconectando canales...');
+      console.log('[AuthRealtime] Desconectando canales...');
       supabase.removeChannel(userChannel);
       supabase.removeChannel(activityChannel);
     };
   }, [user?.id, loadUser]);
-
-  // Efecto para escuchar cambios en tiempo real (Saldo y Perfil)
-  useEffect(() => {
-    if (user?.id) {
-      console.log(`[AuthRealtime] Suscribiendo a cambios para el usuario: ${user.id}`);
-      
-      const channel = supabase.channel(`user_changes:${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'usuarios',
-            filter: `id=eq.${user.id}`
-          },
-          (payload) => {
-            console.log('[AuthRealtime] Datos de usuario actualizados en DB:', payload.new);
-            // Actualizar el estado local con los nuevos datos (saldo, nivel, etc)
-            setUser(prev => ({ ...prev, ...payload.new }));
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user?.id]);
 
   const login = useCallback(async (telefono, password) => {
     const deviceId = getDeviceId();

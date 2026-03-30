@@ -363,7 +363,8 @@ router.post('/cuestionario/responder', authenticate, async (req, res) => {
     const yaRespondio = await checkUserQuestionnaire(req.user.id);
     if (yaRespondio) return res.status(400).json({ error: 'Ya respondiste el cuestionario de hoy' });
     
-    await submitQuestionnaire(req.user.id);
+    const { respuestas } = req.body;
+    await submitQuestionnaire(req.user.id, respuestas);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -102,16 +102,20 @@ export default function Ganancias() {
     const historyData = Array.isArray(data?.history) ? data.history : [];
     if (tab === 'todo') return historyData;
     
+    // Normalizar tipos para evitar errores por cambios menores en backend
     const filters = {
-      tareas: ['ganancia_tarea'],
-      comisiones: ['comision_subordinado'],
-      invitaciones: ['recompensa_invitacion'],
-      recargas: ['recarga'],
-      retiros: ['retiro'],
-      otros: ['ajuste_admin']
+      tareas: ['ganancia_tarea', 'tarea_completada'],
+      comisiones: ['comision_subordinado', 'comision_red'],
+      invitaciones: ['recompensa_invitacion', 'bono_invitado'],
+      recargas: ['recarga', 'deposito'],
+      retiros: ['retiro', 'extraccion'],
+      otros: ['ajuste_admin', 'bono_manual', 'premio_ruleta']
     };
 
-    return historyData.filter(item => filters[tab]?.includes(item.tipo_movimiento));
+    return historyData.filter(item => {
+      const tipo = item.tipo_movimiento?.toLowerCase() || '';
+      return filters[tab]?.some(f => tipo.includes(f));
+    });
   };
 
   const historyList = getFilteredHistory();
@@ -173,23 +177,23 @@ export default function Ganancias() {
               <div className="space-y-1">
                 <p className="text-[11px] font-black uppercase tracking-[0.3em] text-white/50">Balance Acumulado</p>
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-5xl font-black tracking-tighter uppercase drop-shadow-lg">{(user?.saldo_comisiones || 0).toFixed(2)}</h2>
+                  <h2 className="text-5xl font-black tracking-tighter uppercase drop-shadow-lg">{(data?.summary?.total || 0).toFixed(2)}</h2>
                   <span className="text-sm font-black text-white/40 tracking-widest">BOB</span>
                 </div>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-2xl group-hover:rotate-6 transition-transform">
-                <Wallet className="text-white" size={28} />
+                <TrendingUp className="text-white" size={28} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white/5 rounded-2xl p-5 border border-white/10 backdrop-blur-sm group-hover:bg-white/10 transition-colors">
-                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1.5">Hoy</p>
+                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1.5">Ganancias Hoy</p>
                 <p className="text-xl font-black tracking-tight">+{(data?.summary?.hoy || 0).toFixed(2)}</p>
               </div>
               <div className="bg-white/5 rounded-2xl p-5 border border-white/10 backdrop-blur-sm group-hover:bg-white/10 transition-colors text-right">
-                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1.5">Total</p>
-                <p className="text-xl font-black tracking-tight">{(data?.summary?.total || 0).toFixed(2)}</p>
+                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1.5">Saldo de Comisiones</p>
+                <p className="text-xl font-black tracking-tight">{(user?.saldo_comisiones || 0).toFixed(2)}</p>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { Suspense, lazy, useState, useEffect } from 'react';
 // SAV v4.2.0 - Despliegue Final
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import { useAndroidBackHandler } from './hooks/useAndroidBackHandler.js';
 
 /**
  * NavigationGuard: Maneja el comportamiento del botón atrás del celular.
@@ -13,6 +14,9 @@ function NavigationGuard({ children }) {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [initialized, setInitialized] = useState(false);
+
+  // Activar el manejador de botón físico de Android
+  useAndroidBackHandler();
 
   useEffect(() => {
     if (loading) return;

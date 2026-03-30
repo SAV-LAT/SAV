@@ -6,6 +6,7 @@ import Header from '../components/Header.jsx';
 import { api } from '../lib/api.js';
 import { supabase } from '../lib/supabase.js';
 import { TrendingUp, Info, ShieldCheck, Play, Check, Clock, Wallet, ArrowRight, X, Sparkles, AlertCircle, ClipboardList, Trophy } from 'lucide-react';
+import { useAndroidBackHandler } from '../hooks/useAndroidBackHandler.js';
 
 /**
  * SAV v4.1.0 - RECONSTRUCCIÓN INTEGRAL Y MODERNA
@@ -32,6 +33,20 @@ export default function TaskRoom() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [correctAnswerFromServer, setCorrectAnswerFromServer] = useState('');
+
+  // Manejo del botón Atrás físico en Android para cerrar tareas activas
+  const handleCloseTaskFromBack = () => {
+    if (activeTask) {
+      console.log('[TaskRoom] Cerrando tarea desde botón físico...');
+      setActiveTask(null);
+      setIsCorrect(false);
+      setShowResult(false);
+      fetchTasks();
+      refreshUser();
+    }
+  };
+
+  useAndroidBackHandler(activeTask, handleCloseTaskFromBack);
 
   const videoRef = useRef(null);
 

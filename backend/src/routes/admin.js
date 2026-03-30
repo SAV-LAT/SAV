@@ -322,48 +322,51 @@ router.delete('/tareas/:id', async (req, res) => {
 
 
 router.get('/metodos-qr', async (req, res) => {
-  const metodos = await getMetodosQr();
-  res.json(metodos);
+  try {
+    const metodos = await getMetodosQr();
+    res.json(metodos);
+  } catch (err) {
+    console.error('[Admin] Error en get /metodos-qr:', err.message);
+    res.status(500).json({ error: 'Error al obtener métodos QR' });
+  }
 });
 
 router.get('/metodos-qr-all', async (req, res) => {
-  const metodos = await getAllMetodosQr();
-  res.json(metodos);
+  try {
+    const metodos = await getAllMetodosQr();
+    res.json(metodos);
+  } catch (err) {
+    console.error('[Admin] Error en get /metodos-qr-all:', err.message);
+    res.status(500).json({ error: 'Error al obtener todos los métodos QR' });
+  }
 });
 
 router.post('/metodos-qr', async (req, res) => {
-  const { nombre_titular, imagen_base64, admin_id } = req.body;
-  
-  const metodo = {
-    id: uuidv4(),
-    nombre_titular: nombre_titular || 'Nuevo método',
-    imagen_qr_url: imagen_base64 || '',
-    activo: true,
-    admin_id: admin_id || null,
-    seleccionada: false,
-    orden: 0,
-    created_at: new Date().toISOString()
-  };
-
-  const { data, error } = await trySupabase(() => 
-    supabase.from('metodos_qr').insert([metodo]).select().maybeSingle()
-  );
-  
-  if (error) return res.status(500).json({ error: error.message });
-
-  // Lógica de Turno Dinámico: El admin que sube un QR toma el turno
   try {
-    const { findAdminByUserId, setActiveAdminForRecharges } = await import('../lib/queries.js');
-    const admin = await findAdminByUserId(req.user.id);
-    if (admin) {
-      await setActiveAdminForRecharges(admin.id);
-      console.log(`[Admin] Turno dinámico activado para: ${admin.nombre} por subir QR`);
-    }
-  } catch (e) {
-    console.error('[Admin] Error activando turno dinámico:', e.message);
-  }
+    const { nombre_titular, imagen_base64, admin_id } = req.body;
+    
+    const metodo = {
+      id: uuidv4(),
+      nombre_titular: nombre_titular || 'Nuevo método',
+      imagen_qr_url: imagen_base64 || '',
+      activo: true,
+      admin_id: admin_id || null,
+      seleccionada: false,
+      orden: 0,
+      created_at: new Date().toISOString()
+    };
 
-  res.json(data);
+    const { data, error } = await trySupabase(() => 
+      supabase.from('metodos_qr').insert([metodo]).select().maybeSingle()
+    );
+    
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+  } catch (err) {
+    console.error('[Admin] Error en post /metodos-qr:', err.message);
+    res.status(500).json({ error: 'Error al crear método QR' });
+  }
 });
 
 router.delete('/metodos-qr/:id', async (req, res) => {

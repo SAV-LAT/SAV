@@ -29,15 +29,16 @@ export default function AdminMetodosQr() {
 
   const cargarMetodos = async () => {
     try {
-      const { data, error } = await api.request('/admin/metodos-qr-all');
-      if (!error) setMetodos(data || []);
-      else {
-        const list = await api.admin.metodosQr();
-        setMetodos(list);
-      }
+      const data = await api.request('/admin/metodos-qr-all');
+      setMetodos(Array.isArray(data) ? data : []);
     } catch (e) {
-      const list = await api.admin.metodosQr();
-      setMetodos(list);
+      console.error('Error al cargar metodos qr:', e);
+      try {
+        const list = await api.admin.metodosQr();
+        setMetodos(Array.isArray(list) ? list : []);
+      } catch (err) {
+        setMetodos([]);
+      }
     }
   };
 

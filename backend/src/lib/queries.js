@@ -225,76 +225,104 @@ export async function getRetiros() {
 
 
 export async function getMetodosQr() {
-  const now = boliviaTime.now();
-  const timeStr = boliviaTime.getTimeString(now); // HH:mm
-  const day = now.getDay().toString(); // 0-6
+  try {
+    const now = boliviaTime.now();
+    const timeStr = boliviaTime.getTimeString(now); // HH:mm
+    const day = now.getDay().toString(); // 0-6
 
-  // 1. Obtener los administradores que están actualmente en turno
-  const { data: admins } = await trySupabase(() => 
-    supabase.from('admins')
-      .select('id, nombre, hora_inicio_turno, hora_fin_turno, dias_semana, activo')
-      .eq('activo', true)
-  );
+    // 1. Obtener los administradores que están actualmente en turno
+    const { data: admins } = await trySupabase(() => 
+      supabase.from('admins')
+        .select('id, nombre, hora_inicio_turno, hora_fin_turno, dias_semana, activo')
+        .eq('activo', true)
+    );
 
-  const adminsEnTurno = (admins || []).filter(a => {
-    const dias = (a.dias_semana || '').split(',');
-    if (!dias.includes(day)) return false;
-    
-    const inicio = a.hora_inicio_turno || '00:00';
-    const fin = a.hora_fin_turno || '23:59';
-    
-    if (inicio <= fin) {
-      return timeStr >= inicio && timeStr <= fin;
-    } else {
-      // Turno que cruza medianoche
-      return timeStr >= inicio || timeStr <= fin;
+    const adminsEnTurno = (admins || []).filter(a => {
+      const dias = (a.dias_semana || '').split(',');
+      if (!dias.includes(day)) return false;
+      
+      const inicio = a.hora_inicio_turno || '00:00';
+      const fin = a.hora_fin_turno || '23:59';
+      
+      if (inicio <= fin) {
+        return timeStr >= inicio && timeStr <= fin;
+      } else {
+        // Turno que cruza medianoche
+        return timeStr >= inicio || timeStr <= fin;
+      }
+    });
+
+    if (adminsEnTurno.length === 0) {
+      // Si no hay admins en turno, podemos mostrar QRs globales que no tengan admin_id (fallback)
+      // Intentamos con admin_id, si falla (por migración), traemos todo
+      try {
+        const { data: globales } = await trySupabase(() => 
+          supabase.from('metodos_qr')
+            .select('*')
+            .eq('activo', true)
+            .is('admin_id', null)
+            .order('orden', { ascending: true })
+        );
+        return globales || [];
+      } catch (e) {
+        // Fallback si la columna admin_id no existe aún
+        const { data: todo } = await trySupabase(() => 
+          supabase.from('metodos_qr')
+            .select('*')
+            .eq('activo', true)
+            .order('orden', { ascending: true })
+        );
+        return todo || [];
+      }
     }
-  });
 
-  if (adminsEnTurno.length === 0) {
-    // Si no hay admins en turno, podemos mostrar QRs globales que no tengan admin_id (fallback)
-    const { data: globales } = await trySupabase(() => 
-      supabase.from('metodos_qr')
-        .select('*')
-        .eq('activo', true)
-        .is('admin_id', null)
-        .order('orden', { ascending: true })
-    );
-    return globales || [];
+    // 2. Obtener los QRs SELECCIONADOS de los administradores en turno
+    const adminIds = adminsEnTurno.map(a => a.id);
+    try {
+      const { data: qrsAdmins } = await trySupabase(() => 
+        supabase.from('metodos_qr')
+          .select('*')
+          .eq('activo', true)
+          .eq('seleccionada', true)
+          .in('admin_id', adminIds)
+      );
+
+      // 3. Formatear la respuesta para que incluya el nombre del admin si es necesario
+      const metodosFinales = (qrsAdmins || []).map(qr => {
+        const admin = adminsEnTurno.find(a => a.id === qr.admin_id);
+        return {
+          ...qr,
+          nombre_titular: qr.nombre_titular || `Admin: ${admin?.nombre || 'Desconocido'}`
+        };
+      });
+
+      // 4. Si los admins en turno no tienen QRs seleccionados, buscar cualquier QR activo de ellos como fallback
+      if (metodosFinales.length === 0) {
+        const { data: qrsCualquiera } = await trySupabase(() => 
+          supabase.from('metodos_qr')
+            .select('*')
+            .eq('activo', true)
+            .in('admin_id', adminIds)
+            .limit(1)
+        );
+        return qrsCualquiera || [];
+      }
+
+      return metodosFinales;
+    } catch (e) {
+      // Fallback si las nuevas columnas no existen
+      const { data: todo } = await trySupabase(() => 
+        supabase.from('metodos_qr')
+          .select('*')
+          .eq('activo', true)
+          .order('orden', { ascending: true })
+      );
+      return todo || [];
+    }
+  } catch (err) {
+    console.error('[Queries] Error crítico en getMetodosQr:', err.message);
+    return [];
   }
-
-  // 2. Obtener los QRs SELECCIONADOS de los administradores en turno
-  const adminIds = adminsEnTurno.map(a => a.id);
-  const { data: qrsAdmins } = await trySupabase(() => 
-    supabase.from('metodos_qr')
-      .select('*')
-      .eq('activo', true)
-      .eq('seleccionada', true)
-      .in('admin_id', adminIds)
-  );
-
-  // 3. Formatear la respuesta para que incluya el nombre del admin si es necesario
-  const metodosFinales = (qrsAdmins || []).map(qr => {
-    const admin = adminsEnTurno.find(a => a.id === qr.admin_id);
-    return {
-      ...qr,
-      nombre_titular: qr.nombre_titular || `Admin: ${admin?.nombre || 'Desconocido'}`
-    };
-  });
-
-  // 4. Si los admins en turno no tienen QRs seleccionados, buscar cualquier QR activo de ellos como fallback
-  if (metodosFinales.length === 0) {
-    const { data: qrsCualquiera } = await trySupabase(() => 
-      supabase.from('metodos_qr')
-        .select('*')
-        .eq('activo', true)
-        .in('admin_id', adminIds)
-        .limit(1)
-    );
-    return qrsCualquiera || [];
-  }
-
-  return metodosFinales;
 }
 
 export async function getAllMetodosQr() {

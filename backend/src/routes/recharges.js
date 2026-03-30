@@ -10,8 +10,18 @@ import { telegram } from '../lib/telegram.js';
 const router = Router();
 
 router.get('/metodos', async (req, res) => {
-  const metodos = await getMetodosQr();
-  res.json(metodos.map(m => ({ id: m.id, nombre_titular: m.nombre_titular, imagen_qr_url: m.imagen_qr_url, imagen_base64: m.imagen_base64 })));
+  try {
+    const metodos = await getMetodosQr();
+    res.json((metodos || []).map(m => ({ 
+      id: m.id, 
+      nombre_titular: m.nombre_titular, 
+      imagen_qr_url: m.imagen_qr_url, 
+      imagen_base64: m.imagen_base64 
+    })));
+  } catch (err) {
+    console.error('[Recharges] Error en get /metodos:', err.message);
+    res.status(500).json({ error: 'Error al obtener métodos de pago' });
+  }
 });
 
 router.get('/', authenticate, async (req, res) => {

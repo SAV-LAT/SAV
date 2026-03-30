@@ -82,47 +82,49 @@ export default function FloatingQuestionnaire() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-8 space-y-8 overflow-y-auto flex-1 custom-scrollbar">
-              {cuestionario.preguntas.map((p, pIndex) => (
-                <div key={p.id} className="space-y-4">
-                  <div className="flex gap-3">
-                    <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] font-black shrink-0">{pIndex + 1}</span>
-                    <h3 className="text-sm font-black text-gray-800 leading-tight">{p.texto}</h3>
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-8 space-y-8 overflow-y-auto flex-1 custom-scrollbar">
+                {cuestionario.preguntas.map((p, pIndex) => (
+                  <div key={p.id} className="space-y-4">
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] font-black shrink-0">{pIndex + 1}</span>
+                      <h3 className="text-sm font-black text-gray-800 leading-tight">{p.texto}</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-3 ml-9">
+                      {p.opciones.map((opt, oIndex) => (
+                        <label 
+                          key={oIndex}
+                          className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${respuestas[p.id] === oIndex ? 'bg-amber-50 border-amber-500' : 'bg-gray-50 border-gray-50 hover:border-gray-200'}`}
+                        >
+                          <input 
+                            type="radio"
+                            name={`q-${p.id}`}
+                            className="sr-only"
+                            checked={respuestas[p.id] === oIndex}
+                            onChange={() => setRespuestas({...respuestas, [p.id]: oIndex})}
+                          />
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${respuestas[p.id] === oIndex ? 'border-amber-500 bg-amber-500' : 'border-gray-300'}`}>
+                            {respuestas[p.id] === oIndex && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                          </div>
+                          <span className={`text-xs font-bold ${respuestas[p.id] === oIndex ? 'text-amber-700' : 'text-gray-600'}`}>{opt}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 gap-3 ml-9">
-                    {p.opciones.map((opt, oIndex) => (
-                      <label 
-                        key={oIndex}
-                        className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${respuestas[p.id] === oIndex ? 'bg-amber-50 border-amber-500' : 'bg-gray-50 border-gray-50 hover:border-gray-200'}`}
-                      >
-                        <input 
-                          type="radio"
-                          name={`q-${p.id}`}
-                          className="sr-only"
-                          checked={respuestas[p.id] === oIndex}
-                          onChange={() => setRespuestas({...respuestas, [p.id]: oIndex})}
-                        />
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${respuestas[p.id] === oIndex ? 'border-amber-500 bg-amber-500' : 'border-gray-300'}`}>
-                          {respuestas[p.id] === oIndex && <div className="w-2 h-2 bg-white rounded-full"></div>}
-                        </div>
-                        <span className={`text-xs font-bold ${respuestas[p.id] === oIndex ? 'text-amber-700' : 'text-gray-600'}`}>{opt}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <div className="p-8 bg-gray-50 border-t border-gray-100">
-              <button 
-                type="submit"
-                disabled={submitting}
-                className="w-full py-5 rounded-[2rem] bg-amber-500 text-white font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {submitting ? 'Enviando...' : <><Send size={18}/> Enviar Respuestas</>}
-              </button>
-            </div>
+              <div className="p-8 bg-gray-50 border-t border-gray-100">
+                <button 
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-5 rounded-[2rem] bg-amber-500 text-white font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {submitting ? 'Enviando...' : <><Send size={18}/> Enviar Respuestas</>}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

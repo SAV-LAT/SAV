@@ -15,8 +15,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user');
     localStorage.removeItem('lastUserUpdate');
     setUser(null);
-    // Forzar redirección al login para evitar pantalla en blanco en algunas rutas
-    window.location.href = '/login';
+    // Usar window.location.replace para evitar que el usuario vuelva atrás a una sesión "fantasma"
+    window.location.replace('/login');
   }, []);
 
   const getDeviceId = useCallback(() => {

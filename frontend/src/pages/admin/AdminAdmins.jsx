@@ -222,7 +222,7 @@ export default function AdminAdmins() {
                 className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold text-[#1a1f36] outline-none"
               >
                 <option value="">-- Buscar un usuario --</option>
-                {users
+                {Array.isArray(users) && users
                   .filter(u => u.rol === 'admin' || u.rol === 'superadmin')
                   .map(u => (
                     <option key={u.id} value={u.id}>

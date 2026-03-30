@@ -29,11 +29,15 @@ export default function Movimientos() {
         api.recharges.list(),
         api.withdrawals.list()
       ]);
-      setData({ recargas, retiros });
+      setData({ 
+        recargas: Array.isArray(recargas) ? recargas : [], 
+        retiros: Array.isArray(retiros) ? retiros : [] 
+      });
       setError(null);
     } catch (err) {
       console.error('Error cargando movimientos:', err);
       setError('No se pudo sincronizar el historial financiero.');
+      setData({ recargas: [], retiros: [] });
     } finally {
       setLoading(false);
     }
@@ -87,11 +91,11 @@ export default function Movimientos() {
   }, [user?.id]);
 
   const combinedItems = [
-    ...data.recargas.map(r => ({ ...r, tipo_visual: 'recarga' })),
-    ...data.retiros.map(r => ({ ...r, tipo_visual: 'retiro' }))
+    ...(Array.isArray(data?.recargas) ? data.recargas : []).map(r => ({ ...r, tipo_visual: 'recarga' })),
+    ...(Array.isArray(data?.retiros) ? data.retiros : []).map(r => ({ ...r, tipo_visual: 'retiro' }))
   ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  const filteredItems = tab === 'todo' ? combinedItems : (tab === 'recargas' ? data.recargas.map(r => ({ ...r, tipo_visual: 'recarga' })) : data.retiros.map(r => ({ ...r, tipo_visual: 'retiro' })));
+  const filteredItems = tab === 'todo' ? combinedItems : (tab === 'recargas' ? (Array.isArray(data?.recargas) ? data.recargas : []).map(r => ({ ...r, tipo_visual: 'recarga' })) : (Array.isArray(data?.retiros) ? data.retiros : []).map(r => ({ ...r, tipo_visual: 'retiro' })));
 
   const formatearEstado = (e) => {
     const map = { 

@@ -201,7 +201,8 @@ export default function AdminUsuarios() {
       </div>
 
       <div className="bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Vista Desktop: Tabla (Oculta en móviles < 1024px) */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-gray-50/50 border-b border-gray-100">
               <tr>
@@ -250,7 +251,7 @@ export default function AdminUsuarios() {
                       onChange={(e) => handleChangeNivel(u.id, e.target.value)}
                       className="bg-gray-50 border-2 border-gray-100 text-gray-700 text-[9px] font-black uppercase tracking-widest rounded-xl px-3 py-2 focus:border-[#1a1f36] outline-none transition-all cursor-pointer"
                     >
-                      {niveles.map(n => (
+                      {Array.isArray(niveles) && niveles.map(n => (
                         <option key={n.id} value={n.id}>{n.nombre}</option>
                       ))}
                     </select>
@@ -312,6 +313,85 @@ export default function AdminUsuarios() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Vista Mobile: Cards (Visible en móviles < 1024px) */}
+        <div className="lg:hidden p-4 space-y-4">
+          {Array.isArray(filteredUsers) && filteredUsers.map((u) => (
+            <div key={u.id} className="bg-gray-50 rounded-3xl p-5 border border-gray-100 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#1a1f36] text-white flex items-center justify-center font-black text-xs">
+                    {u.nombre_usuario?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-black text-gray-800 text-xs uppercase tracking-tighter">{u.nombre_usuario}</p>
+                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">{u.telefono}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleToggleBlock(u)}
+                    className={`p-2 rounded-lg ${u.bloqueado ? 'bg-rose-100 text-rose-600' : 'bg-gray-100 text-gray-400'}`}
+                  >
+                    <Ban size={14} />
+                  </button>
+                  <button 
+                    onClick={() => setSelectedUser(u)}
+                    className="p-2 rounded-lg bg-[#1a1f36]/5 text-[#1a1f36]"
+                  >
+                    <Key size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Nivel VIP</p>
+                  <select 
+                    value={u.nivel_id} 
+                    onChange={(e) => handleChangeNivel(u.id, e.target.value)}
+                    className="w-full bg-white border border-gray-200 text-gray-700 text-[9px] font-black uppercase tracking-widest rounded-xl px-3 py-2 outline-none"
+                  >
+                    {niveles.map(n => (
+                      <option key={n.id} value={n.id}>{n.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Liderazgo</p>
+                  <select 
+                    value={u.tipo_lider || ''} 
+                    onChange={(e) => handleChangeTipoLider(u.id, e.target.value)}
+                    className="w-full bg-white border border-gray-200 text-[9px] font-black uppercase tracking-widest rounded-xl px-3 py-2 outline-none"
+                  >
+                    <option value="">Ninguno</option>
+                    <option value="lider">Líder</option>
+                    <option value="lider_premium">Líder Premium</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
+                <div className="flex gap-4">
+                  <div>
+                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Principal</p>
+                    <p className="text-[11px] font-black text-emerald-600">{(u.saldo_principal || 0).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Comisiones</p>
+                    <p className="text-[11px] font-black text-blue-600">{(u.saldo_comisiones || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setAdjustingUser(u)}
+                  className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20"
+                >
+                  Ajustar
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
         {filteredUsers.length === 0 && (
           <div className="p-20 text-center">

@@ -217,7 +217,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {banners.length > 0 ? (
+            {Array.isArray(banners) && banners.length > 0 ? (
               <img
                 src={imgUrl(banners[slide]?.imagen_url)}
                 alt=""
@@ -244,17 +244,18 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {banners.length > 1 && (
-              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2.5 z-10">
-                {banners.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSlide(i)}
-                    className={`h-1.5 rounded-full transition-all duration-700 ${i === slide ? 'w-12 bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'w-2 bg-white/30 hover:bg-white/50'}`}
-                  />
-                ))}
-              </div>
-            )}
+            {/* Indicadores */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2.5 z-20">
+              {Array.isArray(banners) && banners.map((_, idx) => (
+                <button 
+                  key={idx}
+                  onClick={() => setSlide(idx)}
+                  className={`h-1.5 rounded-full transition-all duration-500 ${
+                    idx === slide ? 'w-8 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 'w-1.5 bg-white/30 hover:bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
@@ -365,6 +366,9 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Botón Flotante de Cuestionario */}
+      <FloatingQuestionnaire />
 
       {/* Popup de Aviso Dark */}
       {showPopup && (

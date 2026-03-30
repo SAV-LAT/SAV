@@ -6,7 +6,12 @@ export default function AdminDashboard() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    api.admin.dashboard().then(setData).catch(() => setData({}));
+    api.admin.dashboard()
+      .then(res => setData(res || {}))
+      .catch((err) => {
+        console.error('Error fetching admin dashboard:', err);
+        setData({});
+      });
   }, []);
 
   const d = data || {};

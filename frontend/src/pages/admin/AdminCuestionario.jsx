@@ -201,7 +201,7 @@ export default function AdminCuestionario() {
               <div className="space-y-6 pt-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-[10px] font-black text-gray-800 uppercase tracking-widest flex items-center gap-2">
-                    <HelpCircle size={14} className="text-sav-primary" /> Preguntas ({config.cuestionario_data.preguntas.length})
+                    <HelpCircle size={14} className="text-sav-primary" /> Preguntas ({Array.isArray(config.cuestionario_data?.preguntas) ? config.cuestionario_data.preguntas.length : 0})
                   </h3>
                   <button 
                     onClick={addPregunta}

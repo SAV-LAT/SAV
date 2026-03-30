@@ -523,7 +523,7 @@ export default function TaskRoom() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-3 mb-8 relative z-10">
-                        {options.map((opt, idx) => (
+                        {Array.isArray(options) && options.map((opt, idx) => (
                           <button
                             key={idx}
                             onClick={() => setSelectedOption(opt)}
@@ -641,10 +641,10 @@ export default function TaskRoom() {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {data.tareas && data.tareas.length > 0 ? (
+            {Array.isArray(data?.tareas) && data.tareas.length > 0 ? (
               data.tareas.map((t, idx) => (
                 <div
-                  key={t.id}
+                  key={t.id || idx}
                   onClick={() => startTask(t)}
                   className="group relative bg-white rounded-[2rem] p-4 border border-gray-100 shadow-xl shadow-black/5 active:scale-[0.98] transition-all cursor-pointer overflow-hidden flex items-center gap-5"
                   style={{ animationDelay: `${idx * 100}ms` }}

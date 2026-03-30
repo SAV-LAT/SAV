@@ -161,7 +161,7 @@ export default function Team() {
           </div>
           
           <div className="space-y-5">
-            {niveles.map((n) => (
+            {Array.isArray(niveles) && niveles.map((n) => (
               <div key={n.nivel} className="p-7 rounded-[2.5rem] bg-gray-50 border border-gray-100/50 hover:border-[#1a1f36]/20 transition-all group shadow-inner relative overflow-hidden">
                 <div className="flex justify-between items-center mb-6">
                   <div className="flex items-center gap-4">

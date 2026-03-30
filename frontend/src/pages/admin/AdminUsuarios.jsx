@@ -223,7 +223,20 @@ export default function AdminUsuarios() {
                         {u.nombre_usuario?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-black text-gray-800 text-sm uppercase tracking-tighter">{u.nombre_usuario}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-gray-800 text-sm uppercase tracking-tighter">{u.nombre_usuario}</p>
+                          <button 
+                            onClick={() => handleToggleBlock(u)}
+                            className={`p-1 rounded-lg transition-all ${
+                              u.bloqueado 
+                                ? 'text-rose-600 hover:bg-rose-50' 
+                                : 'text-gray-300 hover:text-rose-600 hover:bg-rose-50'
+                            }`}
+                            title={u.bloqueado ? 'Desbloquear Cuenta' : 'Bloquear Cuenta'}
+                          >
+                            <Ban size={14} />
+                          </button>
+                        </div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{u.rol}</p>
                       </div>
                     </div>
@@ -292,17 +305,6 @@ export default function AdminUsuarios() {
                         title="Cambiar Contraseñas"
                       >
                         <Key size={18} />
-                      </button>
-                      <button 
-                        onClick={() => handleToggleBlock(u)}
-                        className={`p-3 rounded-xl transition-all ${
-                          u.bloqueado 
-                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white' 
-                            : 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white'
-                        }`}
-                        title={u.bloqueado ? 'Desbloquear Cuenta' : 'Bloquear Cuenta'}
-                      >
-                        {u.bloqueado ? <CheckCircle size={18} /> : <Ban size={18} />}
                       </button>
                     </div>
                   </td>

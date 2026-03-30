@@ -78,6 +78,7 @@ export default function AdminLayout() {
   const menu = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
+    { to: '/admin/cuestionarios', icon: HelpCircle, label: 'Cuestionarios y Castigos' },
     { to: '/admin/niveles', icon: Layers, label: 'Niveles VIP' },
     { to: '/admin/recargas', icon: CreditCard, label: 'Recargas' },
     { to: '/admin/retiros', icon: Wallet, label: 'Retiros' },
@@ -87,7 +88,6 @@ export default function AdminLayout() {
     { to: '/admin/admins', icon: ShieldCheck, label: 'Gestión Admins y Turnos' },
     { to: '/admin/banners', icon: Image, label: 'Banners' },
     { to: '/admin/contenido-home', icon: Bell, label: 'Contenido y horarios' },
-    { to: '/admin/cuestionarios', icon: HelpCircle, label: 'Cuestionarios y Castigos' },
   ];
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);

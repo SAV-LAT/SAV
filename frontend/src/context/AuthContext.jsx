@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
     console.log('[Auth] Cerrando sesión...');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('lastUserUpdate');
     setUser(null);
     // Forzar redirección al login para evitar pantalla en blanco en algunas rutas
     window.location.href = '/login';

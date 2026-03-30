@@ -47,18 +47,20 @@ export default function Dashboard() {
     setIsMounted(true);
   }, []);
 
-  const fetchStats = () => {
-    api.users.stats()
-      .then(data => {
-        if (isMounted) setStats(data);
-      })
-      .catch((err) => {
-        console.error('Error fetching stats:', err);
-      });
-  };
-
   useEffect(() => {
     if (!isMounted) return;
+
+    const fetchStats = () => {
+      api.users.stats()
+        .then(data => {
+          if (isMounted) setStats(data);
+        })
+        .catch((err) => {
+          console.error('Error fetching stats:', err);
+        });
+    };
+
+    fetchStats();
 
     // Polling de respaldo para estadísticas cada 10 segundos
     const statsInterval = setInterval(fetchStats, 10000);
@@ -66,18 +68,23 @@ export default function Dashboard() {
     const fetchBanners = () => {
       api.banners()
         .then(data => {
-          if (data && data.length > 0) {
-            setBanners(data);
-          } else {
-            setBanners(defaultBanners);
+          if (isMounted) {
+            if (Array.isArray(data) && data.length > 0) {
+              setBanners(data);
+            } else {
+              setBanners(defaultBanners);
+            }
           }
         })
-        .catch(() => setBanners(defaultBanners));
+        .catch(() => {
+          if (isMounted) setBanners(defaultBanners);
+        });
     };
 
     const fetchPublicConfig = () => {
       api.publicContent()
         .then((data) => {
+          if (!isMounted || !data) return;
           setPublicConfig(data);
           setGuideText(g => data.home_guide || g);
           setPopup(data);

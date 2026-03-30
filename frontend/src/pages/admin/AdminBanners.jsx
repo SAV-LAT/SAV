@@ -11,7 +11,10 @@ export default function AdminBanners() {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    api.admin.banners().then(setBanners).catch(console.error).finally(() => setLoading(false));
+    api.admin.banners()
+      .then(res => setBanners(Array.isArray(res) ? res : []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   const handleFile = (e) => {
@@ -132,7 +135,7 @@ export default function AdminBanners() {
       <div className="space-y-4">
         <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Banners activos</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {banners.map((b) => (
+          {Array.isArray(banners) && banners.map((b) => (
             <div key={b.id} className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 group relative">
               <div className="aspect-[21/9] overflow-hidden bg-gray-50 flex items-center justify-center">
                 <img src={b.imagen_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />

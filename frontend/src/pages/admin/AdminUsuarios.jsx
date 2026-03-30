@@ -25,9 +25,9 @@ export default function AdminUsuarios() {
         api.levels.list(),
         api.publicContent()
       ]);
-      setUsers(u);
-      setNiveles(n);
-      setPublicConfig(c);
+      setUsers(Array.isArray(u) ? u : []);
+      setNiveles(Array.isArray(n) ? n : []);
+      setPublicConfig(c || {});
     } catch (err) {
       console.error(err);
     }
@@ -215,7 +215,7 @@ export default function AdminUsuarios() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredUsers.map((u) => (
+              {Array.isArray(filteredUsers) && filteredUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-gray-50/80 transition-colors group">
                   <td className="p-6">
                     <div className="flex items-center gap-4">

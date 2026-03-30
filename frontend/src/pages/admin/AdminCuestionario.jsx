@@ -82,7 +82,7 @@ export default function AdminCuestionario() {
     try {
       const res = await api.post('/admin/cuestionario/castigar');
       alert(`Proceso completado. Usuarios castigados: ${res.punished}`);
-      fetchConfig();
+      fetchPunished();
     } catch (err) {
       alert('Error: ' + err.message);
     } finally {
@@ -213,7 +213,7 @@ export default function AdminCuestionario() {
 
                 <div className="grid grid-cols-1 gap-6">
                   {Array.isArray(config.cuestionario_data?.preguntas) && config.cuestionario_data.preguntas.map((p, index) => (
-                    <div key={p.id} className="p-6 rounded-2xl bg-gray-50 border border-gray-100 space-y-4 relative group">
+                    <div key={p.id} className="p-6 rounded-2xl bg-gray-50 border border-gray-100 space-y-6 relative group">
                       <button 
                         onClick={() => removePregunta(p.id)}
                         className="absolute top-4 right-4 text-gray-300 hover:text-rose-500 transition-colors"
@@ -283,9 +283,9 @@ export default function AdminCuestionario() {
 
         <div className="space-y-6">
           <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
-            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-4 mb-4">Usuarios Castigados ({punishedUsers.length})</h2>
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-4 mb-4">Usuarios Castigados ({punishedUsers?.length || 0})</h2>
             <div className="space-y-3 max-h-[600px] overflow-y-auto no-scrollbar">
-              {punishedUsers.map(u => (
+              {Array.isArray(punishedUsers) && punishedUsers.map(u => (
                 <div key={u.id} className="p-4 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-between group">
                   <div>
                     <p className="text-xs font-black text-rose-900 uppercase tracking-tight">{u.nombre_usuario}</p>

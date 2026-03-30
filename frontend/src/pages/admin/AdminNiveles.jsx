@@ -14,9 +14,11 @@ export default function AdminNiveles() {
   const fetchNiveles = async () => {
     try {
       const data = await api.admin.niveles();
-      setNiveles(data.sort((a, b) => (a.orden || 0) - (b.orden || 0)));
+      const list = Array.isArray(data) ? data : [];
+      setNiveles(list.sort((a, b) => (a.orden || 0) - (b.orden || 0)));
     } catch (err) {
       console.error(err);
+      setNiveles([]);
     } finally {
       setLoading(false);
     }

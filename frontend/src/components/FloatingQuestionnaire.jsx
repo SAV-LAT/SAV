@@ -91,7 +91,7 @@ export default function FloatingQuestionnaire() {
 
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
               <div className="p-8 space-y-8 overflow-y-auto flex-1 custom-scrollbar">
-                {cuestionario.preguntas.map((p, pIndex) => (
+                {Array.isArray(cuestionario?.preguntas) && cuestionario.preguntas.map((p, pIndex) => (
                   <div key={p.id} className="space-y-4">
                     <div className="flex gap-3">
                       <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] font-black shrink-0">{pIndex + 1}</span>

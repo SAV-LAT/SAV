@@ -8,7 +8,9 @@ export default function AdminRetiros() {
   const [motivo, setMotivo] = useState('');
 
   useEffect(() => {
-    api.admin.retiros().then(setList).catch(() => []);
+    api.admin.retiros()
+      .then(res => setList(Array.isArray(res) ? res : []))
+      .catch(() => setList([]));
   }, []);
 
   const handleAprobar = async (id) => {
@@ -54,7 +56,7 @@ export default function AdminRetiros() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {list.map((r) => (
+            {Array.isArray(list) && list.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="p-6">
                   <p className="font-bold text-gray-800 text-sm uppercase tracking-tighter">{r.usuario?.nombre_usuario || 'Usuario'}</p>

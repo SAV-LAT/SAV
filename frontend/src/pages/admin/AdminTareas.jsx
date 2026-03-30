@@ -21,9 +21,11 @@ export default function AdminTareas() {
       api.admin.tareas(),
       api.levels.list()
     ]).then(([t, n]) => {
-      setTareas(t.map(item => ({ ...item, opciones: Array.isArray(item.opciones) ? item.opciones.join(', ') : item.opciones })));
-      setNiveles(n);
-      if (n.length > 0) setForm(f => ({ ...f, nivel_id: n[0].id }));
+      const tareasList = Array.isArray(t) ? t : [];
+      const nivelesList = Array.isArray(n) ? n : [];
+      setTareas(tareasList.map(item => ({ ...item, opciones: Array.isArray(item.opciones) ? item.opciones.join(', ') : item.opciones })));
+      setNiveles(nivelesList);
+      if (nivelesList.length > 0) setForm(f => ({ ...f, nivel_id: nivelesList[0].id }));
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
@@ -160,9 +162,9 @@ export default function AdminTareas() {
       {/* Lista de Tareas */}
       <div className="space-y-4">
         <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Tareas registradas</h2>
-        <div className="grid grid-cols-1 gap-4">
-          {tareas.map(t => (
-            <div key={t.id} className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.isArray(tareas) && tareas.map((t) => (
+            <div key={t.id} className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 group hover:shadow-md transition-all relative overflow-hidden">
               {editing?.id === t.id ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <input

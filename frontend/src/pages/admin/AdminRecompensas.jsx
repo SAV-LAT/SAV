@@ -54,14 +54,14 @@ export default function AdminRecompensas() {
       const [p, u, n] = await Promise.all([
         api.admin.premiosRuleta(),
         api.admin.usuarios(),
-        api.admin.niveles()
+        api.levels.list()
       ]);
-      setPremios(p);
-      setUsuarios(u);
-      setNiveles(n);
-      setLoading(false);
+      setPremios(Array.isArray(p) ? p : []);
+      setUsuarios(Array.isArray(u) ? u : []);
+      setNiveles(Array.isArray(n) ? n : []);
     } catch (err) {
       console.error(err);
+    } finally {
       setLoading(false);
     }
   };
@@ -228,7 +228,7 @@ export default function AdminRecompensas() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {premios.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase())).map((p) => (
+              {Array.isArray(premios) && premios.filter(p => (p.nombre || '').toLowerCase().includes(searchTerm.toLowerCase())).map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">

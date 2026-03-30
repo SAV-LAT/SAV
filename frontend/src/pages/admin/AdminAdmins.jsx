@@ -31,7 +31,9 @@ export default function AdminAdmins() {
   const fetchSettings = async () => {
     try {
       const pc = await api.get('/public-content');
-      setNotifyGroupAlways(pc.notificar_grupo_recargas_siempre === 'true');
+      if (pc) {
+        setNotifyGroupAlways(pc.notificar_grupo_recargas_siempre === 'true');
+      }
     } catch (err) {
       console.error('Error fetching settings:', err);
     }
@@ -52,7 +54,7 @@ export default function AdminAdmins() {
   const fetchAdmins = async () => {
     try {
       const res = await api.get('/admin/admins');
-      setAdmins(res || []);
+      setAdmins(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error('Error fetching admins:', err);
     } finally {
@@ -63,7 +65,7 @@ export default function AdminAdmins() {
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/usuarios');
-      setUsers(res || []);
+      setUsers(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error('Error fetching users:', err);
     }
@@ -368,7 +370,7 @@ export default function AdminAdmins() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {admins.map(admin => (
+            {Array.isArray(admins) && admins.filter(admin => (admin.nombre || '').toLowerCase().includes(search.toLowerCase())).map(admin => (
               <tr key={admin.id} className="hover:bg-gray-50/30 transition-colors group">
                 <td className="px-8 py-6">
                   <div className="flex items-center gap-3">
@@ -425,7 +427,7 @@ export default function AdminAdmins() {
 
       {/* Vista Móvil: Cards */}
       <div className="md:hidden space-y-4">
-        {admins.map(admin => (
+        {Array.isArray(admins) && admins.filter(admin => (admin.nombre || '').toLowerCase().includes(search.toLowerCase())).map(admin => (
           <div key={admin.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

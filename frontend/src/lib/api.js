@@ -105,6 +105,7 @@ export const api = {
   post: (url, data) => request(url, { method: 'POST', body: JSON.stringify(data) }),
   put: (url, data) => request(url, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (url) => request(url, { method: 'DELETE' }),
+  request: (url, options) => request(url, options), // Soporte para api.request que se usa en algunos archivos
   auth: {
     login: (telefono, password, deviceId) => request('/auth/login', { method: 'POST', body: JSON.stringify({ telefono, password, deviceId }) }),
     register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),

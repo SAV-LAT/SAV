@@ -27,7 +27,6 @@ export default function TaskRoom() {
   const [surveyVisible, setSurveyVisible] = useState(false);
   const [selectedOption, setSelectedOption] = useState('');
   const [isCorrect, setIsCorrect] = useState(false);
-  const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [videoFinished, setVideoFinished] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -185,7 +184,6 @@ export default function TaskRoom() {
     setSurveyVisible(false);
     setSelectedOption('');
     setIsCorrect(false);
-    setAlreadyCompleted(false);
     setVideoFinished(false);
     setErrorMessage('');
     setShowResult(false);
@@ -213,45 +211,24 @@ export default function TaskRoom() {
         setCorrectAnswerFromServer(res.respuesta_correcta);
       }
       
-      if (res.already_completed) {
-        setAlreadyCompleted(true);
-        setIsCorrect(false);
-        setErrorMessage(res.error || 'Esta tarea ya fue completada hoy.');
-        return;
-      }
-
       if (res.correcta) {
         setIsCorrect(true);
-        setAlreadyCompleted(false);
         refreshUser();
       } else {
         setIsCorrect(false);
-        setAlreadyCompleted(false);
         setErrorMessage(res.mensaje || 'Respuesta incorrecta. Inténtalo de nuevo.');
       }
     } catch (err) {
       console.error('[TaskRoom] Error en onConfirmResponse:', err);
       
-      // Manejo especial para el error 400 de tarea ya completada
-      if (err.status === 400 && (err.message?.includes('completado') || err.error?.includes('completado') || err.already_completed)) {
-        setAlreadyCompleted(true);
-        setIsCorrect(false);
-        setShowResult(true);
-        setErrorMessage(err.message || err.error || 'Esta tarea ya fue completada hoy.');
-        refreshUser();
-        return;
-      }
-
       // DIFERENCIAR ERROR DE RED/SERVIDOR DE RESPUESTA INCORRECTA
       if (err.status === 500 || err.message?.includes('500') || err.message?.includes('servidor')) {
         setErrorMessage('Error interno del servidor al procesar la tarea. Por favor, intenta de nuevo más tarde.');
         setIsCorrect(false);
-        setAlreadyCompleted(false);
         setShowResult(true);
       } else if (err.status === 400) {
         setErrorMessage(err.message || 'Petición inválida.');
         setIsCorrect(false);
-        setAlreadyCompleted(false);
         setShowResult(true);
       } else {
         // Otros errores (red, timeout, etc.)
@@ -264,7 +241,6 @@ export default function TaskRoom() {
 
   const finishAndGoBack = () => {
     setActiveTask(null);
-    setAlreadyCompleted(false);
     setIsCorrect(false);
     setShowResult(false);
     fetchTasks();
@@ -468,23 +444,6 @@ export default function TaskRoom() {
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center">Respuesta: {selectedOption}</span>
                         <div className="flex items-center gap-3">
                           <span className="text-4xl font-black text-[#1a1f36] tracking-tighter">+{activeTask.recompensa}</span>
-                          <span className="text-sm font-black text-[#1a1f36]/40 uppercase tracking-widest">BOB</span>
-                        </div>
-                      </div>
-                    </>
-                  ) : alreadyCompleted ? (
-                    <>
-                      <div className="absolute top-0 left-0 w-full h-3 bg-amber-500" />
-                      <div className="w-20 h-20 bg-amber-500 rounded-[2.5rem] mx-auto flex items-center justify-center mb-6 shadow-2xl shadow-amber-500/40 border-4 border-white rotate-6">
-                        <Info className="text-white" size={40} strokeWidth={2.5} />
-                      </div>
-                      <h3 className="font-black text-[#1a1f36] text-2xl uppercase mb-2 tracking-tighter">TAREA YA REALIZADA</h3>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] mb-8">Esta tarea ya fue completada hoy.</p>
-                      
-                      <div className="bg-amber-50 py-6 px-8 rounded-[2.5rem] border border-amber-100 inline-flex flex-col items-center gap-2 mb-8 shadow-inner w-full">
-                        <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest text-center">Ya has recibido la recompensa anteriormente.</span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-4xl font-black text-[#1a1f36] tracking-tighter">+0</span>
                           <span className="text-sm font-black text-[#1a1f36]/40 uppercase tracking-widest">BOB</span>
                         </div>
                       </div>

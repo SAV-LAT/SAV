@@ -134,12 +134,6 @@ router.get('/', authenticate, async (req, res) => {
       tareas_restantes: remaining,
       tareas_completadas: todayCompletedCount,
       tareas: availableTasks.map(t => {
-        const completada = activity.some(a => 
-          String(a.tarea_id) === String(t.id) && 
-          boliviaTime.getDateString(a.created_at) === todayStr && 
-          a.respuesta_correcta === true
-        );
-        
         return {
           id: t.id,
           nombre: t.nombre,
@@ -148,7 +142,7 @@ router.get('/', authenticate, async (req, res) => {
           descripcion: t.descripcion,
           pregunta: t.pregunta,
           opciones: t.opciones,
-          completada_hoy: completada // Informamos al frontend
+          completada_hoy: false // Siempre disponible para repetir si hay cupo
         };
       }),
       mensaje
@@ -169,13 +163,6 @@ router.get('/:id', authenticate, async (req, res) => {
     
     const activity = await getTaskActivity(req.user.id);
     
-    const todayStr = boliviaTime.todayStr();
-    const yaCompletadaExitosamente = activity.some(
-      a => String(a.tarea_id) === String(task.id) && 
-           boliviaTime.getDateString(a.created_at) === todayStr && 
-           a.respuesta_correcta === true
-    );
-
     // Validación de integridad del detalle
     const options = Array.isArray(task.opciones) ? task.opciones : [];
     const hasCorrectAnswerInOptions = options.some(opt => 
@@ -189,7 +176,7 @@ router.get('/:id', authenticate, async (req, res) => {
     res.json({
       ...task,
       nivel: level?.nombre,
-      completada_hoy: yaCompletadaExitosamente,
+      completada_hoy: false,
       error_configuracion: !hasCorrectAnswerInOptions
     });
   } catch (err) {
@@ -228,26 +215,6 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     if (!task) return res.status(404).json({ error: 'Tarea no encontrada' });
 
     console.log(`[Tasks v4] Respuesta recibida de ${user.nombre_usuario} para tarea ${req.params.id}: "${respuesta}"`);
-
-    const activity = await getTaskActivity(user.id);
-    const todayStr = boliviaTime.todayStr();
-
-    // Verificamos si YA la completó exitosamente hoy (Idempotencia)
-    const yaGanadaHoy = activity.some(
-      a => String(a.tarea_id) === String(task.id) && 
-           boliviaTime.getDateString(a.created_at) === todayStr &&
-           a.respuesta_correcta === true
-    );
-
-    if (yaGanadaHoy) {
-      return res.status(400).json({ 
-        error: 'Ya has completado esta tarea exitosamente el día de hoy.',
-        already_completed: true,
-        success: false,
-        correcta: false,
-        monto: 0
-      });
-    }
 
     // --- BLOQUEO ANTI-DUPLICADO (Race Condition Prevention) ---
     const lockKey = `${user.id}:${task.id}`;
@@ -326,28 +293,24 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       }
 
       if (esCorrectaReal) {
-        if (yaGanadaHoy) {
-          console.log(`  - [AVISO] Tarea correcta pero YA FUE GANADA HOY. No se acredita saldo duplicado.`);
-        } else {
-          console.log(`  - [STEP 2] Tarea correcta. Iniciando acreditación de ${recompensa} BOB...`);
-          
-          // 1. Registrar ganancia y actualizar saldo
-          try {
-            await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
-            console.log(`  - [OK] Ganancia, saldo y movimiento contable registrados.`);
-          } catch (e) {
-            console.error(`  - [ERROR] Fallo al acreditar ganancia:`, e.message);
-            throw new Error(`Fallo contable: ${e.message}`);
-          }
-          
-          // 2. Distribuir comisiones (No bloqueante para el usuario)
-          try {
-            console.log(`  - [STEP 3] Procesando comisiones de red...`);
-            await distributeCommissions(user.id, recompensa);
-            console.log(`  - [OK] Comisiones enviadas a cola de procesamiento.`);
-          } catch (e) {
-            console.error(`  - [AVISO] Fallo no crítico en comisiones:`, e.message);
-          }
+        console.log(`  - [STEP 2] Tarea correcta. Iniciando acreditación de ${recompensa} BOB...`);
+        
+        // 1. Registrar ganancia y actualizar saldo
+        try {
+          await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
+          console.log(`  - [OK] Ganancia, saldo y movimiento contable registrados.`);
+        } catch (e) {
+          console.error(`  - [ERROR] Fallo al acreditar ganancia:`, e.message);
+          throw new Error(`Fallo contable: ${e.message}`);
+        }
+        
+        // 2. Distribuir comisiones (No bloqueante para el usuario)
+        try {
+          console.log(`  - [STEP 3] Procesando comisiones de red...`);
+          await distributeCommissions(user.id, recompensa);
+          console.log(`  - [OK] Comisiones enviadas a cola de procesamiento.`);
+        } catch (e) {
+          console.error(`  - [AVISO] Fallo no crítico en comisiones:`, e.message);
         }
       } else {
         console.log(`  - [STEP 2] Tarea incorrecta. No se acredita recompensa.`);

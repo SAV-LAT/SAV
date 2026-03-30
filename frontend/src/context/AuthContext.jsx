@@ -10,9 +10,12 @@ export function AuthProvider({ children }) {
   const isUpdatingRef = useRef(false);
 
   const logout = useCallback(() => {
+    console.log('[Auth] Cerrando sesión...');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    // Forzar redirección al login para evitar pantalla en blanco en algunas rutas
+    window.location.href = '/login';
   }, []);
 
   const getDeviceId = useCallback(() => {

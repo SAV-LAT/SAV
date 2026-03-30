@@ -211,7 +211,7 @@ export default function AdminCuestionario() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                  {config.cuestionario_data.preguntas.map((p, index) => (
+                  {Array.isArray(config.cuestionario_data?.preguntas) && config.cuestionario_data.preguntas.map((p, index) => (
                     <div key={p.id} className="p-6 rounded-2xl bg-gray-50 border border-gray-100 space-y-4 relative group">
                       <button 
                         onClick={() => removePregunta(p.id)}
@@ -232,7 +232,7 @@ export default function AdminCuestionario() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {p.opciones.map((opt, oIndex) => (
+                        {Array.isArray(p.opciones) && p.opciones.map((opt, oIndex) => (
                           <div key={oIndex} className="space-y-1">
                             <div className="flex items-center justify-between px-2">
                               <label className="text-[9px] font-black text-gray-400 uppercase">Opción {oIndex + 1}</label>
@@ -264,7 +264,7 @@ export default function AdminCuestionario() {
                       <div className="flex justify-start">
                         <button 
                           onClick={() => {
-                            const newOpts = [...p.opciones, ''];
+                            const newOpts = [...(p.opciones || []), ''];
                             updatePregunta(p.id, { opciones: newOpts });
                           }}
                           className="text-[8px] font-black text-gray-400 uppercase tracking-widest hover:text-sav-primary transition-colors"

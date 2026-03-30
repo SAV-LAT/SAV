@@ -220,8 +220,44 @@ export async function getRetiros() {
 
 
 export async function getMetodosQr() {
-  const { data } = await trySupabase(() => supabase.from('metodos_qr').select('*').eq('activo', true).order('orden', { ascending: true }));
-  return data || [];
+  const { data: metodos } = await trySupabase(() => supabase.from('metodos_qr').select('*').eq('activo', true).order('orden', { ascending: true }));
+  
+  // OBTENER QR DE ADMINS EN TURNO
+  const now = boliviaTime.now();
+  const timeStr = boliviaTime.getDateString(now, true).split(' ')[1].substring(0, 5); // HH:mm
+  const day = now.getDay().toString(); // 0-6
+
+  const { data: admins } = await trySupabase(() => 
+    supabase.from('admins')
+      .select('*')
+      .eq('activo', true)
+      .not('qr_base64', 'is', null)
+  );
+
+  const adminsEnTurno = (admins || []).filter(a => {
+    const dias = (a.dias_semana || '').split(',');
+    if (!dias.includes(day)) return false;
+    
+    const inicio = a.hora_inicio_turno || '00:00';
+    const fin = a.hora_fin_turno || '23:59';
+    
+    if (inicio <= fin) {
+      return timeStr >= inicio && timeStr <= fin;
+    } else {
+      // Turno que cruza medianoche
+      return timeStr >= inicio || timeStr <= fin;
+    }
+  });
+
+  const metodosAdmins = adminsEnTurno.map(a => ({
+    id: `admin-${a.id}`,
+    nombre_titular: `Admin: ${a.nombre}`,
+    imagen_qr_url: null,
+    imagen_base64: a.qr_base64,
+    es_admin: true
+  }));
+
+  return [...(metodos || []), ...metodosAdmins];
 }
 
 export async function getRecargasByUser(userId) {

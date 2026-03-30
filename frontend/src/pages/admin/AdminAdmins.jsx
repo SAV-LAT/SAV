@@ -4,6 +4,7 @@ import { ShieldCheck, Save, Plus, Trash2, Clock, Bell, BellOff } from 'lucide-re
 
 export default function AdminAdmins() {
   const [admins, setAdmins] = useState([]);
+  const [search, setSearch] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -17,7 +18,8 @@ export default function AdminAdmins() {
     hora_inicio_turno: '00:00',
     hora_fin_turno: '23:59',
     activo: true,
-    recibe_notificaciones: true
+    recibe_notificaciones: true,
+    qr_base64: ''
   });
 
   useEffect(() => {
@@ -67,6 +69,23 @@ export default function AdminAdmins() {
     }
   };
 
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validar tamaño máximo (2MB para QR)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen es muy pesada. Máximo 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData({ ...formData, qr_base64: reader.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleUserSelect = (e) => {
     const userId = e.target.value;
     if (!userId) return;
@@ -81,6 +100,17 @@ export default function AdminAdmins() {
         telegram_username: selectedUser.telegram_username || ''
       });
     }
+  };
+
+  const toggleDia = (val) => {
+    const current = (formData.dias_semana || '').split(',').filter(d => d);
+    let next;
+    if (current.includes(val)) {
+      next = current.filter(d => d !== val);
+    } else {
+      next = [...current, val].sort();
+    }
+    setFormData({ ...formData, dias_semana: next.join(',') });
   };
 
   const handleSubmit = async (e) => {
@@ -101,7 +131,9 @@ export default function AdminAdmins() {
         hora_inicio_turno: '00:00',
         hora_fin_turno: '23:59',
         activo: true,
-        recibe_notificaciones: true
+        recibe_notificaciones: true,
+        qr_base64: '',
+        dias_semana: '1,2,3,4,5'
       });
       fetchAdmins();
     } catch (err) {
@@ -119,7 +151,9 @@ export default function AdminAdmins() {
       hora_inicio_turno: admin.hora_inicio_turno?.substring(0, 5) || '00:00',
       hora_fin_turno: admin.hora_fin_turno?.substring(0, 5) || '23:59',
       activo: admin.activo,
-      recibe_notificaciones: admin.recibe_notificaciones
+      recibe_notificaciones: admin.recibe_notificaciones,
+      qr_base64: admin.qr_base64 || '',
+      dias_semana: admin.dias_semana || '1,2,3,4,5'
     });
     setShowForm(true);
   };
@@ -163,7 +197,9 @@ export default function AdminAdmins() {
                 hora_inicio_turno: '00:00',
                 hora_fin_turno: '23:59',
                 activo: true,
-                recibe_notificaciones: true
+                recibe_notificaciones: true,
+                qr_base64: '',
+                dias_semana: '1,2,3,4,5'
               });
               setShowForm(!showForm);
             }}
@@ -249,6 +285,46 @@ export default function AdminAdmins() {
                 onChange={e => setFormData({...formData, hora_fin_turno: e.target.value})}
                 className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold outline-none"
               />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Imagen QR de Cobro</label>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFile}
+                    className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold outline-none"
+                  />
+                </div>
+                {formData.qr_base64 && (
+                  <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-sm shrink-0">
+                    <img src={formData.qr_base64} alt="QR Preview" className="w-full h-full object-contain" />
+                  </div>
+                )}
+              </div>
+              <p className="text-[9px] text-gray-400 italic ml-2">* Este QR se mostrará a los usuarios cuando estés en turno.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 pt-2">
+            <div className="flex-1 space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Días de Turno</label>
+              <div className="flex flex-wrap gap-2">
+                {diasOptions.map(d => {
+                  const isSel = (formData.dias_semana || '').split(',').includes(d.val);
+                  return (
+                    <button
+                      key={d.val}
+                      type="button"
+                      onClick={() => toggleDia(d.val)}
+                      className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${isSel ? 'bg-sav-primary text-white shadow-lg shadow-sav-primary/20' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                    >
+                      {d.lab}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

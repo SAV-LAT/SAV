@@ -568,31 +568,52 @@ router.get('/admins', async (req, res) => {
 });
 
 router.post('/admins', async (req, res) => {
-  const { nombre, telegram_user_id, telegram_username, rol, activo, hora_inicio_turno, hora_fin_turno, recibe_notificaciones } = req.body;
-  const { data, error } = await trySupabase(() => 
-    supabase.from('admins').insert([{
+  try {
+    const { nombre, telefono, telegram_user_id, telegram_username, rol, activo, hora_inicio_turno, hora_fin_turno, recibe_notificaciones, qr_base64, dias_semana } = req.body;
+    
+    await trySupabase(() => supabase.from('admins').insert([{
       nombre,
+      telefono,
       telegram_user_id,
       telegram_username,
       rol: rol || 'admin',
       activo: activo ?? true,
       hora_inicio_turno: hora_inicio_turno || '00:00',
       hora_fin_turno: hora_fin_turno || '23:59',
-      recibe_notificaciones: recibe_notificaciones ?? true
-    }]).select().maybeSingle()
-  );
-  if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+      recibe_notificaciones: recibe_notificaciones ?? true,
+      qr_base64,
+      dias_semana
+    }]));
+    
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.put('/admins/:id', async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  const { data, error } = await trySupabase(() => 
-    supabase.from('admins').update(updates).eq('id', id).select().maybeSingle()
-  );
-  if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+  try {
+    const { id } = req.params;
+    const { nombre, telefono, telegram_user_id, telegram_username, rol, activo, hora_inicio_turno, hora_fin_turno, recibe_notificaciones, qr_base64, dias_semana } = req.body;
+    
+    await trySupabase(() => supabase.from('admins').update({
+      nombre,
+      telefono,
+      telegram_user_id,
+      telegram_username,
+      rol,
+      activo,
+      hora_inicio_turno,
+      hora_fin_turno,
+      recibe_notificaciones,
+      qr_base64,
+      dias_semana
+    }).eq('id', id));
+    
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.delete('/admins/:id', async (req, res) => {

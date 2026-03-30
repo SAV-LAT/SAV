@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { HelpCircle, X, CheckCircle2, AlertTriangle, Send } from 'lucide-react';
 import { api } from '../lib/api';
 
 export default function FloatingQuestionnaire() {
+  const location = useLocation();
   const [showModal, setShowModal] = useState(false);
   const [cuestionario, setCuestionario] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,8 @@ export default function FloatingQuestionnaire() {
     }
   };
 
-  if (loading || !cuestionario) return null;
+  // Solo mostrar en Inicio
+  if (location.pathname !== '/' || loading || !cuestionario) return null;
 
   return (
     <>

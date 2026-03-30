@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate } from '../middleware/auth.js';
-import { getPremiosRuleta, createSorteoGanador, findUserById, updateUser, getSorteosGanadores } from '../lib/queries.js';
+import { getPremiosRuleta, createSorteoGanador, findUserById, updateUser, getSorteosGanadores, isUserPunished } from '../lib/queries.js';
 
 const router = Router();
 
@@ -37,6 +37,14 @@ router.post('/girar', authenticate, async (req, res) => {
   try {
     const user = await findUserById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // VERIFICAR CASTIGO POR CUESTIONARIO
+    const castigado = await isUserPunished(user.id);
+    if (castigado) {
+      return res.status(403).json({ 
+        error: 'Tu acceso a la ruleta de premios ha sido bloqueado por hoy como castigo por no responder el cuestionario obligatorio de ayer.' 
+      });
+    }
 
     // La ruleta consume 1 TICKET
     if ((Number(user.tickets_ruleta) || 0) < 1) {

@@ -466,6 +466,13 @@ export async function handleLevelUpRewards(userId, oldLevelId, newLevelId) {
     if (rewardTickets > 0) {
       const inviter = await findUserById(user.invitado_por);
       if (inviter) {
+        // VERIFICAR SI EL INVITADOR ESTÁ CASTIGADO
+        const castigado = await isUserPunished(inviter.id);
+        if (castigado) {
+          console.log(`[Recompensas] Invitador ${inviter.nombre_usuario} está castigado. No recibe tickets de primer ascenso.`);
+          return;
+        }
+
         console.log(`[Recompensas] Primer ascenso de ${user.nombre_usuario} a ${levelCode}. Otorgando ${rewardTickets} tickets a ${inviter.nombre_usuario}.`);
         
         // Marcar el primer ascenso como completado para este usuario

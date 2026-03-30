@@ -27,6 +27,7 @@ export default function Recompensas() {
   const [result, setResult] = useState(null);
   const [rotation, setRotation] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [punished, setPunished] = useState(false);
   const [error, setError] = useState(null);
   const wheelRef = useRef(null);
 
@@ -36,12 +37,14 @@ export default function Recompensas() {
         api.sorteo.premios(),
         api.sorteo.historial(),
         api.sorteo.config(),
-        api.users.team()
-      ]).then(([p, h, c, t]) => {
+        api.users.team(),
+        api.get('/users/status-castigo')
+      ]).then(([p, h, c, t, statusRes]) => {
         setPremios(p || []);
         setHistorial(h || []);
         setConfig(c);
         setTeamStats(t);
+        setPunished(statusRes.castigado);
         setLoading(false);
       }).catch(err => {
         console.error('Error cargando datos de ruleta:', err);
@@ -99,6 +102,32 @@ export default function Recompensas() {
       <div className="min-h-screen bg-[#1a1f36] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  if (punished) {
+    return (
+      <Layout>
+        <div className="p-8 text-center space-y-6 flex flex-col items-center justify-center min-h-[70vh] bg-white">
+          <div className="w-24 h-24 bg-rose-50 text-rose-600 rounded-[2.5rem] flex items-center justify-center shadow-xl border border-rose-100 animate-pulse">
+            <AlertCircle size={48} strokeWidth={1.5} />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-[#1a1f36] uppercase tracking-tighter">Premios Bloqueados</h2>
+            <p className="text-sm text-gray-400 font-medium leading-relaxed max-w-xs mx-auto">
+              Tu acceso a la ruleta de premios ha sido <span className="text-rose-600 font-bold uppercase">bloqueado por hoy</span> como castigo por no responder el cuestionario obligatorio de ayer.
+            </p>
+          </div>
+          <div className="bg-amber-50 p-6 rounded-[2rem] border border-amber-100 text-left w-full shadow-inner">
+            <p className="text-[10px] text-amber-700 font-black uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+              <AlertCircle size={14} /> Nota:
+            </p>
+            <p className="text-xs text-amber-600 leading-relaxed font-medium">
+              Asegúrate de responder el cuestionario de hoy para evitar ser sancionado nuevamente mañana.
+            </p>
+          </div>
+        </div>
+      </Layout>
     );
   }
 

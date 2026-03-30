@@ -21,12 +21,17 @@ export default function Ganancias() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [punished, setPunished] = useState(false);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.users.earnings();
+      const [res, statusRes] = await Promise.all([
+        api.users.earnings(),
+        api.get('/users/status-castigo')
+      ]);
       setData(res);
+      setPunished(statusRes.castigado);
       setError(null);
     } catch (err) {
       console.error('Error cargando ganancias:', err);
@@ -122,6 +127,33 @@ export default function Ganancias() {
         <div className="p-8 flex flex-col items-center justify-center min-h-[70vh] space-y-4">
           <div className="w-16 h-16 border-4 border-[#1a1f36] border-t-emerald-500 rounded-full animate-spin" />
           <p className="text-[#1a1f36] font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Sincronizando balances...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (punished) {
+    return (
+      <Layout>
+        <Header title="Ganancias Bloqueadas" />
+        <div className="p-8 text-center space-y-6 flex flex-col items-center justify-center min-h-[70vh] bg-white">
+          <div className="w-24 h-24 bg-rose-50 text-rose-600 rounded-[2.5rem] flex items-center justify-center shadow-xl border border-rose-100 animate-pulse">
+            <AlertCircle size={48} strokeWidth={1.5} />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-[#1a1f36] uppercase tracking-tighter">Acceso Restringido</h2>
+            <p className="text-sm text-gray-400 font-medium leading-relaxed max-w-xs mx-auto">
+              Tu sistema de ganancias ha sido <span className="text-rose-600 font-bold uppercase">bloqueado por hoy</span> como castigo por no responder el cuestionario obligatorio de ayer.
+            </p>
+          </div>
+          <div className="bg-amber-50 p-6 rounded-[2rem] border border-amber-100 text-left w-full shadow-inner">
+            <p className="text-[10px] text-amber-700 font-black uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+              <AlertCircle size={14} /> Nota:
+            </p>
+            <p className="text-xs text-amber-600 leading-relaxed font-medium">
+              Asegúrate de responder el cuestionario de hoy para evitar ser sancionado nuevamente mañana.
+            </p>
+          </div>
         </div>
       </Layout>
     );

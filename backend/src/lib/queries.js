@@ -615,10 +615,10 @@ export async function distributeCommissions(userId, baseAmount) {
     const userLevel = levels.find(l => l.id === user.nivel_id);
     const userRank = userLevel ? (userLevel.orden || 0) : 0;
 
-    // Lógica de comisiones por niveles (A: 12%, B: 3%, C: 1%)
+    // Lógica de comisiones por niveles (A: 1%, B: 1%, C: 1%)
     const commissionConfigs = [
-      { key: 'A', percent: 0.12 },
-      { key: 'B', percent: 0.03 },
+      { key: 'A', percent: 0.01 },
+      { key: 'B', percent: 0.01 },
       { key: 'C', percent: 0.01 }
     ];
 

@@ -17,11 +17,14 @@ export default function FloatingQuestionnaire() {
   const fetchCuestionario = async () => {
     try {
       const res = await api.get('/users/cuestionario');
-      if (res.activo && !res.ya_respondio) {
+      if (res && res.activo && !res.ya_respondio) {
         setCuestionario(res.datos);
+      } else {
+        setCuestionario(null);
       }
     } catch (err) {
       console.error('Error fetching questionnaire:', err);
+      setCuestionario(null);
     } finally {
       setLoading(false);
     }
@@ -36,11 +39,12 @@ export default function FloatingQuestionnaire() {
 
     setSubmitting(true);
     try {
-      await api.post('/users/cuestionario/responder');
+      await api.post('/users/cuestionario/responder', { respuestas });
       alert('¡Cuestionario enviado con éxito!');
       setShowModal(false);
       setCuestionario(null);
     } catch (err) {
+      alert('Error: ' + err.message);
       setError(err.message);
     } finally {
       setSubmitting(false);

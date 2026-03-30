@@ -101,7 +101,10 @@ export const api = {
     // Usamos el dominio base del backend configurado
     return BACKEND_URL + normalizedPath;
   },
+  get: (url) => request(url),
   post: (url, data) => request(url, { method: 'POST', body: JSON.stringify(data) }),
+  put: (url, data) => request(url, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (url) => request(url, { method: 'DELETE' }),
   auth: {
     login: (telefono, password, deviceId) => request('/auth/login', { method: 'POST', body: JSON.stringify({ telefono, password, deviceId }) }),
     register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),

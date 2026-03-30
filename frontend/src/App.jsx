@@ -58,6 +58,7 @@ const AdminNiveles = lazyWithRetry(() => import('./pages/admin/AdminNiveles.jsx'
 const AdminRecompensas = lazyWithRetry(() => import('./pages/admin/AdminRecompensas.jsx'));
 const AdminAdmins = lazyWithRetry(() => import('./pages/admin/AdminAdmins.jsx'));
 const AdminCuestionario = lazyWithRetry(() => import('./pages/admin/AdminCuestionario.jsx'));
+const AdminConfiguracion = lazyWithRetry(() => import('./pages/admin/AdminConfiguracion.jsx'));
 
 const GlobalLoader = () => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0c1a] space-y-6">
@@ -117,6 +118,7 @@ function AppRoutes() {
           <Route path="admins" element={<AdminAdmins />} />
           <Route path="cuestionarios" element={<AdminCuestionario />} />
           <Route path="contenido-home" element={<AdminContenidoHome />} />
+          <Route path="configuracion" element={<AdminConfiguracion />} />
         </Route>
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/recompensas" element={<PrivateRoute><Recompensas /></PrivateRoute>} />

@@ -50,7 +50,7 @@ export default function AdminAdmins() {
   const fetchAdmins = async () => {
     try {
       const res = await api.get('/admin/admins');
-      setAdmins(res);
+      setAdmins(res || []);
     } catch (err) {
       console.error('Error fetching admins:', err);
     } finally {
@@ -61,7 +61,7 @@ export default function AdminAdmins() {
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/usuarios');
-      setUsers(res);
+      setUsers(res || []);
     } catch (err) {
       console.error('Error fetching users:', err);
     }
@@ -135,23 +135,22 @@ export default function AdminAdmins() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-[#1a1f36] flex items-center gap-3">
             <ShieldCheck className="text-sav-primary" />
-            Gestión de Admins y Turnos
+            Admins y Turnos
           </h2>
-          <p className="text-sm text-gray-500">Configura quién y en qué horario recibe notificaciones.</p>
+          <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mt-1">Configura notificaciones de Telegram</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-end">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex flex-col items-start sm:items-end">
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" checked={notifyGroupAlways} onChange={toggleGroupNotify} className="sr-only peer" />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-              <span className="ml-3 text-xs font-black uppercase tracking-tighter text-gray-500">Notificar Grupo Siempre</span>
+              <span className="ml-3 text-[10px] font-black uppercase tracking-tighter text-gray-500">Notificar Grupo Siempre</span>
             </label>
-            <p className="text-[9px] text-gray-400 italic">Si está activo, las recargas llegarán al admin en turno Y al grupo.</p>
           </div>
           <button 
             onClick={() => {
@@ -168,182 +167,177 @@ export default function AdminAdmins() {
               });
               setShowForm(!showForm);
             }}
-            className="bg-sav-primary text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all"
+            className="w-full sm:w-auto bg-sav-primary text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-sav-primary/20"
           >
-            {showForm ? 'Cancelar' : <><Plus size={20} /> Nuevo Admin</>}
+            {showForm ? 'Cancelar' : <><Plus size={16} /> Nuevo Admin</>}
           </button>
         </div>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Seleccionar de Usuarios Registrados</label>
+        <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6 animate-in fade-in slide-in-from-top-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2 space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Seleccionar de Usuarios Registrados</label>
               <select 
                 onChange={handleUserSelect}
-                className="w-full bg-blue-50/50 border border-blue-100 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
+                className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold text-[#1a1f36] outline-none"
               >
                 <option value="">-- Buscar un usuario --</option>
                 {users
                   .filter(u => u.rol === 'admin' || u.rol === 'superadmin')
                   .map(u => (
                     <option key={u.id} value={u.id}>
-                      {u.nombre_usuario} ({u.nombre_real || 'Sin nombre real'}) - {u.rol}
+                      {u.nombre_usuario} ({u.nombre_real || 'Sin nombre real'})
                     </option>
                   ))}
               </select>
-              <p className="text-[10px] text-gray-400 mt-1 italic">* Solo se muestran usuarios con rol de administrador o superior.</p>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre (Confirmar)</label>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Nombre (Confirmar)</label>
               <input
                 required
                 value={formData.nombre}
                 onChange={e => setFormData({...formData, nombre: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
+                className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold text-[#1a1f36] outline-none"
                 placeholder="Ej: Moisés"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Teléfono</label>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Teléfono</label>
               <input
                 required
                 value={formData.telefono}
                 onChange={e => setFormData({...formData, telefono: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
+                className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold text-[#1a1f36] outline-none"
                 placeholder="Ej: 67091817"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Telegram ID</label>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Telegram ID</label>
               <input
                 required
                 value={formData.telegram_user_id}
                 onChange={e => setFormData({...formData, telegram_user_id: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
+                className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold text-[#1a1f36] outline-none"
                 placeholder="Ej: 6896414316"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Telegram Username</label>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Telegram Username</label>
               <input
                 value={formData.telegram_username}
                 onChange={e => setFormData({...formData, telegram_username: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all font-bold text-[#1a1f36]"
+                className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold text-[#1a1f36] outline-none"
                 placeholder="Ej: usuario_tg"
               />
-              <p className="text-[9px] text-blue-500 mt-1">El ID se usa para enviar notificaciones directas.</p>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Inicio de Turno (Bolivia)</label>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Inicio de Turno</label>
               <input
                 type="time"
                 value={formData.hora_inicio_turno}
                 onChange={e => setFormData({...formData, hora_inicio_turno: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all"
+                className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold outline-none"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Fin de Turno</label>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Fin de Turno</label>
               <input
                 type="time"
                 value={formData.hora_fin_turno}
                 onChange={e => setFormData({...formData, hora_fin_turno: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sav-primary/20 transition-all"
+                className="w-full bg-gray-50 border-2 border-gray-50 rounded-2xl px-5 py-4 text-sm focus:border-sav-primary/20 transition-all font-bold outline-none"
               />
             </div>
           </div>
 
-          <div className="flex gap-6 pt-2">
-            <label className="flex items-center gap-2 cursor-pointer">
+          <div className="flex flex-col sm:flex-row gap-4 pt-2">
+            <label className="flex-1 flex items-center gap-3 cursor-pointer p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <input
                 type="checkbox"
                 checked={formData.activo}
                 onChange={e => setFormData({...formData, activo: e.target.checked})}
-                className="w-4 h-4 text-sav-primary rounded focus:ring-sav-primary"
+                className="w-5 h-5 text-sav-primary rounded-lg focus:ring-sav-primary border-gray-300"
               />
-              <span className="text-sm font-medium text-gray-700">Admin Activo</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-700">Admin Activo</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex-1 flex items-center gap-3 cursor-pointer p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <input
                 type="checkbox"
                 checked={formData.recibe_notificaciones}
                 onChange={e => setFormData({...formData, recibe_notificaciones: e.target.checked})}
-                className="w-4 h-4 text-sav-primary rounded focus:ring-sav-primary"
+                className="w-5 h-5 text-sav-primary rounded-lg focus:ring-sav-primary border-gray-300"
               />
-              <span className="text-sm font-medium text-gray-700">Recibe Notificaciones</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-700">Recibe Notificaciones</span>
             </label>
           </div>
 
-          <button type="submit" className="w-full bg-[#1a1f36] text-white py-3 rounded-xl font-black uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2">
-            <Save size={20} /> {editingId ? 'Actualizar' : 'Guardar'} Administrador
+          <button type="submit" className="w-full bg-[#1a1f36] text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] text-[10px] hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-indigo-900/20">
+            <Save size={18} /> {editingId ? 'Actualizar' : 'Guardar'} Administrador
           </button>
         </form>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100">
+      {/* Lista de Admins - Desktop: Tabla, Mobile: Cards */}
+      <div className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead className="bg-gray-50/50 border-b border-gray-100">
             <tr>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Admin</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Telegram</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Horario Turno</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Estado</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Administrador</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Telegram</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Horario</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Estado</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-center">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {admins.map(admin => (
-              <tr key={admin.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-[#1a1f36]">{admin.nombre}</span>
-                    <span className="text-[10px] text-gray-400 font-mono">{admin.telefono || 'Sin tel.'}</span>
+              <tr key={admin.id} className="hover:bg-gray-50/30 transition-colors group">
+                <td className="px-8 py-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-sav-primary/10 flex items-center justify-center text-sav-primary font-black text-xs">
+                      {admin.nombre?.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-[#1a1f36] uppercase tracking-tighter">{admin.nombre}</span>
+                      <span className="text-[10px] text-gray-400 font-bold">{admin.telefono || 'Sin tel.'}</span>
+                    </div>
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-8 py-6">
                   <div className="flex flex-col">
-                    <span className="text-xs font-medium text-gray-600">ID: {admin.telegram_user_id}</span>
-                    <span className="text-[10px] text-blue-500">@{admin.telegram_username || 'sin_username'}</span>
+                    <span className="text-xs font-bold text-gray-600">ID: {admin.telegram_user_id}</span>
+                    <span className="text-[10px] text-blue-500 font-bold">@{admin.telegram_username || 'sin_username'}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-8 py-6">
                   <div className="flex items-center gap-2">
                     <Clock size={14} className="text-gray-400" />
-                    <span className="text-xs font-bold text-gray-700">
+                    <span className="text-xs font-black text-gray-700">
                       {admin.hora_inicio_turno?.substring(0, 5)} - {admin.hora_fin_turno?.substring(0, 5)}
                     </span>
                   </div>
-                  {admin.en_turno_recarga && (
-                    <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 uppercase tracking-tighter">
-                      ⚡ En Turno (QR)
-                    </span>
-                  )}
                 </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-col gap-1">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black text-center ${admin.activo ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                <td className="px-8 py-6">
+                  <div className="flex flex-col gap-1.5">
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black text-center inline-block w-fit ${admin.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                       {admin.activo ? 'ACTIVO' : 'INACTIVO'}
                     </span>
-                    {admin.recibe_notificaciones ? (
-                      <span className="flex items-center gap-1 text-[9px] text-emerald-500 font-bold">
-                        <Bell size={10} /> NOTIF. ON
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-[9px] text-gray-400 font-bold">
-                        <BellOff size={10} /> NOTIF. OFF
+                    {admin.recibe_notificaciones && (
+                      <span className="flex items-center gap-1 text-[9px] text-emerald-500 font-black uppercase">
+                        <Bell size={10} /> Notif. On
                       </span>
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => handleEdit(admin)} className="p-2 hover:bg-sav-primary/10 text-sav-primary rounded-lg transition-colors">
-                      <Clock size={18} />
+                <td className="px-8 py-6">
+                  <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(admin)} className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                      <Clock size={16} />
                     </button>
-                    <button onClick={() => handleDelete(admin.id)} className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors">
-                      <Trash2 size={18} />
+                    <button onClick={() => handleDelete(admin.id)} className="p-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </td>
@@ -352,6 +346,68 @@ export default function AdminAdmins() {
           </tbody>
         </table>
       </div>
+
+      {/* Vista Móvil: Cards */}
+      <div className="md:hidden space-y-4">
+        {admins.map(admin => (
+          <div key={admin.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-sav-primary/10 flex items-center justify-center text-sav-primary font-black">
+                  {admin.nombre?.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#1a1f36] uppercase tracking-tighter">{admin.nombre}</h3>
+                  <p className="text-[10px] text-gray-400 font-bold">{admin.telefono}</p>
+                </div>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-[9px] font-black ${admin.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                {admin.activo ? 'ACTIVO' : 'INACTIVO'}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 py-4 border-y border-gray-50">
+              <div className="space-y-1">
+                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Telegram</p>
+                <p className="text-[10px] font-bold text-gray-700">ID: {admin.telegram_user_id}</p>
+                <p className="text-[10px] font-bold text-blue-500">@{admin.telegram_username || 'sin_user'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Horario Turno</p>
+                <div className="flex items-center gap-1.5 text-[10px] font-black text-gray-700">
+                  <Clock size={12} className="text-sav-primary" />
+                  {admin.hora_inicio_turno?.substring(0, 5)} - {admin.hora_fin_turno?.substring(0, 5)}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <div className="flex items-center gap-2">
+                {admin.recibe_notificaciones && (
+                  <span className="flex items-center gap-1 text-[9px] text-emerald-500 font-black uppercase">
+                    <Bell size={12} /> Notificaciones
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleEdit(admin)} className="p-3 bg-indigo-50 text-indigo-600 rounded-xl active:scale-90 transition-all">
+                  <Clock size={16} />
+                </button>
+                <button onClick={() => handleDelete(admin.id)} className="p-3 bg-rose-50 text-rose-600 rounded-xl active:scale-90 transition-all">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {admins.length === 0 && !loading && (
+        <div className="bg-white rounded-[2rem] p-12 text-center border border-dashed border-gray-200">
+          <ShieldCheck size={48} className="mx-auto text-gray-200 mb-4" />
+          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">No hay administradores configurados</p>
+        </div>
+      )}
     </div>
   );
 }

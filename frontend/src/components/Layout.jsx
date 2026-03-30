@@ -20,18 +20,18 @@ export default function Layout({ children }) {
         href="https://whatsapp.com/channel/0029Vb7MSAUBadmgpZ6OpM2h" 
         target="_blank" 
         rel="noopener noreferrer"
-        className="fixed bottom-24 right-6 z-[60] group animate-bounce-slow"
+        className="fixed bottom-[150px] right-6 z-[60] group animate-bounce-slow"
       >
         <div className="relative">
           {/* Efecto de pulso/glow */}
           <div className="absolute inset-0 bg-emerald-500 rounded-full blur-xl opacity-40 group-hover:opacity-70 animate-pulse transition-opacity" />
           
           {/* Botón principal */}
-          <div className="relative bg-emerald-500 text-white p-4 rounded-full shadow-2xl border-2 border-white/20 flex items-center justify-center transform group-hover:scale-110 group-active:scale-95 transition-all duration-300">
-            <MessageCircle size={28} fill="currentColor" className="text-white" />
+          <div className="relative bg-emerald-500 text-white p-3 rounded-full shadow-2xl border-2 border-white/20 flex items-center justify-center transform group-hover:scale-110 group-active:scale-95 transition-all duration-300">
+            <MessageCircle size={22} fill="currentColor" className="text-white" />
             
             {/* Tooltip/Etiqueta flotante */}
-            <div className="absolute right-full mr-4 bg-[#1a1f36] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap shadow-xl border border-white/10">
+            <div className="absolute right-full mr-4 bg-[#1a1f36] text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all pointer-events-none whitespace-nowrap shadow-xl border border-white/10">
               Soporte WhatsApp
               <div className="absolute top-1/2 -translate-y-1/2 left-full w-2 h-2 bg-[#1a1f36] rotate-45 -ml-1 border-r border-t border-white/10" />
             </div>

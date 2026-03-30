@@ -24,8 +24,15 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, user: currentUser } = useAuth();
   const navigate = useNavigate();
+
+  // Redirigir si ya está logueado
+  useEffect(() => {
+    if (currentUser) {
+      navigate(currentUser.rol === 'admin' ? '/admin' : '/', { replace: true });
+    }
+  }, [currentUser, navigate]);
 
   const telefono = pais + numero.replace(/\D/g, '').trim();
 

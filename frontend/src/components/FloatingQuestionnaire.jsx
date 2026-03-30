@@ -58,10 +58,10 @@ export default function FloatingQuestionnaire() {
       {/* Botón Flotante */}
       <button 
         onClick={() => setShowModal(true)}
-        className="fixed bottom-24 right-6 z-[60] w-14 h-14 bg-amber-500 text-white rounded-full shadow-2xl shadow-amber-500/40 flex items-center justify-center animate-bounce hover:scale-110 active:scale-95 transition-all"
+        className="fixed bottom-24 right-6 z-[60] w-12 h-12 bg-amber-500 text-white rounded-full shadow-2xl shadow-amber-500/40 flex items-center justify-center animate-bounce hover:scale-110 active:scale-95 transition-all"
       >
-        <HelpCircle size={30} />
-        <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black">1</span>
+        <HelpCircle size={24} />
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-black">1</span>
       </button>
 
       {/* Modal */}

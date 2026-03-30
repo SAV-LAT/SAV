@@ -1,7 +1,37 @@
 import { Suspense, lazy, useState, useEffect } from 'react';
 // SAV v4.2.0 - Despliegue Final
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+
+/**
+ * NavigationGuard: Maneja el comportamiento del botón atrás del celular.
+ * Asegura que el usuario regrese paso a paso y no salga de la app
+ * hasta estar en la pantalla de inicio.
+ */
+function NavigationGuard({ children }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const handlePopState = (event) => {
+      // Si el usuario está logueado y no está en el inicio (o admin dashboard)
+      // y la historia del navegador parece haberse agotado para la app,
+      // forzamos el regreso al inicio en lugar de cerrar la app.
+      if (user && location.pathname !== '/' && location.pathname !== '/admin') {
+        // Si no hay más estados en la historia, redirigir al home
+        if (window.history.state === null || window.history.state?.idx === 0) {
+          navigate(user.rol === 'admin' ? '/admin' : '/', { replace: true });
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [location, navigate, user]);
+
+  return children;
+}
 
 /**
  * Helper para manejar errores de carga de módulos dinámicos (Chunks).
@@ -180,7 +210,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <NavigationGuard>
+          <AppRoutes />
+        </NavigationGuard>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   findUserById, getLevels, updateUser, getTaskActivity, getTarjetasByUser, 
-  createTarjeta, deleteTarjeta, getUsers, trySupabase, getUserEarningsSummary 
+  createTarjeta, deleteTarjeta, getUsers, trySupabase, getUserEarningsSummary,
+  getPublicContent, checkUserQuestionnaire, submitQuestionnaire, isUserPunished
 } from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
 import { getStore } from '../data/store.js';
@@ -335,6 +336,46 @@ router.get('/team', authenticate, async (req, res) => {
   } catch (err) {
     console.error('[Users] Error en /team:', err);
     res.status(500).json({ error: 'Error al calcular equipo' });
+  }
+});
+
+router.get('/cuestionario', authenticate, async (req, res) => {
+  try {
+    const config = await getPublicContent();
+    if (!config.cuestionario_activo) return res.json({ activo: false });
+    
+    const yaRespondio = await checkUserQuestionnaire(req.user.id);
+    res.json({
+      activo: true,
+      ya_respondio: yaRespondio,
+      datos: config.cuestionario_data // JSON con preguntas/opciones
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/cuestionario/responder', authenticate, async (req, res) => {
+  try {
+    const config = await getPublicContent();
+    if (!config.cuestionario_activo) return res.status(400).json({ error: 'No hay cuestionario activo' });
+    
+    const yaRespondio = await checkUserQuestionnaire(req.user.id);
+    if (yaRespondio) return res.status(400).json({ error: 'Ya respondiste el cuestionario de hoy' });
+    
+    await submitQuestionnaire(req.user.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/status-castigo', authenticate, async (req, res) => {
+  try {
+    const castigado = await isUserPunished(req.user.id);
+    res.json({ castigado });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

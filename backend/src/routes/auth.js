@@ -65,7 +65,11 @@ router.post('/login', async (req, res) => {
     const { telefono, password, deviceId } = req.body;
     const user = await findUserByTelefono(telefono);
     if (!user) return res.status(401).json({ error: 'Credenciales incorrectas' });
-    if (user.bloqueado) return res.status(401).json({ error: 'Cuenta bloqueada' });
+    if (user.bloqueado) {
+      return res.status(403).json({ 
+        error: 'Tu cuenta ha sido bloqueada por cometer una infracción. Debes comunicarte con el gerente para poder desbloquearla.' 
+      });
+    }
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Credenciales incorrectas' });
 

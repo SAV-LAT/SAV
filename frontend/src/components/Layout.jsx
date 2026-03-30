@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Users, Gem, Wallet, User } from 'lucide-react';
+import FloatingQuestionnaire from './FloatingQuestionnaire.jsx';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Inicio' },
@@ -22,6 +23,7 @@ export default function Layout({ children }) {
 
       <div className="w-full max-w-md bg-white min-h-screen relative shadow-[0_0_50px_rgba(0,0,0,0.1)] border-x border-gray-100 z-10">
         {children}
+        <FloatingQuestionnaire />
         <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/80 backdrop-blur-xl border-t border-gray-100 flex justify-around py-3 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
           {navItems.map((item) => {
             const { to, icon: NavIcon, label } = item;

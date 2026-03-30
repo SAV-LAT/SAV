@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../lib/api.js';
-import { User, Shield, ArrowUpCircle, Search, Key, Lock, X, DollarSign, Wallet } from 'lucide-react';
+import { User, Shield, ArrowUpCircle, Search, Key, Lock, X, DollarSign, Wallet, Ban, CheckCircle } from 'lucide-react';
 
 export default function AdminUsuarios() {
   const [users, setUsers] = useState([]);
@@ -107,6 +107,17 @@ export default function AdminUsuarios() {
       alert('Contraseñas actualizadas con éxito');
       setSelectedUser(null);
       setPasswords({ login: '', fondo: '' });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleToggleBlock = async (user) => {
+    const action = user.bloqueado ? 'desbloquear' : 'bloquear';
+    if (!confirm(`¿Estás seguro de ${action} a ${user.nombre_usuario}?`)) return;
+    try {
+      await api.admin.updateUsuario(user.id, { bloqueado: !user.bloqueado });
+      setUsers(users.map(u => u.id === user.id ? { ...u, bloqueado: !user.bloqueado } : u));
     } catch (err) {
       alert(err.message);
     }
@@ -281,6 +292,17 @@ export default function AdminUsuarios() {
                         title="Cambiar Contraseñas"
                       >
                         <Key size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleToggleBlock(u)}
+                        className={`p-3 rounded-xl transition-all ${
+                          u.bloqueado 
+                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white' 
+                            : 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white'
+                        }`}
+                        title={u.bloqueado ? 'Desbloquear Cuenta' : 'Bloquear Cuenta'}
+                      >
+                        {u.bloqueado ? <CheckCircle size={18} /> : <Ban size={18} />}
                       </button>
                     </div>
                   </td>

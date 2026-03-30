@@ -5,7 +5,7 @@ import {
   getUsers, getRecargas, getRetiros, getLevels, findUserById, updateUser, 
   getPublicContent, getMetodosQr, getBanners, getAllTasks, getRecargaById, 
   updateRecarga, getRetiroById, updateRetiro, trySupabase, handleLevelUpRewards,
-  getUserEarningsSummary, createMovimiento 
+  getUserEarningsSummary, createMovimiento, boliviaTime 
 } from '../lib/queries.js';
 import { getStore } from '../data/store.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
@@ -648,6 +648,41 @@ router.put('/contenido-home', async (req, res) => {
     }
     const config = await getPublicContent();
     res.json(mergePublicContent(config));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/cuestionario/castigar', async (req, res) => {
+  try {
+    const config = await getPublicContent();
+    if (!config.cuestionario_activo) return res.status(400).json({ error: 'No hay cuestionario activo' });
+    
+    const users = await getUsers();
+    const today = boliviaTime.todayStr();
+    const tomorrow = new Date(boliviaTime.now());
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = boliviaTime.getDateString(tomorrow);
+
+    const { data: responded } = await trySupabase(() => 
+      supabase.from('respuestas_cuestionario').select('usuario_id').eq('fecha', today)
+    );
+    const respondedIds = new Set(responded.map(r => r.usuario_id));
+
+    let punishedCount = 0;
+    for (const user of users) {
+      if (user.rol === 'usuario' && !respondedIds.has(user.id)) {
+        await updateUser(user.id, { castigado_hasta: tomorrowStr });
+        punishedCount++;
+      }
+    }
+
+    // Desactivar cuestionario después de castigar
+    await trySupabase(() => 
+      supabase.from('configuraciones').upsert({ clave: 'cuestionario_activo', valor: 'false' }, { onConflict: 'clave' })
+    );
+
+    res.json({ ok: true, punished: punishedCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

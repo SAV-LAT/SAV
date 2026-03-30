@@ -18,7 +18,8 @@ import {
   Layers,
   Sparkles,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  HelpCircle
 } from 'lucide-react';
 import Logo from '../../components/Logo.jsx';
 
@@ -86,6 +87,7 @@ export default function AdminLayout() {
     { to: '/admin/admins', icon: ShieldCheck, label: 'Gestión Admins y Turnos' },
     { to: '/admin/banners', icon: Image, label: 'Banners' },
     { to: '/admin/contenido-home', icon: Bell, label: 'Contenido y horarios' },
+    { to: '/admin/cuestionarios', icon: HelpCircle, label: 'Cuestionarios y Castigos' },
   ];
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);

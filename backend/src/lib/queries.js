@@ -493,6 +493,11 @@ export async function distributeCommissions(userId, baseAmount) {
     const user = await findUserById(userId);
     if (!user || !user.invitado_por) return;
 
+    // VERIFICAR SI EL USUARIO ORIGEN ESTÁ CASTIGADO
+    // Si el subordinado que hizo la tarea está castigado, no genera comisiones?
+    // El usuario dijo: "no podrá realizar tareas ni resivir comisiones de algún tipo y no podrá invitar y resir la comisión de invitación"
+    // Esto significa que si YO estoy castigado, NO recibo comisiones de mis subordinados.
+    
     const levels = await getLevels();
     const userLevel = levels.find(l => l.id === user.nivel_id);
     const userRank = userLevel ? (userLevel.orden || 0) : 0;
@@ -509,6 +514,14 @@ export async function distributeCommissions(userId, baseAmount) {
       if (!currentUplineId) break;
       const upline = await findUserById(currentUplineId);
       if (!upline) break;
+
+      // VERIFICAR SI EL UPLINE ESTÁ CASTIGADO
+      const castigado = await isUserPunished(upline.id);
+      if (castigado) {
+        console.log(`[Comisiones] Upline ${upline.nombre_usuario} está castigado. No recibe comisión.`);
+        currentUplineId = upline.invitado_por;
+        continue;
+      }
 
       const uplineLevel = levels.find(l => l.id === upline.nivel_id);
       const uplineRank = uplineLevel ? (uplineLevel.orden || 0) : 0;
@@ -646,6 +659,13 @@ export async function getUserEarningsSummary(userId) {
 export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', origenId = null, descripcion = null) {
   if (!amount || amount <= 0) return;
   
+  // VERIFICAR SI EL USUARIO ESTÁ CASTIGADO
+  const castigado = await isUserPunished(userId);
+  if (castigado) {
+    console.log(`[Earnings] Usuario ${userId} está castigado. No se acredita ganancia.`);
+    return;
+  }
+
   const referencia = `EARN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   const desc = descripcion || (tipo === 'ganancia_tarea' ? 'Ganancia por tarea completada' : 'Comisión de red');
 
@@ -763,4 +783,38 @@ export async function resetDailyEarnings() {
   } catch (err) {
     console.error('[Cron] Error en resetDailyEarnings:', err);
   }
+}
+
+/**
+ * CUESTIONARIOS Y CASTIGOS
+ */
+
+export async function checkUserQuestionnaire(userId) {
+  const today = boliviaTime.todayStr();
+  const { data } = await trySupabase(() => 
+    supabase.from('respuestas_cuestionario')
+      .select('id')
+      .eq('usuario_id', userId)
+      .eq('fecha', today)
+      .maybeSingle()
+  );
+  return !!data;
+}
+
+export async function submitQuestionnaire(userId) {
+  const today = boliviaTime.todayStr();
+  return await trySupabase(() => 
+    supabase.from('respuestas_cuestionario').insert([{
+      usuario_id: userId,
+      fecha: today
+    }])
+  );
+}
+
+export async function isUserPunished(userId) {
+  const user = await findUserById(userId);
+  if (!user || !user.castigado_hasta) return false;
+  
+  const today = boliviaTime.todayStr();
+  return user.castigado_hasta >= today;
 }

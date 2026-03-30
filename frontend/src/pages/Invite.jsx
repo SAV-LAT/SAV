@@ -9,6 +9,15 @@ export default function Invite() {
   const { user } = useAuth();
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [punished, setPunished] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/users/status-castigo')
+      .then(res => setPunished(res.castigado))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const inviteLink = `https://sav-lat.vercel.app/register?ref=${user?.codigo_invitacion || ''}`;
   // Force update
@@ -27,6 +36,35 @@ export default function Invite() {
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
+
+  if (loading) return null;
+
+  if (punished) {
+    return (
+      <Layout>
+        <Header title="Invitación Bloqueada" />
+        <div className="p-8 text-center space-y-6 flex flex-col items-center justify-center min-h-[70vh] bg-white">
+          <div className="w-24 h-24 bg-rose-50 text-rose-600 rounded-[2.5rem] flex items-center justify-center shadow-xl border border-rose-100 animate-pulse">
+            <AlertCircle size={48} strokeWidth={1.5} />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-[#1a1f36] uppercase tracking-tighter">Acceso Restringido</h2>
+            <p className="text-sm text-gray-400 font-medium leading-relaxed max-w-xs mx-auto">
+              Tu acceso a invitaciones y comisiones ha sido <span className="text-rose-600 font-bold uppercase">bloqueado por hoy</span> como castigo por no responder el cuestionario obligatorio de ayer.
+            </p>
+          </div>
+          <div className="bg-amber-50 p-6 rounded-[2rem] border border-amber-100 text-left w-full shadow-inner">
+            <p className="text-[10px] text-amber-700 font-black uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+              <Info size={14} /> Nota:
+            </p>
+            <p className="text-xs text-amber-600 leading-relaxed font-medium">
+              Asegúrate de responder el cuestionario de hoy para evitar ser sancionado nuevamente mañana.
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (user?.nivel_codigo === 'internar' || user?.nivel_codigo === 'pasante') {
     return (

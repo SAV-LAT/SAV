@@ -332,17 +332,16 @@ router.get('/metodos-qr-all', async (req, res) => {
 });
 
 router.post('/metodos-qr', async (req, res) => {
-  const { nombre_titular, imagen_base64, dias_semana, hora_inicio, hora_fin } = req.body;
+  const { nombre_titular, imagen_base64, admin_id } = req.body;
   
   const metodo = {
     id: uuidv4(),
     nombre_titular: nombre_titular || 'Nuevo método',
     imagen_qr_url: imagen_base64 || '',
     activo: true,
-    orden: (await getMetodosQr()).length + 1,
-    dias_semana: dias_semana || '0,1,2,3,4,5,6',
-    hora_inicio: hora_inicio || '00:00:00',
-    hora_fin: hora_fin || '23:59:59',
+    admin_id: admin_id || null,
+    seleccionada: false,
+    orden: 0,
     created_at: new Date().toISOString()
   };
 
@@ -390,11 +389,29 @@ router.delete('/metodos-qr/:id', async (req, res) => {
 router.put('/metodos-qr/:id', async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
+
+  // Si se está marcando como seleccionada, desmarcar las otras del mismo admin
+  if (updates.seleccionada) {
+    const { data: current } = await trySupabase(() => supabase.from('metodos_qr').select('admin_id').eq('id', id).maybeSingle());
+    if (current?.admin_id) {
+      await trySupabase(() => 
+        supabase.from('metodos_qr')
+          .update({ seleccionada: false })
+          .eq('admin_id', current.admin_id)
+      );
+    }
+  }
+
   const { data, error } = await trySupabase(() => 
     supabase.from('metodos_qr').update(updates).eq('id', id).select().maybeSingle()
   );
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
+});
+
+router.get('/admins', async (req, res) => {
+  const { data } = await trySupabase(() => supabase.from('admins').select('*').order('nombre', { ascending: true }));
+  res.json(data || []);
 });
 
 router.get('/banners', async (req, res) => {

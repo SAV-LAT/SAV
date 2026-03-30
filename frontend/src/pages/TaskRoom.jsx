@@ -35,19 +35,6 @@ export default function TaskRoom() {
 
   const videoRef = useRef(null);
 
-  // Función para normalizar y obtener el ID de YouTube
-  const getYoutubeEmbedUrl = (url) => {
-    if (!url) return '';
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    if (match && match[2].length === 11) {
-      return `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=0&controls=0&rel=0&modestbranding=1`;
-    }
-    return url;
-  };
-
-  const isYoutube = activeTask?.video_url?.includes('youtube.com') || activeTask?.video_url?.includes('youtu.be');
-
   const fetchTasks = async () => {
     if (!isMounted) return;
     setLoading(true);
@@ -143,7 +130,7 @@ export default function TaskRoom() {
 
   // Efecto para forzar el inicio del video cuando cambia la tarea
   useEffect(() => {
-    if (activeTask && videoRef.current && !isYoutube) {
+    if (activeTask && videoRef.current) {
       console.log('[TaskRoom] Forzando inicio de video para:', activeTask.id);
       videoRef.current.currentTime = 0;
       const playPromise = videoRef.current.play();
@@ -156,7 +143,7 @@ export default function TaskRoom() {
         });
       }
     }
-  }, [activeTask?.id, isYoutube]);
+  }, [activeTask?.id]);
 
   // Efecto para el temporizador de la encuesta
   useEffect(() => {
@@ -380,39 +367,24 @@ export default function TaskRoom() {
             <section className="relative group w-full shrink-0" key={activeTask?.id || 'no-task'}>
               <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-30 transition duration-1000"></div>
               <div className="relative w-full aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border-[6px] border-white ring-1 ring-black/5 flex items-center justify-center">
-                {isYoutube ? (
-                  <iframe 
-                    className="w-full h-full absolute inset-0 z-10"
-                    src={getYoutubeEmbedUrl(activeTask.video_url)}
-                    title="YouTube video player"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    onLoad={() => {
-                      // Simular final de video para YouTube ya que no hay evento directo cross-origin
-                      setTimeout(() => setVideoFinished(true), 10000); 
-                    }}
-                  />
-                ) : (
-                  <video 
-                    ref={videoRef}
-                    key={`video-${activeTask.id}`}
-                    className="w-full h-full object-cover absolute inset-0 z-10" 
-                    src={activeTask.video_url} 
-                    controls={videoFinished}
-                    autoPlay 
-                    playsInline 
-                    onEnded={() => setVideoFinished(true)} 
-                    onCanPlay={(e) => { 
-                      e.target.muted = false; 
-                      e.target.play().catch(()=>{
-                        // Fallback silenciado si el navegador bloquea audio inicial
-                        e.target.muted = true;
-                        e.target.play();
-                      }); 
-                    }} 
-                  />
-                )}
+                <video 
+                  ref={videoRef}
+                  key={`video-${activeTask.id}`}
+                  className="w-full h-full object-cover absolute inset-0 z-10" 
+                  src={activeTask.video_url} 
+                  controls={videoFinished}
+                  autoPlay 
+                  playsInline 
+                  onEnded={() => setVideoFinished(true)} 
+                  onCanPlay={(e) => { 
+                    e.target.muted = false; 
+                    e.target.play().catch(()=>{
+                      // Fallback silenciado si el navegador bloquea audio inicial
+                      e.target.muted = true;
+                      e.target.play();
+                    }); 
+                  }} 
+                />
                 
                 {/* Timer Overlay sutil (solo visible durante el conteo) */}
                 {!surveyVisible && !showResult && (

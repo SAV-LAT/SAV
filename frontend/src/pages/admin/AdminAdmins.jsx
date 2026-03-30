@@ -38,12 +38,12 @@ export default function AdminAdmins() {
   const toggleGroupNotify = async () => {
     try {
       const newValue = !notifyGroupAlways;
-      await api.put('/admin/contenido-home', { 
+      await api.put('/admin/public-content', { 
         notificar_grupo_recargas_siempre: String(newValue) 
       });
       setNotifyGroupAlways(newValue);
     } catch (err) {
-      alert('Error actualizando configuración');
+      alert('Error actualizando configuración: ' + err.message);
     }
   };
 

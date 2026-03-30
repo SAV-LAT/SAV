@@ -34,6 +34,14 @@ export const publicContentDefaults = {
   task_allowed_days: '1,2,3,4,5',
   /** Comisión de Retiro (porcentaje) */
   comision_retiro: 12,
+  /** Cuestionario Diario */
+  cuestionario_activo: false,
+  cuestionario_data: {
+    titulo: 'Cuestionario Diario Obligatorio',
+    preguntas: []
+  },
+  /** Configuración de Admins */
+  notificar_grupo_recargas_siempre: false,
 };
 
 export function mergePublicContent(pc) {

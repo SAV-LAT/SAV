@@ -93,48 +93,56 @@ export default function AdminLayout() {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row relative overflow-x-hidden">
       {/* Barra superior para móvil */}
       <header className="md:hidden bg-[#1a1f36] text-white p-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
         <div className="flex items-center gap-3">
           <button 
-            onClick={toggleSidebar}
-            className="p-2 rounded-xl bg-white/10 active:scale-90 transition-transform"
+            onClick={toggleSidebar} 
+            className="p-2.5 bg-white/10 rounded-xl active:scale-90 transition-all"
           >
-            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-          <Logo variant="header" className="h-6" />
+          <div className="flex flex-col">
+            <h1 className="text-lg font-black tracking-tighter uppercase leading-none">SAV ADMIN</h1>
+            <p className="text-[8px] font-black tracking-[0.2em] text-white/40 uppercase">Panel de Control</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest bg-white text-[#1a1f36] px-2 py-0.5 rounded-full">Admin</span>
+        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-xs text-sav-primary">
+          {user?.nombre_usuario?.substring(0, 2).toUpperCase()}
         </div>
       </header>
 
-      {/* Overlay para móvil cuando el menú está abierto */}
+      {/* Overlay para móvil */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-[#1a1f36]/60 backdrop-blur-sm z-40 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-[#0a0c1a]/80 backdrop-blur-sm z-[60] md:hidden animate-in fade-in duration-300"
+          onClick={toggleSidebar}
         />
       )}
 
-      {/* Sidebar lateral */}
+      {/* Menú lateral (Desktop y Mobile) */}
       <aside className={`
-        fixed md:sticky top-0 left-0 h-full md:h-screen w-72 bg-[#1a1f36] text-white p-6 z-50 transition-transform duration-300 ease-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        flex flex-col shadow-2xl md:shadow-none
+        fixed md:sticky top-0 h-screen w-72 bg-[#1a1f36] text-white z-[70]
+        transition-all duration-500 ease-out flex flex-col
+        ${isSidebarOpen ? 'left-0' : '-left-full md:left-0'}
+        shadow-[25px_0_50px_rgba(0,0,0,0.2)] md:shadow-none
       `}>
-        <div className="hidden md:flex items-center gap-3 mb-10 px-2">
-          <div className="p-2 rounded-2xl bg-white/10">
-            <Logo variant="header" className="h-8" />
-          </div>
-          <div>
-            <h1 className="font-black text-lg leading-tight uppercase tracking-tighter text-white">SAV Admin</h1>
-            <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Administrador</p>
+        {/* Logo Section */}
+        <div className="p-8 hidden md:block">
+          <div className="flex items-center gap-4 group cursor-pointer">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 p-2 border border-white/10 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-xl">
+              <img src="/imag/logo.png" alt="SAV" className="w-full h-full object-contain" />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-black tracking-tighter uppercase leading-none">SAV</h1>
+              <p className="text-[9px] font-black tracking-[0.3em] text-white/30 uppercase">Administrador</p>
+            </div>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar py-4 md:py-0">
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1.5 overflow-y-auto no-scrollbar py-6 md:py-0 px-4">
           {menu.map((item) => {
             const { to, icon: MenuIcon, label } = item;
             const isActive = location.pathname === to;
@@ -144,46 +152,48 @@ export default function AdminLayout() {
                 to={to}
                 onClick={() => setIsSidebarOpen(false)}
                 className={`
-                  flex items-center justify-between group px-4 py-3.5 rounded-2xl transition-all duration-200
+                  flex items-center justify-between group px-4 py-3.5 rounded-2xl transition-all duration-300
                   ${isActive 
-                    ? 'bg-white text-[#1a1f36] font-black shadow-[0_10px_20px_-5px_rgba(255,255,255,0.1)]' 
-                    : 'text-white/60 hover:bg-white/5 hover:text-white'
+                    ? 'bg-white text-[#1a1f36] font-black shadow-[0_15px_30px_-5px_rgba(255,255,255,0.15)] scale-[1.02]' 
+                    : 'text-white/50 hover:bg-white/5 hover:text-white'
                   }
                 `}
               >
-                <div className="flex items-center gap-3">
-                  <MenuIcon size={22} strokeWidth={isActive ? 2.5 : 1.5} />
-                  <span className="text-sm uppercase tracking-tighter font-bold">{label}</span>
+                <div className="flex items-center gap-3.5">
+                  <MenuIcon size={20} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-sav-primary' : 'text-white/20 group-hover:text-white/60 transition-colors'} />
+                  <span className="text-[11px] uppercase tracking-tighter font-bold">{label}</span>
                 </div>
-                {isActive && <ChevronRight size={16} />}
+                {isActive && <ChevronRight size={14} className="animate-in slide-in-from-left-2 duration-300" />}
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-white/10">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white font-black">
-              {user?.nombre_usuario?.charAt(0).toUpperCase()}
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-black truncate uppercase tracking-tighter text-white">{user?.nombre_usuario}</p>
-              <p className="text-[10px] text-white/40 font-bold uppercase truncate">ID: {user?.id?.slice(0, 8)}</p>
+        {/* User / Logout */}
+        <div className="p-6 border-t border-white/5 bg-[#14182a]">
+          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-sav-primary/20 flex items-center justify-center text-sav-primary font-black text-xs border border-sav-primary/20">
+                {user?.nombre_usuario?.substring(0, 2).toUpperCase()}
+              </div>
+              <div className="flex flex-col overflow-hidden">
+                <p className="text-xs font-black truncate uppercase tracking-tighter">{user?.nombre_usuario}</p>
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest truncate">{user?.rol}</p>
+              </div>
             </div>
           </div>
-          <button
-            onClick={() => { if(confirm('¿Cerrar sesión de administrador?')) { logout(); navigate('/login'); } }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-sm font-black uppercase tracking-widest"
+          <button 
+            onClick={logout}
+            className="w-full py-4 rounded-2xl bg-rose-500/10 text-rose-500 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-rose-500 hover:text-white transition-all duration-300 shadow-lg shadow-rose-950/20"
           >
-            <LogOut size={18} />
-            Cerrar Sesión
+            <LogOut size={16} /> Cerrar Sesión
           </button>
         </div>
       </aside>
 
-      {/* Contenido principal */}
-      <main className="flex-1 overflow-x-hidden p-4 md:p-8">
-        <div className="max-w-7xl mx-auto page-transition">
+      {/* Contenido Principal */}
+      <main className="flex-1 min-h-screen relative overflow-x-hidden">
+        <div className="p-4 md:p-10 max-w-7xl mx-auto">
           <ErrorBoundary>
             <Outlet />
           </ErrorBoundary>

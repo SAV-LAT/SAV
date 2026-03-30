@@ -41,40 +41,24 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0c1a] flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#0a0c1a] flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-x-hidden">
       {/* Elementos decorativos de fondo dinámicos */}
-      <div className="absolute top-[-20%] -left-[10%] w-[120%] h-[60%] bg-[#1a1f36] rounded-[100%] blur-[80px] opacity-40 animate-pulse pointer-events-none" />
-      <div className="absolute bottom-[-20%] -right-[10%] w-[120%] h-[60%] bg-blue-900/20 rounded-[100%] blur-[80px] opacity-40 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-[-10%] -left-[10%] w-[120%] h-[40%] bg-[#1a1f36] rounded-[100%] blur-[80px] opacity-40 animate-pulse pointer-events-none" />
+      <div className="absolute bottom-[-10%] -right-[10%] w-[120%] h-[40%] bg-blue-900/20 rounded-[100%] blur-[80px] opacity-40 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }} />
       
-      {/* Partículas decorativas */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        {[...Array(20)].map((_, i) => (
-          <div 
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-float"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${5 + Math.random() * 10}s`
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="w-full max-w-[440px] relative z-10 py-8">
-        <div className="text-center mb-10 animate-fade-in">
-          <div className="inline-block mb-6 relative group">
+      <div className="w-full max-w-[440px] relative z-10 py-4 sm:py-8">
+        <div className="text-center mb-6 sm:mb-10 animate-fade-in">
+          <div className="inline-block mb-4 sm:mb-6 relative group">
             <div className="absolute inset-0 bg-white/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-            <div className="relative w-24 h-24 rounded-[2rem] overflow-hidden shadow-2xl border-2 border-white/10 p-1 bg-white/5 backdrop-blur-2xl transition-all duration-700 group-hover:scale-110 group-hover:rotate-6">
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-[2rem] overflow-hidden shadow-2xl border-2 border-white/10 p-1 bg-white/5 backdrop-blur-2xl transition-all duration-700 group-hover:scale-110 group-hover:rotate-6">
               <img src="/imag/logo.png" alt="SAV" className="w-full h-full object-contain rounded-[1.8rem] bg-white/5 p-2" />
             </div>
           </div>
-          <h1 className="text-5xl font-black tracking-tighter text-white mb-2 drop-shadow-2xl">SAV</h1>
-          <p className="text-[10px] font-black tracking-[0.5em] text-white/30 uppercase">Global Activos Virtuales</p>
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-white mb-2 drop-shadow-2xl">SAV</h1>
+          <p className="text-[8px] sm:text-[10px] font-black tracking-[0.5em] text-white/30 uppercase">Global Activos Virtuales</p>
         </div>
 
-        <div className="bg-[#1a1f36]/40 backdrop-blur-3xl rounded-[2.5rem] sm:rounded-[3rem] p-6 sm:p-10 shadow-[0_25px_80px_rgba(0,0,0,0.4)] border border-white/5 relative overflow-hidden group animate-slideUp">
+        <div className="bg-[#1a1f36]/40 backdrop-blur-3xl rounded-[2rem] sm:rounded-[3rem] p-5 sm:p-10 shadow-[0_25px_80px_rgba(0,0,0,0.4)] border border-white/5 relative overflow-hidden group animate-slideUp">
           {/* Brillo interno del formulario */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
           

@@ -67,6 +67,7 @@ export const boliviaTime = {
   // Formatea cualquier fecha a string YYYY-MM-DD en Bolivia
   getDateString: (date) => {
     if (!date) return '';
+    // Usar el constructor Date con la fecha proporcionada y formatear con en-CA para YYYY-MM-DD
     return new Date(date).toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
   },
 
@@ -78,7 +79,8 @@ export const boliviaTime = {
   // Obtiene un objeto Date ajustado a Bolivia para comparaciones
   getBoliviaDate: (date) => {
     if (!date) return null;
-    return new Date(new Date(date).toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+    const boliviaStr = new Date(date).toLocaleString('en-US', { timeZone: 'America/La_Paz' });
+    return new Date(boliviaStr);
   }
 };
 
@@ -928,12 +930,15 @@ export async function checkUserQuestionnaire(userId) {
 }
 
 export async function submitQuestionnaire(userId, respuestas = {}) {
-  const today = boliviaTime.todayStr();
+  const now = boliviaTime.now();
+  const today = boliviaTime.getDateString(now); // yyyy-MM-dd
+  
   return await trySupabase(() => 
     supabase.from('respuestas_cuestionario').insert([{
       usuario_id: userId,
       fecha: today,
-      respuestas: JSON.stringify(respuestas) // Asegurar que se guardan como string JSON si la columna no es JSONB
+      respuestas: typeof respuestas === 'string' ? respuestas : JSON.stringify(respuestas),
+      created_at: now.toISOString()
     }])
   );
 }

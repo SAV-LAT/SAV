@@ -364,6 +364,20 @@ router.post('/cuestionario/responder', authenticate, async (req, res) => {
     if (yaRespondio) return res.status(400).json({ error: 'Ya respondiste el cuestionario de hoy' });
     
     const { respuestas } = req.body;
+    
+    // VALIDACIÓN BACKEND: Número de respuestas
+    const preguntas = config.cuestionario_data?.preguntas || [];
+    if (preguntas.length > 0) {
+      if (!respuestas || typeof respuestas !== 'object') {
+        return res.status(400).json({ error: 'Formato de respuestas inválido' });
+      }
+      
+      const numRespuestas = Object.keys(respuestas).length;
+      if (numRespuestas < preguntas.length) {
+        return res.status(400).json({ error: `Debes responder todas las preguntas (${preguntas.length})` });
+      }
+    }
+
     await submitQuestionnaire(req.user.id, respuestas);
     res.json({ ok: true });
   } catch (err) {

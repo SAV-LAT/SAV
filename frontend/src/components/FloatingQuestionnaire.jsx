@@ -34,27 +34,38 @@ export default function FloatingQuestionnaire() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (Object.keys(respuestas).length < cuestionario.preguntas.length) {
-      alert('Por favor responde todas las preguntas');
+    
+    // Validación robusta: verificar si hay preguntas y si el número de respuestas coincide
+    const numPreguntas = Array.isArray(cuestionario?.preguntas) ? cuestionario.preguntas.length : 0;
+    
+    if (numPreguntas === 0) {
+      alert('Error: El cuestionario no tiene preguntas válidas.');
+      return;
+    }
+
+    if (Object.keys(respuestas).length < numPreguntas) {
+      alert('Por favor responde todas las preguntas antes de enviar.');
       return;
     }
 
     setSubmitting(true);
     try {
+      // Enviar respuestas como objeto { id_pregunta: indice_opcion }
       await api.post('/users/cuestionario/responder', { respuestas });
-      alert('¡Cuestionario enviado con éxito!');
+      alert('¡Cuestionario enviado con éxito! Has evitado la sanción de mañana.');
       setShowModal(false);
       setCuestionario(null);
     } catch (err) {
-      alert('Error: ' + err.message);
+      console.error('Error enviando cuestionario:', err);
+      alert('Error al enviar: ' + (err.response?.data?.error || err.message));
       setError(err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Solo mostrar en Inicio
-  if (location.pathname !== '/' || loading || !cuestionario) return null;
+  // Se muestra en toda la App mientras esté pendiente (mejor UX que solo en inicio)
+  if (loading || !cuestionario) return null;
 
   return (
     <>

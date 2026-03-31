@@ -47,6 +47,17 @@ export default function AdminCuestionario() {
     }
   };
 
+  const handleUnpunishAll = async () => {
+    if (!confirm('¿Estás seguro de liberar a TODOS los usuarios castigados? Esta acción no se puede deshacer.')) return;
+    try {
+      await api.post('/admin/cuestionario/desbloquear-todos');
+      alert('Todos los usuarios han sido liberados correctamente.');
+      fetchPunished();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
   const fetchConfig = async () => {
     try {
       const res = await api.admin.publicContent();
@@ -283,7 +294,17 @@ export default function AdminCuestionario() {
 
         <div className="space-y-6">
           <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
-            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-4 mb-4">Usuarios Castigados ({punishedUsers?.length || 0})</h2>
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">Usuarios Castigados ({punishedUsers?.length || 0})</h2>
+              {punishedUsers.length > 0 && (
+                <button 
+                  onClick={handleUnpunishAll}
+                  className="text-[8px] font-black text-rose-600 uppercase tracking-widest hover:underline"
+                >
+                  Liberar Todos
+                </button>
+              )}
+            </div>
             <div className="space-y-3 max-h-[600px] overflow-y-auto no-scrollbar">
               {Array.isArray(punishedUsers) && punishedUsers.map(u => (
                 <div key={u.id} className="p-4 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-between group">

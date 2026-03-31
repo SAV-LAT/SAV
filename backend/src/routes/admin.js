@@ -6,7 +6,7 @@ import {
   getPublicContent, getMetodosQr, getAllMetodosQr, getBanners, getAllTasks, getRecargaById, 
   updateRecarga, getRetiroById, updateRetiro, trySupabase, handleLevelUpRewards,
   getUserEarningsSummary, createMovimiento, boliviaTime, getPunishedUsers, unpunishUser,
-  distributeInvestmentCommissions
+  unpunishAllUsers, distributeInvestmentCommissions
 } from '../lib/queries.js';
 import { getStore } from '../data/store.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
@@ -864,6 +864,15 @@ router.get('/cuestionario/castigados', async (req, res) => {
 router.post('/cuestionario/desbloquear/:id', async (req, res) => {
   try {
     await unpunishUser(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/cuestionario/desbloquear-todos', async (req, res) => {
+  try {
+    await unpunishAllUsers();
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

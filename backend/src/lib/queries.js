@@ -1044,3 +1044,13 @@ export async function getPunishedUsers() {
 export async function unpunishUser(userId) {
   return await updateUser(userId, { castigado_hasta: null });
 }
+
+export async function unpunishAllUsers() {
+  const { error } = await supabase
+    .from('usuarios')
+    .update({ castigado_hasta: null })
+    .neq('castigado_hasta', null);
+  
+  if (error) throw error;
+  return true;
+}

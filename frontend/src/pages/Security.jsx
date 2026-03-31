@@ -124,10 +124,7 @@ export default function Security() {
         </div>
 
         <button
-          onClick={() => {
-            logout();
-            navigate('/login');
-          }}
+          onClick={logout}
           className="w-full mt-4 py-4 rounded-xl bg-red-500 text-white font-semibold"
         >
           Cerrar sesión

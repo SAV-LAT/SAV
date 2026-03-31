@@ -272,7 +272,7 @@ export default function Profile() {
         </div>
 
         <button
-          onClick={() => { if(confirm('¿Cerrar sesión?')) { logout(); navigate('/login'); } }}
+          onClick={() => { if(confirm('¿Cerrar sesión?')) { logout(); } }}
           className="w-full py-6 rounded-3xl bg-rose-50 text-rose-500 font-black text-[11px] uppercase tracking-[0.4em] active:scale-[0.98] border border-rose-100 hover:bg-rose-500 hover:text-white shadow-sm hover:shadow-rose-500/20 transition-all duration-300"
         >
           Cerrar Sesión Segura

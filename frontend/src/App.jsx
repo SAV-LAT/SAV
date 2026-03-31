@@ -19,7 +19,10 @@ function NavigationGuard({ children }) {
   useAndroidBackHandler();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !user) {
+      if (!user) setInitialized(false);
+      return;
+    }
 
     // Si el usuario entra directamente a una subpágina (por ejemplo /ganancias)
     // el historial del navegador está vacío. Al apretar "atrás", el celular cierra la app.
@@ -101,6 +104,7 @@ const AdminNiveles = lazyWithRetry(() => import('./pages/admin/AdminNiveles.jsx'
 const AdminAdmins = lazyWithRetry(() => import('./pages/admin/AdminAdmins.jsx'));
 const AdminCuestionario = lazyWithRetry(() => import('./pages/admin/AdminCuestionario.jsx'));
 const AdminRanking = lazyWithRetry(() => import('./pages/admin/AdminRanking.jsx'));
+const AdminRecompensas = lazyWithRetry(() => import('./pages/admin/AdminRecompensas.jsx'));
 
 const GlobalLoader = () => {
   const [showError, setShowError] = useState(false);
@@ -148,8 +152,10 @@ const GlobalLoader = () => {
 
 function PrivateRoute({ children, adminOnly }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
+
   if (loading) return <GlobalLoader />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
   
   // Si la ruta es solo para admin y el usuario no es admin, redirigir al home de usuario
   if (adminOnly && user.rol !== 'admin') {

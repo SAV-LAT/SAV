@@ -17,8 +17,8 @@ export function AuthProvider({ children }) {
     // Limpiar estado del popup para que se vuelva a mostrar al iniciar sesión
     sessionStorage.removeItem('sav_popup_seen');
     setUser(null);
-    // Usar window.location.replace para evitar que el usuario vuelva atrás a una sesión "fantasma"
-    window.location.replace('/login');
+    // Ya no usamos window.location.replace('/login') para evitar pantalla blanca
+    // La redirección debe ser manejada por el componente que llama a logout o por las rutas (PrivateRoute)
   }, []);
 
   const getDeviceId = useCallback(() => {

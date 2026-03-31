@@ -185,6 +185,11 @@ export async function updateUser(id, updates) {
   if (!supabase || !hasDb()) return null;
 
   try {
+    // Evitar que "null" string llegue a la base de datos si se esperaba null real
+    if (updates && updates.castigado_hasta === "null") {
+      updates.castigado_hasta = null;
+    }
+
     const { data, error } = await supabase.from('usuarios').update(updates).eq('id', id).select().maybeSingle();
     
     if (error) {
@@ -1042,6 +1047,7 @@ export async function getPunishedUsers() {
 }
 
 export async function unpunishUser(userId) {
+  // Aseguramos que sea null real y no "null"
   return await updateUser(userId, { castigado_hasta: null });
 }
 
@@ -1049,7 +1055,7 @@ export async function unpunishAllUsers() {
   const { error } = await supabase
     .from('usuarios')
     .update({ castigado_hasta: null })
-    .neq('castigado_hasta', null);
+    .not('castigado_hasta', 'is', null);
   
   if (error) throw error;
   return true;

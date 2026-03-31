@@ -369,24 +369,35 @@ export default function Dashboard() {
 
       {/* Popup de Aviso Dark */}
       {showPopup && (
-        <div className="fixed inset-0 z-50 bg-[#1a1f36]/80 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
-          <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-8 border border-gray-100 animate-scale-in text-center">
-            <div className="w-16 h-16 bg-[#1a1f36]/5 text-[#1a1f36] rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100 shadow-inner">
-              <Info size={32} />
+        <div className="fixed inset-0 z-[100] bg-[#1a1f36]/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl flex flex-col max-h-[90vh] border border-gray-100 animate-scale-in">
+            {/* Header del Popup */}
+            <div className="pt-8 px-8 pb-4 text-center shrink-0">
+              <div className="w-16 h-16 bg-[#1a1f36]/5 text-[#1a1f36] rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100 shadow-inner">
+                <Info size={32} />
+              </div>
+              <h3 className="text-xl font-black text-[#1a1f36] uppercase tracking-tighter leading-tight">
+                {popup.popup_title || 'Aviso del Sistema'}
+              </h3>
             </div>
-            <h3 className="text-xl font-black text-[#1a1f36] mb-3 uppercase tracking-tighter">
-              {popup.popup_title || 'Aviso del Sistema'}
-            </h3>
-            <p className="text-sm text-gray-500 font-medium leading-relaxed mb-8">
-              {popup.popup_message || 'Bienvenido a la plataforma. Revisa tus tareas diarias.'}
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowPopup(false)}
-              className="w-full py-4 rounded-2xl bg-[#1a1f36] text-white font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all"
-            >
-              ¡Entendido!
-            </button>
+
+            {/* Contenido con Scroll si es necesario */}
+            <div className="px-8 py-2 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+              <p className="text-sm text-gray-500 font-medium leading-relaxed text-center">
+                {popup.popup_message || 'Bienvenido a la plataforma. Revisa tus tareas diarias.'}
+              </p>
+            </div>
+
+            {/* Botón de acción fijo al final */}
+            <div className="p-8 pt-4 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowPopup(false)}
+                className="w-full py-5 rounded-2xl bg-[#1a1f36] text-white font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-indigo-900/20 active:scale-95 transition-all whitespace-normal leading-relaxed"
+              >
+                ¡Entendido, Continuar!
+              </button>
+            </div>
           </div>
         </div>
       )}

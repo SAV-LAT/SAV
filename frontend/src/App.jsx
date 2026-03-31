@@ -156,9 +156,10 @@ function PrivateRoute({ children, adminOnly }) {
     return <Navigate to="/" replace />;
   }
 
-  // Se permite que los administradores accedan a las rutas de usuario (como Dashboard, Perfil, etc)
-  // para que puedan visualizar la experiencia del usuario o realizar pruebas.
-  // No redirigimos automáticamente a /admin a menos que sea necesario.
+  // Si el usuario es admin y entra a la ruta raíz de usuario (/), redirigir a su panel /admin
+  if (location.pathname === '/' && user.rol === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
 
   return children;
 }

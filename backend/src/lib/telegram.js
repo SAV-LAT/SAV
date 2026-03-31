@@ -5,6 +5,7 @@ const getRecargasConfig = async () => {
   const adminsInShift = await getAdminsInShift();
   
   const groupChatId = config.telegram_recargas_chat_id || process.env.TELEGRAM_RECARGAS_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+  const botToken = config.telegram_recargas_token || process.env.TELEGRAM_RECARGAS_TOKEN;
   
   let targetChatIds = [];
 
@@ -15,18 +16,22 @@ const getRecargasConfig = async () => {
 
   // 2. Si hay admins en turno, añadir sus IDs personales (para alerta privada)
   if (adminsInShift.length > 0) {
-    const adminChatIds = adminsInShift.map(a => a.telegram_user_id).filter(id => id);
+    const adminChatIds = adminsInShift
+      .filter(a => a.recibe_notificaciones !== false) // Solo si tiene notificaciones activas
+      .map(a => a.telegram_user_id)
+      .filter(id => id);
+      
     adminChatIds.forEach(id => {
-      if (!targetChatIds.includes(id)) {
-        targetChatIds.push(id);
+      if (!targetChatIds.includes(String(id))) {
+        targetChatIds.push(String(id));
       }
     });
   }
 
   return {
-    token: config.telegram_recargas_token || process.env.TELEGRAM_RECARGAS_TOKEN,
+    token: botToken,
     chatId: targetChatIds.join(','),
-    enabled: config.telegram_recargas_enabled !== 'false'
+    enabled: config.telegram_recargas_enabled !== 'false' && !!botToken
   };
 };
 
@@ -35,6 +40,7 @@ const getRetirosConfig = async () => {
   const adminsInShift = await getAdminsInShift();
   
   const groupChatId = config.telegram_retiros_chat_id || process.env.TELEGRAM_RETIROS_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+  const botToken = config.telegram_retiros_token || process.env.TELEGRAM_RETIROS_TOKEN;
   
   let targetChatIds = [];
 
@@ -45,18 +51,22 @@ const getRetirosConfig = async () => {
 
   // 2. Si hay admins en turno, añadir sus IDs personales
   if (adminsInShift.length > 0) {
-    const adminChatIds = adminsInShift.map(a => a.telegram_user_id).filter(id => id);
+    const adminChatIds = adminsInShift
+      .filter(a => a.recibe_notificaciones !== false)
+      .map(a => a.telegram_user_id)
+      .filter(id => id);
+      
     adminChatIds.forEach(id => {
-      if (!targetChatIds.includes(id)) {
-        targetChatIds.push(id);
+      if (!targetChatIds.includes(String(id))) {
+        targetChatIds.push(String(id));
       }
     });
   }
 
   return {
-    token: config.telegram_retiros_token || process.env.TELEGRAM_RETIROS_TOKEN,
+    token: botToken,
     chatId: targetChatIds.join(','),
-    enabled: config.telegram_retiros_enabled !== 'false'
+    enabled: config.telegram_retiros_enabled !== 'false' && !!botToken
   };
 };
 

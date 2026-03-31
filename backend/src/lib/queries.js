@@ -278,44 +278,35 @@ export async function getMetodosQr() {
       }
     }
 
-    // 2. Obtener los QRs SELECCIONADOS de los administradores en turno
+    // 2. Obtener los QRs de los administradores en turno
     const adminIds = adminsEnTurno.map(a => a.id);
     try {
       const { data: qrsAdmins } = await trySupabase(() => 
         supabase.from('metodos_qr')
           .select('*')
           .eq('activo', true)
-          .eq('seleccionada', true)
           .in('admin_id', adminIds)
       );
 
-      // 3. Formatear la respuesta para que incluya el nombre del admin si es necesario
-      const metodosFinales = (qrsAdmins || []).map(qr => {
-        const admin = adminsEnTurno.find(a => a.id === qr.admin_id);
-        return {
-          ...qr,
-          nombre_titular: qr.nombre_titular || `Admin: ${admin?.nombre || 'Desconocido'}`
-        };
-      });
+      if (qrsAdmins && qrsAdmins.length > 0) {
+        // PRIORIDAD: 1. Seleccionada (Principal) -> 2. Cualquier QR activo del admin en turno
+        const qrsOrdenados = [...qrsAdmins].sort((a, b) => {
+          if (a.seleccionada && !b.seleccionada) return -1;
+          if (!a.seleccionada && b.seleccionada) return 1;
+          return 0;
+        });
 
-      // 4. Si los admins en turno no tienen QRs seleccionados, buscar cualquier QR activo de ellos
-      if (metodosFinales.length === 0) {
-        const { data: qrsCualquiera } = await trySupabase(() => 
-          supabase.from('metodos_qr')
-            .select('*')
-            .eq('activo', true)
-            .in('admin_id', adminIds)
-            .limit(1)
-        );
-        
-        if (qrsCualquiera && qrsCualquiera.length > 0) {
-          return qrsCualquiera;
-        }
-      } else {
-        return metodosFinales;
+        // Formatear la respuesta para que incluya el nombre del admin
+        return qrsOrdenados.map(qr => {
+          const admin = adminsEnTurno.find(a => a.id === qr.admin_id);
+          return {
+            ...qr,
+            nombre_titular: qr.nombre_titular || `Admin: ${admin?.nombre || 'Desconocido'}`
+          };
+        });
       }
 
-      // 5. Fallback final a QRs globales si los admins en turno no tienen nada configurado
+      // 3. Fallback final a QRs globales si los admins en turno no tienen nada configurado
       const { data: globales } = await trySupabase(() => 
         supabase.from('metodos_qr')
           .select('*')

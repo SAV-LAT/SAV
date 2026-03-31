@@ -19,7 +19,7 @@ export default function AdminAdmins() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [notifyGroupAlways, setNotifyGroupAlways] = useState(false);
+  const [notifyGroupAlways, setNotifyGroupAlways] = useState(true);
   const [formData, setFormData] = useState({
     nombre: '',
     telefono: '',

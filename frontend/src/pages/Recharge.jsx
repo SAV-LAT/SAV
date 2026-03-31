@@ -25,6 +25,8 @@ export default function Recharge() {
   const [lastRechargeTime, setLastRechargeTime] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
+  const [isScheduleLocked, setIsScheduleLocked] = useState(false);
+  const [scheduleMsg, setScheduleMsg] = useState('');
   const [teamStats, setTeamStats] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationDone, setOptimizationDone] = useState(false);
@@ -109,7 +111,16 @@ export default function Recharge() {
     }).catch(() => []);
     
     api.publicContent().then(data => {
-      if (isMounted) setPc(data || null);
+      if (isMounted) {
+        setPc(data || null);
+        if (data?.horario_recarga) {
+          const sched = isScheduleOpen(data.horario_recarga);
+          if (!sched.ok) {
+            setIsScheduleLocked(true);
+            setScheduleMsg(sched.message || 'Fuera del horario de recarga permitido.');
+          }
+        }
+      }
     }).catch(() => {});
 
     if (location.state?.monto) {
@@ -251,6 +262,41 @@ export default function Recharge() {
               <p className="text-sm font-bold text-rose-600 uppercase tracking-widest mt-4">
                 Vuelve a intentarlo mañana
               </p>
+            </div>
+
+            <Link 
+              to="/" 
+              className="block w-full py-5 rounded-2xl bg-[#1a1f36] text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-[#1a1f36]/20 active:scale-95 transition-all"
+            >
+              Volver al inicio
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (isScheduleLocked) {
+    return (
+      <Layout>
+        <Header title="Horario de Recarga" />
+        <div className="p-8 text-center flex flex-col items-center justify-center min-h-[80vh] bg-white">
+          <div className="w-24 h-24 bg-amber-500/10 text-amber-500 rounded-[2.5rem] flex items-center justify-center shadow-xl border border-amber-100 mb-6">
+            <Clock size={48} />
+          </div>
+          
+          <div className="space-y-6 max-w-xs w-full">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-[#1a1f36] uppercase tracking-tighter">Fuera de Horario</h2>
+              <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                {scheduleMsg}
+              </p>
+              <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 mt-4">
+                <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Horario Permitido</p>
+                <p className="text-xs font-bold text-amber-900">
+                  {pc?.horario_recarga?.hora_inicio || '00:00'} - {pc?.horario_recarga?.hora_fin || '23:59'}
+                </p>
+              </div>
             </div>
 
             <Link 

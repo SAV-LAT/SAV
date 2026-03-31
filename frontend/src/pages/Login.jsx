@@ -19,7 +19,6 @@ const PAISES = [
 ];
 
 export default function Login() {
-  const [pais, setPais] = useState('+591');
   const [numero, setNumero] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -34,7 +33,7 @@ export default function Login() {
     }
   }, [currentUser, navigate]);
 
-  const telefono = pais + numero.replace(/\D/g, '').trim();
+  const telefono = '+591' + numero.replace(/\D/g, '').trim();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,25 +78,19 @@ export default function Login() {
             <div className="space-y-2">
               <label className="block text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-4">Acceso Móvil</label>
               <div className="flex gap-2">
-                <div className="relative flex-shrink-0">
-                  <select
-                    value={pais}
-                    onChange={(e) => setPais(e.target.value)}
-                    className="appearance-none w-20 px-4 py-4 rounded-2xl bg-white/5 border border-white/10 focus:border-blue-500/50 text-white font-black text-xs transition-all outline-none cursor-pointer hover:bg-white/10"
-                  >
-                    {PAISES.map((p) => (
-                      <option key={p.codigo} value={p.codigo} className="bg-[#1a1f36]">{p.codigo}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/20 text-[8px]">▼</div>
+                <div className="flex-none w-20 px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white/50 font-black text-sm flex items-center justify-center cursor-default select-none shadow-inner">
+                  +591
                 </div>
                 <input
                   type="tel"
                   inputMode="numeric"
                   value={numero}
-                  onChange={(e) => setNumero(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 8);
+                    setNumero(val);
+                  }}
                   className="flex-1 px-6 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm focus:border-blue-500/50 transition-all outline-none placeholder:text-white/10 shadow-inner hover:bg-white/10"
-                  placeholder="Número de teléfono"
+                  placeholder="70000000"
                   required
                 />
               </div>

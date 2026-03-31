@@ -14,7 +14,14 @@ export function getBoliviaNow() {
 /** @returns {{ ok: boolean, message?: string }} */
 export function isScheduleOpen(schedule, now = getBoliviaNow()) {
   if (!schedule || schedule.enabled === false) return { ok: true };
-  const dias = Array.isArray(schedule.dias_semana) ? schedule.dias_semana : [];
+  
+  let dias = [];
+  if (Array.isArray(schedule.dias_semana)) {
+    dias = schedule.dias_semana.map(d => parseInt(d, 10));
+  } else if (typeof schedule.dias_semana === 'string') {
+    dias = schedule.dias_semana.split(',').map(d => parseInt(d.trim(), 10));
+  }
+
   if (dias.length === 0) return { ok: false, message: 'No hay días habilitados.' };
   const day = now.getDay();
   if (!dias.includes(day)) {

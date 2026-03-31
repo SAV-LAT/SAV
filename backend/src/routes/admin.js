@@ -146,26 +146,37 @@ router.post('/usuarios/:id/ajuste', async (req, res) => {
   const { monto, descripcion, tipo_billetera } = req.body;
   
   try {
+    if (!monto || isNaN(Number(monto))) {
+      return res.status(400).json({ error: 'Monto inválido' });
+    }
+
     const user = await findUserById(id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     
     const field = tipo_billetera === 'comisiones' ? 'saldo_comisiones' : 'saldo_principal';
-    const nuevoSaldo = Number((Number(user[field]) || 0) + Number(monto)).toFixed(2);
+    const nuevoSaldo = Number((Number(user[field]) || 0) + Number(monto));
     
-    await updateUser(id, { [field]: nuevoSaldo });
+    await updateUser(id, { [field]: nuevoSaldo.toFixed(2) });
     
-    await createMovimiento({
-      usuario_id: id,
-      tipo_movimiento: 'ajuste_admin',
-      monto: Number(monto),
-      saldo_anterior: Number(user[field]),
-      saldo_nuevo: Number(nuevoSaldo),
-      descripcion: descripcion || 'Ajuste administrativo manual',
-      referencia: `ADJ-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-    });
+    try {
+      await createMovimiento({
+        usuario_id: id,
+        tipo_movimiento: 'ajuste_admin',
+        monto: Number(monto),
+        saldo_anterior: Number(user[field]),
+        saldo_nuevo: nuevoSaldo,
+        descripcion: descripcion || 'Ajuste administrativo manual',
+        referencia: `ADJ-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        fecha: new Date().toISOString()
+      });
+    } catch (movErr) {
+      console.error('[Admin Adjustment] Error creando movimiento:', movErr.message);
+      // El error del movimiento no debe bloquear la respuesta exitosa del ajuste de saldo
+    }
     
-    res.json({ ok: true, nuevo_saldo: nuevoSaldo });
+    res.json({ ok: true, nuevo_saldo: nuevoSaldo.toFixed(2) });
   } catch (err) {
+    console.error('[Admin Adjustment] Error crítico:', err);
     res.status(500).json({ error: err.message });
   }
 });

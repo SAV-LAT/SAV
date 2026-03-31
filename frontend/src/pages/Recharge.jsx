@@ -378,7 +378,7 @@ export default function Recharge() {
   }
 
   const saldo = (user?.saldo_principal ?? 0) + (user?.saldo_comisiones ?? 0);
-  const horarioRec = pc?.horario_recharge;
+  const horarioRec = pc?.horario_recarga;
   const schedRec = horarioRec ? isScheduleOpen(horarioRec) : { ok: true };
   const fueraHorario = horarioRec?.enabled && !schedRec.ok;
 

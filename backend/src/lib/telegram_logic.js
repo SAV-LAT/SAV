@@ -4,7 +4,8 @@ import {
   findUserById, updateUser,
   getLevels, handleLevelUpRewards,
   createMovimiento, boliviaTime,
-  findAdminByTelegramId, getDailyWithdrawalSummary
+  findAdminByTelegramId, getDailyWithdrawalSummary,
+  distributeInvestmentCommissions
 } from './queries.js';
 
 export async function processTelegramUpdate(update) {
@@ -204,6 +205,8 @@ export async function processTelegramUpdate(update) {
             procesado_at: new Date().toISOString() 
           });
           await handleLevelUpRewards(user.id, user.nivel_id, nivelDestino.id);
+          // Distribuir comisiones por ascenso (Inversión)
+          await distributeInvestmentCommissions(user.id, recarga.monto);
           statusMsg = `✅ Ascenso Aprobado por ${adminName} a ${nivelDestino.nombre}`;
           console.log(`[Telegram Logic] Recarga (VIP) ${id} aprobada por ${adminName}`);
         } else {
@@ -223,6 +226,8 @@ export async function processTelegramUpdate(update) {
             procesado_por_admin_name: adminName,
             procesado_at: new Date().toISOString() 
           });
+          // Distribuir comisiones por recarga de saldo (Inversión)
+          await distributeInvestmentCommissions(user.id, recarga.monto);
           statusMsg = `✅ Recarga Aprobada por ${adminName}`;
           console.log(`[Telegram Logic] Recarga (Saldo) ${id} aprobada por ${adminName}`);
         }

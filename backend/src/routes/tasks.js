@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   findUserById, getLevels, getTasks, getTaskById, getTaskActivity, 
-  createTaskActivity, updateUser, addUserEarnings, distributeCommissions, 
+  createTaskActivity, updateUser, addUserEarnings, distributeTaskCommissions, 
   boliviaTime, isUserPunished, getPublicContent 
 } from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
@@ -307,7 +307,7 @@ router.post('/:id/responder', authenticate, async (req, res) => {
         // 2. Distribuir comisiones (No bloqueante para el usuario)
         try {
           console.log(`  - [STEP 3] Procesando comisiones de red...`);
-          await distributeCommissions(user.id, recompensa);
+          await distributeTaskCommissions(user.id, recompensa);
           console.log(`  - [OK] Comisiones enviadas a cola de procesamiento.`);
         } catch (e) {
           console.error(`  - [AVISO] Fallo no crítico en comisiones:`, e.message);

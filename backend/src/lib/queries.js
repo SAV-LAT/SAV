@@ -605,69 +605,119 @@ export async function handleLevelUpRewards(userId, oldLevelId, newLevelId) {
  * Distribuye comisiones a la línea ascendente (Upline)
  * Restricción: Solo se paga si el invitador tiene rango >= subordinado
  */
-export async function distributeCommissions(userId, baseAmount) {
-  console.log(`[Comisiones] Iniciando distribución para usuario ${userId}, monto base: ${baseAmount}`);
+/**
+ * Distribuye comisiones por tareas a la red (Niveles A, B, C)
+ */
+export async function distributeTaskCommissions(userId, baseAmount) {
+  console.log(`[Comisiones Tareas] Iniciando distribución para usuario ${userId}, monto base: ${baseAmount}`);
   
   try {
     const user = await findUserById(userId);
     if (!user || !user.invitado_por) return;
 
-    // VERIFICAR SI EL USUARIO ORIGEN ESTÁ CASTIGADO
-    // Si el subordinado que hizo la tarea está castigado, no genera comisiones?
-    // El usuario dijo: "no podrá realizar tareas ni resivir comisiones de algún tipo y no podrá invitar y resir la comisión de invitación"
-    // Esto significa que si YO estoy castigado, NO recibo comisiones de mis subordinados.
-    
+    // REGLA: Si el usuario origen es pasante, no genera comisiones
     const levels = await getLevels();
     const userLevel = levels.find(l => l.id === user.nivel_id);
-    const userRank = userLevel ? (userLevel.orden || 0) : 0;
+    const userLevelCode = String(userLevel?.codigo || '').toLowerCase();
+    
+    if (userLevelCode === 'pasante' || userLevelCode === 'internar') {
+      console.log(`[Comisiones Tareas] Usuario ${user.nombre_usuario} es pasante. No genera comisiones.`);
+      return;
+    }
 
-    // Lógica de comisiones por niveles (A: 1%, B: 1%, C: 1%)
-    const commissionConfigs = [
-      { key: 'A', percent: 0.01 },
-      { key: 'B', percent: 0.01 },
-      { key: 'C', percent: 0.01 }
+    // Porcentajes: A: 0.7%, B: 0.6%, C: 0.5%
+    const configs = [
+      { key: 'A', percent: 0.007 },
+      { key: 'B', percent: 0.006 },
+      { key: 'C', percent: 0.005 }
     ];
 
     let currentUplineId = user.invitado_por;
-    for (const config of commissionConfigs) {
+    for (const config of configs) {
       if (!currentUplineId) break;
       const upline = await findUserById(currentUplineId);
       if (!upline) break;
 
-      // VERIFICAR SI EL UPLINE ESTÁ CASTIGADO
       const castigado = await isUserPunished(upline.id);
       if (castigado) {
-        console.log(`[Comisiones] Upline ${upline.nombre_usuario} está castigado. No recibe comisión.`);
+        console.log(`[Comisiones Tareas] Upline ${upline.nombre_usuario} castigado. Salta.`);
         currentUplineId = upline.invitado_por;
         continue;
       }
 
-      const uplineLevel = levels.find(l => l.id === upline.nivel_id);
-      const uplineRank = uplineLevel ? (uplineLevel.orden || 0) : 0;
-
-      // REGLA: El rango del invitador debe ser >= al del subordinado
-      if (uplineRank >= userRank) {
-        const commission = Number((baseAmount * config.percent).toFixed(2));
-        if (commission > 0) {
-          console.log(`[Comisiones] Red Nivel ${config.key}: Otorgando ${commission} BOB a ${upline.nombre_usuario} (Rango ${uplineRank} >= ${userRank})`);
-          
-          // Registrar ganancia y actualizar saldo (addUserEarnings maneja todo de forma atómica)
-          await addUserEarnings(
-            upline.id, 
-            commission, 
-            'comision_subordinado', 
-            user.id, 
-            `Comisión por tarea de ${user.nombre_usuario} (Nivel ${config.key})`
-          );
-        }
-      } else {
-        console.log(`[Comisiones] Red Nivel ${config.key}: No se paga a ${upline.nombre_usuario} (Rango ${uplineRank} < Subordinado ${userRank})`);
+      const commission = Number((baseAmount * config.percent).toFixed(4)); // Más precisión para tareas
+      if (commission > 0) {
+        console.log(`[Comisiones Tareas] Nivel ${config.key}: ${commission} BOB para ${upline.nombre_usuario}`);
+        await addUserEarnings(
+          upline.id, 
+          commission, 
+          'comision_subordinado', 
+          user.id, 
+          `Comisión Tarea Nivel ${config.key} (Origen: ${user.nombre_usuario})`
+        );
       }
       
       currentUplineId = upline.invitado_por;
     }
   } catch (err) {
-    console.error('[Comisiones] Error:', err);
+    console.error('[Comisiones Tareas] Error:', err);
+  }
+}
+
+/**
+ * Distribuye comisiones por inversión (Recargas/Ascensos) a la red (Niveles A, B, C)
+ */
+export async function distributeInvestmentCommissions(userId, amount) {
+  console.log(`[Comisiones Inversión] Iniciando distribución para usuario ${userId}, monto: ${amount}`);
+  
+  try {
+    const user = await findUserById(userId);
+    if (!user || !user.invitado_por || !amount || amount <= 0) return;
+
+    const levels = await getLevels();
+    const userLevel = levels.find(l => l.id === user.nivel_id);
+    const userLevelCode = String(userLevel?.codigo || '').toLowerCase();
+    
+    if (userLevelCode === 'pasante' || userLevelCode === 'internar') {
+      console.log(`[Comisiones Inversión] Usuario ${user.nombre_usuario} es pasante. No genera comisiones.`);
+      return;
+    }
+
+    // Porcentajes: A: 12%, B: 3%, C: 1%
+    const configs = [
+      { key: 'A', percent: 0.12 },
+      { key: 'B', percent: 0.03 },
+      { key: 'C', percent: 0.01 }
+    ];
+
+    let currentUplineId = user.invitado_por;
+    for (const config of configs) {
+      if (!currentUplineId) break;
+      const upline = await findUserById(currentUplineId);
+      if (!upline) break;
+
+      const castigado = await isUserPunished(upline.id);
+      if (castigado) {
+        currentUplineId = upline.invitado_por;
+        continue;
+      }
+
+      const commission = Number((amount * config.percent).toFixed(2));
+      if (commission > 0) {
+        console.log(`[Comisiones Inversión] Nivel ${config.key}: ${commission} BOB para ${upline.nombre_usuario}`);
+        await addUserEarnings(
+          upline.id, 
+          commission, 
+          'comision_subordinado', 
+          user.id, 
+          `Comisión Inversión Nivel ${config.key} (Origen: ${user.nombre_usuario})`
+        );
+      }
+      
+      currentUplineId = upline.invitado_por;
+    }
+  } catch (err) {
+    console.error('[Comisiones Inversión] Error:', err);
   }
 }
 

@@ -5,7 +5,8 @@ import {
   getUsers, getRecargas, getRetiros, getLevels, findUserById, updateUser, 
   getPublicContent, getMetodosQr, getAllMetodosQr, getBanners, getAllTasks, getRecargaById, 
   updateRecarga, getRetiroById, updateRetiro, trySupabase, handleLevelUpRewards,
-  getUserEarningsSummary, createMovimiento, boliviaTime, getPunishedUsers, unpunishUser 
+  getUserEarningsSummary, createMovimiento, boliviaTime, getPunishedUsers, unpunishUser,
+  distributeInvestmentCommissions
 } from '../lib/queries.js';
 import { getStore } from '../data/store.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
@@ -216,10 +217,16 @@ router.post('/recargas/:id/aprobar', async (req, res) => {
     
     // Procesar recompensas por ascenso
     await handleLevelUpRewards(user.id, oldLevelId, nivelDestino.id);
+
+    // Distribuir comisiones por inversión (Ascenso)
+    await distributeInvestmentCommissions(user.id, recarga.monto);
   } else {
     // Fallback anterior
     await updateUser(user.id, { saldo_principal: (user.saldo_principal || 0) + recarga.monto });
     await updateRecarga(id, { estado: 'aprobada' });
+
+    // Distribuir comisiones por inversión (Recarga de Saldo)
+    await distributeInvestmentCommissions(user.id, recarga.monto);
   }
 
   res.json({ ok: true });

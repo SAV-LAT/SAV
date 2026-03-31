@@ -9,7 +9,7 @@ export default function Register() {
   const refCode = searchParams.get('ref');
 
   const [data, setData] = useState({
-    telefono: '+591',
+    telefono: '',
     nombre_usuario: '',
     password: '',
     repeat_password: '',
@@ -39,7 +39,7 @@ export default function Register() {
     }
     try {
       await register({
-        telefono: data.telefono,
+        telefono: '+591' + data.telefono,
         nombre_usuario: data.nombre_usuario,
         password: data.password,
         codigo_invitacion: data.codigo_invitacion,
@@ -81,14 +81,22 @@ export default function Register() {
             
             <div className="space-y-1.5">
               <label className="block text-[9px] font-black text-white/30 uppercase tracking-[0.3em] ml-4">Teléfono Móvil</label>
-              <input
-                type="tel"
-                value={data.telefono}
-                onChange={(e) => handleChange('telefono', e.target.value)}
-                className="w-full px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm focus:border-blue-500/50 transition-all outline-none placeholder:text-white/10 shadow-inner hover:bg-white/10"
-                placeholder="+591 70000000"
-                required
-              />
+              <div className="flex gap-2">
+                <div className="flex-none w-20 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/50 font-black text-sm flex items-center justify-center cursor-default select-none shadow-inner">
+                  +591
+                </div>
+                <input
+                  type="tel"
+                  value={data.telefono}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 8);
+                    handleChange('telefono', val);
+                  }}
+                  className="flex-1 px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm focus:border-blue-500/50 transition-all outline-none placeholder:text-white/10 shadow-inner hover:bg-white/10"
+                  placeholder="70000000"
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

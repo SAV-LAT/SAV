@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { ShieldCheck, Save, Plus, Trash2, Clock, Bell, BellOff } from 'lucide-react';
 
+const diasOptions = [
+  { label: 'Lunes', value: 'lunes' },
+  { label: 'Martes', value: 'martes' },
+  { label: 'Miércoles', value: 'miercoles' },
+  { label: 'Jueves', value: 'jueves' },
+  { label: 'Viernes', value: 'viernes' },
+  { label: 'Sábado', value: 'sabado' },
+  { label: 'Domingo', value: 'domingo' }
+];
+
 export default function AdminAdmins() {
   const [admins, setAdmins] = useState([]);
   const [search, setSearch] = useState('');
@@ -19,7 +29,8 @@ export default function AdminAdmins() {
     hora_fin_turno: '23:59',
     activo: true,
     recibe_notificaciones: true,
-    qr_base64: ''
+    qr_base64: '',
+    dias_semana: []
   });
 
   useEffect(() => {
@@ -105,23 +116,36 @@ export default function AdminAdmins() {
   };
 
   const toggleDia = (val) => {
-    const current = (formData.dias_semana || '').split(',').filter(d => d);
+    const current = Array.isArray(formData.dias_semana) ? formData.dias_semana : [];
     let next;
     if (current.includes(val)) {
       next = current.filter(d => d !== val);
     } else {
       next = [...current, val].sort();
     }
-    setFormData({ ...formData, dias_semana: next.join(',') });
+    setFormData({ ...formData, dias_semana: next });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validación: Al menos un día seleccionado
+    if (!Array.isArray(formData.dias_semana) || formData.dias_semana.length === 0) {
+      alert('Por favor selecciona al menos un día de turno.');
+      return;
+    }
+
     try {
+      // Convertir array de días a string para el backend
+      const dataToSend = {
+        ...formData,
+        dias_semana: formData.dias_semana.join(',')
+      };
+
       if (editingId) {
-        await api.put(`/admin/admins/${editingId}`, formData);
+        await api.put(`/admin/admins/${editingId}`, dataToSend);
       } else {
-        await api.post('/admin/admins', formData);
+        await api.post('/admin/admins', dataToSend);
       }
       setShowForm(false);
       setEditingId(null);
@@ -135,7 +159,7 @@ export default function AdminAdmins() {
         activo: true,
         recibe_notificaciones: true,
         qr_base64: '',
-        dias_semana: '1,2,3,4,5'
+        dias_semana: []
       });
       fetchAdmins();
     } catch (err) {
@@ -155,7 +179,8 @@ export default function AdminAdmins() {
       activo: admin.activo,
       recibe_notificaciones: admin.recibe_notificaciones,
       qr_base64: admin.qr_base64 || '',
-      dias_semana: admin.dias_semana || '1,2,3,4,5'
+      // Convertir string de backend a array para el frontend
+      dias_semana: admin.dias_semana ? admin.dias_semana.split(',').filter(d => d) : []
     });
     setShowForm(true);
   };
@@ -201,7 +226,7 @@ export default function AdminAdmins() {
                 activo: true,
                 recibe_notificaciones: true,
                 qr_base64: '',
-                dias_semana: '1,2,3,4,5'
+                dias_semana: []
               });
               setShowForm(!showForm);
             }}
@@ -313,16 +338,16 @@ export default function AdminAdmins() {
             <div className="flex-1 space-y-2">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Días de Turno</label>
               <div className="flex flex-wrap gap-2">
-                {diasOptions.map(d => {
-                  const isSel = (formData.dias_semana || '').split(',').includes(d.val);
+                {Array.isArray(diasOptions) && diasOptions.map(d => {
+                  const isSel = Array.isArray(formData.dias_semana) && formData.dias_semana.includes(d.value);
                   return (
                     <button
-                      key={d.val}
+                      key={d.value}
                       type="button"
-                      onClick={() => toggleDia(d.val)}
+                      onClick={() => toggleDia(d.value)}
                       className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${isSel ? 'bg-sav-primary text-white shadow-lg shadow-sav-primary/20' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
                     >
-                      {d.lab}
+                      {d.label}
                     </button>
                   );
                 })}

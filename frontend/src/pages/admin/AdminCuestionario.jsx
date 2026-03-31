@@ -90,11 +90,11 @@ export default function AdminCuestionario() {
   };
 
   const handleCastigar = async () => {
-    if (!confirm('¿Estás seguro de aplicar los castigos? Esto bloqueará a todos los usuarios que no respondieron el cuestionario AYER. Si el mantenimiento automático de las 00:00 ya corrió, no es necesario hacerlo manualmente.')) return;
+    if (!confirm('¿Estás seguro de aplicar los castigos? Esto bloqueará a todos los usuarios que no respondieron el cuestionario AYER. Esta acción se basa en la fecha del servidor de ayer.')) return;
     setPunishing(true);
     try {
       const res = await api.post('/admin/cuestionario/castigar');
-      alert(`¡Éxito! Se han aplicado castigos a ${res.punished} usuarios.`);
+      alert(`¡Éxito! Se han aplicado castigos a ${res.punished} usuarios correspondientes al día ${res.target_date}.`);
       fetchPunished();
     } catch (err) {
       alert('Error: ' + err.message);

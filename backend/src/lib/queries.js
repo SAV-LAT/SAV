@@ -58,6 +58,13 @@ export const boliviaTime = {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'America/La_Paz' });
   },
 
+  // Obtiene la fecha de AYER en Bolivia como string YYYY-MM-DD
+  yesterdayStr: () => {
+    const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/La_Paz' }));
+    d.setDate(d.getDate() - 1);
+    return d.toLocaleDateString('en-CA');
+  },
+
   // Obtiene el día de la semana actual en Bolivia (0-6)
   getDay: () => {
     const nowBolivia = new Date().toLocaleString('en-US', { timeZone: 'America/La_Paz' });

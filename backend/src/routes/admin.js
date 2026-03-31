@@ -822,46 +822,62 @@ router.post('/cuestionario/castigar', async (req, res) => {
     const config = await getPublicContent();
     const cData = config.cuestionario_data || {};
     
-    // REGLA: No castigar si el cuestionario NO estuvo activo ayer (o si no tiene preguntas)
+    // REGLA 1: No castigar si el cuestionario NO está activo
     if (!config.cuestionario_activo) {
-      return res.status(400).json({ error: 'No se pueden aplicar castigos porque el cuestionario no está marcado como activo.' });
+      return res.status(400).json({ error: 'Cuestionario inactivo. No se aplican sanciones.' });
     }
 
+    // REGLA 2: No castigar si el cuestionario no tiene preguntas (inválido)
     if (!cData.preguntas || cData.preguntas.length === 0) {
-      return res.status(400).json({ error: 'No se pueden aplicar castigos: El cuestionario no tiene preguntas configuradas.' });
+      return res.status(400).json({ error: 'Cuestionario sin preguntas configuradas. Sanción abortada por seguridad.' });
     }
 
     const users = await getUsers();
-    const today = boliviaTime.todayStr();
+    const normalUsers = users.filter(u => u.rol === 'usuario');
     
-    // El castigo se aplica sobre el día de AYER (quienes no respondieron ayer)
-    // Sin embargo, en el flujo actual, se suele pulsar a las 00:00 o manualmente hoy.
-    // Vamos a buscar quién NO respondió el día de HOY (si se pulsa a final del día)
-    // O AYER (si se pulsa por la mañana). 
-    // Por simplicidad para el admin, castigaremos a los que no respondieron HOY (día actual del servidor/Bolivia).
+    if (normalUsers.length === 0) return res.json({ ok: true, punished: 0, message: 'No hay usuarios para sancionar.' });
+
+    // Determinar la fecha objetivo del castigo: AYER
+    // Porque se castiga a quienes no respondieron el día que ya pasó.
+    const targetDate = boliviaTime.yesterdayStr();
     
+    // Consultar respuestas del día objetivo
+    const { data: responded } = await trySupabase(() => 
+      supabase.from('respuestas_cuestionario').select('usuario_id').eq('fecha', targetDate)
+    );
+    const respondedIds = new Set(responded?.map(r => r.usuario_id) || []);
+
+    // REGLA 3: Salvaguarda contra bloqueos masivos por error de visibilidad
+    // Si hay muchos usuarios pero NADIE respondió ayer, es probable que el cuestionario 
+    // no fuera visible o hubiera un error de red/servidor.
+    if (normalUsers.length > 5 && respondedIds.size === 0) {
+      return res.status(400).json({ 
+        error: `Bloqueo masivo detectado: 0 respuestas registradas para la fecha ${targetDate}. Es posible que el cuestionario no haya sido visible.` 
+      });
+    }
+
+    // Calcular fecha de liberación (mañana respecto a hoy)
     const tomorrow = new Date(boliviaTime.now());
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = boliviaTime.getDateString(tomorrow);
 
-    const { data: responded } = await trySupabase(() => 
-      supabase.from('respuestas_cuestionario').select('usuario_id').eq('fecha', today)
-    );
-    const respondedIds = new Set(responded.map(r => r.usuario_id));
-
     let punishedCount = 0;
-    for (const user of users) {
-      if (user.rol === 'usuario' && !respondedIds.has(user.id)) {
+    for (const user of normalUsers) {
+      if (!respondedIds.has(user.id)) {
         await updateUser(user.id, { castigado_hasta: tomorrowStr });
         punishedCount++;
       }
     }
 
-    // IMPORTANTE: Ya NO desactivamos el cuestionario automáticamente.
-    // Permanece activo para el día siguiente.
-
-    res.json({ ok: true, punished: punishedCount });
+    res.json({ 
+      ok: true, 
+      punished: punishedCount, 
+      total_checked: normalUsers.length,
+      target_date: targetDate,
+      message: `Sanciones aplicadas para el día ${targetDate}.`
+    });
   } catch (err) {
+    console.error('[Admin Castigar] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

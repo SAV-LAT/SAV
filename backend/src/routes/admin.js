@@ -71,31 +71,101 @@ router.get('/ranking-invitados', async (req, res) => {
     const users = await getUsers();
     const levels = await getLevels();
     
-    // Contar invitados directos
-    const counts = {};
+    // Mapeo de niveles para acceso rápido
+    const levelMap = {};
+    levels.forEach(l => {
+      levelMap[l.id] = l;
+    });
+
+    // Helper para verificar si un usuario es "invitado válido" (no pasante)
+    const isValidGuest = (user) => {
+      if (!user) return false;
+      const level = levelMap[user.nivel_id];
+      const code = String(level?.codigo || '').toLowerCase();
+      return code !== 'pasante' && code !== 'internar' && code !== '';
+    };
+
+    // Construir mapa de red por usuario (solo nivel A, B, C)
+    const network = {}; // userId -> { A: [], B: [], C: [] }
+    
+    // Nivel A: Directos
     users.forEach(u => {
       if (u.invitado_por) {
-        counts[u.invitado_por] = (counts[u.invitado_por] || 0) + 1;
+        if (!network[u.invitado_por]) network[u.invitado_por] = { A: [], B: [], C: [] };
+        network[u.invitado_por].A.push(u);
       }
     });
 
+    // Nivel B: Invitados de A
+    Object.keys(network).forEach(uId => {
+      network[uId].A.forEach(directo => {
+        if (network[directo.id]) {
+          network[uId].B.push(...network[directo.id].A);
+        }
+      });
+    });
+
+    // Nivel C: Invitados de B
+    Object.keys(network).forEach(uId => {
+      network[uId].B.forEach(indirecto => {
+        if (network[indirecto.id]) {
+          network[uId].C.push(...network[indirecto.id].A);
+        }
+      });
+    });
+
     const ranking = users
-      .filter(u => u.rol === 'usuario') // Solo usuarios normales entran en el ranking
-      .map(u => ({
-        ...sanitizeUser(u, levels),
-        invitados_count: counts[u.id] || 0
-      }))
+      .filter(u => u.rol === 'usuario')
+      .map(u => {
+        const userNet = network[u.id] || { A: [], B: [], C: [] };
+        
+        // Filtrar solo invitados válidos (inversión/ascenso real)
+        const validA = userNet.A.filter(isValidGuest);
+        const validB = userNet.B.filter(isValidGuest);
+        const validC = userNet.C.filter(isValidGuest);
+
+        // Agrupar por nivel VIP (S1, S2, S3, S4, S5, etc.)
+        const statsByLevel = {}; // "S1": { A: 0, B: 0, C: 0, total: 0 }
+        
+        const countByDepth = (list, depthKey) => {
+          list.forEach(guest => {
+            const guestLevel = levelMap[guest.nivel_id];
+            const code = String(guestLevel?.codigo || 'S1').toUpperCase();
+            if (!statsByLevel[code]) statsByLevel[code] = { A: 0, B: 0, C: 0, total: 0 };
+            statsByLevel[code][depthKey]++;
+            statsByLevel[code].total++;
+          });
+        };
+
+        countByDepth(validA, 'A');
+        countByDepth(validB, 'B');
+        countByDepth(validC, 'C');
+
+        const totalInvitadosValidos = validA.length + validB.length + validC.length;
+
+        return {
+          ...sanitizeUser(u, levels),
+          invitados_count: totalInvitadosValidos, // Ranking basado en el total de la red válida
+          network_stats: {
+            A: validA.length,
+            B: validB.length,
+            C: validC.length
+          },
+          level_stats: statsByLevel
+        };
+      })
+      .filter(u => u.invitados_count > 0) // Solo mostrar quienes tienen red válida
       .sort((a, b) => {
         if (b.invitados_count !== a.invitados_count) {
           return b.invitados_count - a.invitados_count;
         }
-        // Criterio secundario: fecha de registro (más antiguos primero)
         return new Date(a.created_at) - new Date(b.created_at);
       })
       .slice(0, 70);
 
     res.json(ranking);
   } catch (err) {
+    console.error('[Ranking Error]:', err);
     res.status(500).json({ error: err.message });
   }
 });

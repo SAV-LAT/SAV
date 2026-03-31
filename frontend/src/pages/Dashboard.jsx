@@ -367,9 +367,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Botón Flotante de Cuestionario */}
-      <FloatingQuestionnaire />
-
       {/* Popup de Aviso Dark */}
       {showPopup && (
         <div className="fixed inset-0 z-50 bg-[#1a1f36]/80 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">

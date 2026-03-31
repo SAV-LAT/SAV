@@ -27,6 +27,7 @@ export default function Withdrawal() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationDone, setOptimizationDone] = useState(false);
   const [hasWithdrawalToday, setHasWithdrawalToday] = useState(false);
+  const [isPunished, setIsPunished] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -35,6 +36,11 @@ export default function Withdrawal() {
       navigate('/cambiar-contrasena-fondo');
       return;
     }
+
+    // Verificar si el usuario está castigado
+    api.get('/users/status-castigo').then(res => {
+      if (isMounted) setIsPunished(res.castigado);
+    }).catch(() => {});
 
     api.withdrawals.montos().then(data => {
       if (isMounted) setMontos(data || [25, 100, 500, 1500, 5000, 10000]);
@@ -208,6 +214,16 @@ export default function Withdrawal() {
             </div>
           )}
 
+          {isPunished && (
+            <div className="p-5 bg-rose-600 border border-rose-700 rounded-2xl text-white text-center shadow-lg animate-pulse">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <AlertCircle size={18} />
+                <p className="text-[10px] font-black uppercase tracking-widest">Castigo Activo</p>
+              </div>
+              <p className="text-xs font-bold leading-relaxed">No puedes realizar retiros hoy por no responder el cuestionario obligatorio de ayer. Por favor responde el de hoy para evitar ser sancionado mañana.</p>
+            </div>
+          )}
+
           {hasWithdrawalToday && (
             <div className="p-5 bg-amber-50 border border-amber-100 rounded-2xl text-amber-600 text-center shadow-sm">
               <p className="text-[10px] font-black uppercase tracking-widest mb-1">Límite Diario Alcanzado</p>
@@ -378,10 +394,21 @@ export default function Withdrawal() {
 
           <button
             type="submit"
-            disabled={loading || fueraHorario || hasWithdrawalToday}
-            className="w-full py-5 rounded-2xl bg-[#1a1f36] text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-[#1a1f36]/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale mt-4"
+            disabled={loading || hasWithdrawalToday || fueraHorario || isPunished}
+            className={`w-full py-6 rounded-3xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${
+              (loading || hasWithdrawalToday || fueraHorario || isPunished)
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none' 
+                : 'bg-[#1a1f36] text-white hover:bg-[#2a2f46] shadow-[#1a1f36]/20'
+            }`}
           >
-            {loading ? 'Procesando Retiro...' : hasWithdrawalToday ? 'Límite de Retiro Alcanzado' : 'Solicitar Retiro Ahora'}
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <Sparkles size={18} />
+                Solicitar Retiro Seguro
+              </>
+            )}
           </button>
         </form>
 

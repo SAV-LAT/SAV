@@ -36,14 +36,19 @@ export default function FloatingQuestionnaire() {
     e.preventDefault();
     
     // Validación robusta: verificar si hay preguntas y si el número de respuestas coincide
-    const numPreguntas = Array.isArray(cuestionario?.preguntas) ? cuestionario.preguntas.length : 0;
+    const preguntas = Array.isArray(cuestionario?.preguntas) ? cuestionario.preguntas : [];
+    const numPreguntas = preguntas.length;
     
     if (numPreguntas === 0) {
       alert('Error: El cuestionario no tiene preguntas válidas.');
       return;
     }
 
-    if (Object.keys(respuestas).length < numPreguntas) {
+    // Validar que todas las preguntas tengan una respuesta (no nula/undefined)
+    const respondidasIds = Object.keys(respuestas);
+    const todasRespondidas = preguntas.every(p => respondidasIds.includes(String(p.id)) && respuestas[p.id] !== undefined);
+
+    if (!todasRespondidas || respondidasIds.length < numPreguntas) {
       alert('Por favor responde todas las preguntas antes de enviar.');
       return;
     }
@@ -64,8 +69,8 @@ export default function FloatingQuestionnaire() {
     }
   };
 
-  // Se muestra en toda la App mientras esté pendiente (mejor UX que solo en inicio)
-  if (loading || !cuestionario) return null;
+  // Se muestra solo en el Inicio (/) mientras esté pendiente
+  if (location.pathname !== '/' || loading || !cuestionario) return null;
 
   return (
     <>

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import { findUserById, getRetirosByUser, createRetiro, updateRetiro, getTarjetasByUser, getPublicContent, updateUser, boliviaTime, trySupabase } from '../lib/queries.js';
+import { findUserById, getRetirosByUser, createRetiro, updateRetiro, getTarjetasByUser, getPublicContent, updateUser, boliviaTime, trySupabase, isUserPunished } from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
 import { mergePublicContent } from '../data/publicContentDefaults.js';
 import { isScheduleOpen } from '../lib/schedule.js';
@@ -30,6 +30,14 @@ router.post('/', authenticate, async (req, res) => {
     const { monto, tipo_billetera, password_fondo, qr_retiro, tarjeta_id } = req.body;
     const user = await findUserById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // VERIFICAR CASTIGO ACTIVO (Bloqueo de retiros)
+    const castigado = await isUserPunished(user.id);
+    if (castigado) {
+      return res.status(403).json({ 
+        error: 'No puedes realizar retiros mientras tengas un castigo activo por no responder el cuestionario.' 
+      });
+    }
 
     // Validar horario por nivel
     const { data: niveles } = await trySupabase(() => supabase.from('niveles').select('*'));

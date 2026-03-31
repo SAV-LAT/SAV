@@ -365,17 +365,21 @@ router.post('/cuestionario/responder', authenticate, async (req, res) => {
     
     const { respuestas } = req.body;
     
-    // VALIDACIÓN BACKEND: Número de respuestas
+    // VALIDACIÓN BACKEND: Formato y completitud de respuestas
     const preguntas = config.cuestionario_data?.preguntas || [];
     if (preguntas.length > 0) {
-      if (!respuestas || typeof respuestas !== 'object') {
-        return res.status(400).json({ error: 'Formato de respuestas inválido' });
+      if (!respuestas || typeof respuestas !== 'object' || Array.isArray(respuestas)) {
+        return res.status(400).json({ error: 'Formato de respuestas inválido. Se espera un objeto.' });
       }
       
-      const numRespuestas = Object.keys(respuestas).length;
-      if (numRespuestas < preguntas.length) {
-        return res.status(400).json({ error: `Debes responder todas las preguntas (${preguntas.length})` });
+      const idsRespondidos = Object.keys(respuestas);
+      const faltantes = preguntas.filter(p => !idsRespondidos.includes(String(p.id)) || respuestas[p.id] === undefined || respuestas[p.id] === null);
+
+      if (faltantes.length > 0) {
+        return res.status(400).json({ error: `Debes responder todas las preguntas (${preguntas.length}). Faltan: ${faltantes.length}` });
       }
+    } else {
+      return res.status(400).json({ error: 'El cuestionario actual no tiene preguntas configuradas.' });
     }
 
     await submitQuestionnaire(req.user.id, respuestas);

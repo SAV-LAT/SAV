@@ -894,22 +894,56 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
  * Esta función es llamada por un cron job a medianoche Bolivia
  */
 export async function resetDailyEarnings() {
-  console.log('[Cron] Iniciando reset de ganancias diarias...');
+  console.log('[Cron] Iniciando mantenimiento diario (00:00 Bolivia)...');
   try {
     const users = await getUsers();
+    
+    // 1. APLICAR CASTIGOS POR CUESTIONARIO NO RESPONDIDO AYER
+    const config = await getPublicContent();
+    const todayStr = boliviaTime.todayStr();
+    
+    // Solo si el cuestionario estuvo activo ayer (o sigue activo hoy para la revisión)
+    if (config.cuestionario_activo || config.cuestionario_data?.preguntas?.length > 0) {
+      console.log('[Cron] Revisando respuestas del cuestionario...');
+      
+      // Obtener quiénes respondieron HOY (que en el momento de las 00:00 se refiere al día que acaba de terminar)
+      // Nota: Si el cron corre exactamente a las 00:00, "todayStr" ya es el nuevo día.
+      // Necesitamos revisar el día ANTERIOR.
+      const yesterday = new Date(boliviaTime.now());
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = boliviaTime.getDateString(yesterday);
+      
+      const { data: responded } = await trySupabase(() => 
+        supabase.from('respuestas_cuestionario').select('usuario_id').eq('fecha', yesterdayStr)
+      );
+      const respondedIds = new Set(responded?.map(r => r.usuario_id) || []);
+
+      const tomorrow = new Date(boliviaTime.now());
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = boliviaTime.getDateString(tomorrow);
+
+      for (const user of users) {
+        if (user.rol === 'usuario' && !respondedIds.has(user.id)) {
+          // Solo castigar si no tiene ya un castigo activo que cubra hoy
+          if (!user.castigado_hasta || user.castigado_hasta < todayStr) {
+            console.log(`[Cron] Aplicando castigo a: ${user.nombre_usuario} (No respondió el ${yesterdayStr})`);
+            await updateUser(user.id, { castigado_hasta: todayStr }); // Castigado por todo el día de hoy
+          }
+        }
+      }
+    }
+
+    // 2. RESET DE GANANCIAS DIARIAS (Lógica existente)
     for (const user of users) {
       const updates = {
         ganancias_ayer: Number(user.ganancias_hoy || 0).toFixed(2),
         ganancias_hoy: 0
       };
-      
-      // El sistema ahora calcula semana y mes dinámicamente desde movimientos_saldo,
-      // pero mantenemos el caché por rendimiento.
       await updateUser(user.id, updates);
     }
-    console.log('[Cron] Reset de ganancias completado.');
+    console.log('[Cron] Mantenimiento diario completado.');
   } catch (err) {
-    console.error('[Cron] Error en resetDailyEarnings:', err);
+    console.error('[Cron] Error en maintenance:', err);
   }
 }
 

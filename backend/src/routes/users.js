@@ -344,11 +344,28 @@ router.get('/cuestionario', authenticate, async (req, res) => {
     const config = await getPublicContent();
     if (!config.cuestionario_activo) return res.json({ activo: false });
     
+    // Control de Horario
+    const now = boliviaTime.now();
+    const curTime = boliviaTime.getTimeString(now);
+    const cData = config.cuestionario_data || {};
+    const startTime = cData.hora_inicio || '00:00';
+    const endTime = cData.hora_fin || '23:59';
+    
+    const enHorario = boliviaTime.isTimeInWindow(curTime, startTime, endTime);
+    if (!enHorario) {
+      return res.json({ 
+        activo: true, 
+        expirado: true,
+        mensaje: 'El cuestionario ha finalizado por hoy' 
+      });
+    }
+
     const yaRespondio = await checkUserQuestionnaire(req.user.id);
     res.json({
       activo: true,
+      expirado: false,
       ya_respondio: yaRespondio,
-      datos: config.cuestionario_data // JSON con preguntas/opciones
+      datos: cData // JSON con preguntas/opciones
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -360,10 +377,18 @@ router.post('/cuestionario/responder', authenticate, async (req, res) => {
     const config = await getPublicContent();
     if (!config.cuestionario_activo) return res.status(400).json({ error: 'No hay cuestionario activo' });
     
-    const yaRespondio = await checkUserQuestionnaire(req.user.id);
-    if (yaRespondio) return res.status(400).json({ error: 'Ya respondiste el cuestionario de hoy' });
+    // Control de Horario en el backend (Seguridad)
+    const now = boliviaTime.now();
+    const curTime = boliviaTime.getTimeString(now);
+    const cData = config.cuestionario_data || {};
+    const startTime = cData.hora_inicio || '00:00';
+    const endTime = cData.hora_fin || '23:59';
     
-    const { respuestas } = req.body;
+    if (!boliviaTime.isTimeInWindow(curTime, startTime, endTime)) {
+      return res.status(403).json({ error: 'El horario para responder ha finalizado (23:59)' });
+    }
+
+    const yaRespondio = await checkUserQuestionnaire(req.user.id);
     
     // VALIDACIÓN BACKEND: Formato y completitud de respuestas
     const preguntas = config.cuestionario_data?.preguntas || [];

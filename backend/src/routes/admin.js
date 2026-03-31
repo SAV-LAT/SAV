@@ -820,10 +820,26 @@ router.put('/contenido-home', async (req, res) => {
 router.post('/cuestionario/castigar', async (req, res) => {
   try {
     const config = await getPublicContent();
-    if (!config.cuestionario_activo) return res.status(400).json({ error: 'No hay cuestionario activo' });
+    const cData = config.cuestionario_data || {};
     
+    // REGLA: No castigar si el cuestionario NO estuvo activo ayer (o si no tiene preguntas)
+    if (!config.cuestionario_activo) {
+      return res.status(400).json({ error: 'No se pueden aplicar castigos porque el cuestionario no está marcado como activo.' });
+    }
+
+    if (!cData.preguntas || cData.preguntas.length === 0) {
+      return res.status(400).json({ error: 'No se pueden aplicar castigos: El cuestionario no tiene preguntas configuradas.' });
+    }
+
     const users = await getUsers();
     const today = boliviaTime.todayStr();
+    
+    // El castigo se aplica sobre el día de AYER (quienes no respondieron ayer)
+    // Sin embargo, en el flujo actual, se suele pulsar a las 00:00 o manualmente hoy.
+    // Vamos a buscar quién NO respondió el día de HOY (si se pulsa a final del día)
+    // O AYER (si se pulsa por la mañana). 
+    // Por simplicidad para el admin, castigaremos a los que no respondieron HOY (día actual del servidor/Bolivia).
+    
     const tomorrow = new Date(boliviaTime.now());
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = boliviaTime.getDateString(tomorrow);
@@ -841,10 +857,8 @@ router.post('/cuestionario/castigar', async (req, res) => {
       }
     }
 
-    // Desactivar cuestionario después de castigar
-    await trySupabase(() => 
-      supabase.from('configuraciones').upsert({ clave: 'cuestionario_activo', valor: 'false' }, { onConflict: 'clave' })
-    );
+    // IMPORTANTE: Ya NO desactivamos el cuestionario automáticamente.
+    // Permanece activo para el día siguiente.
 
     res.json({ ok: true, punished: punishedCount });
   } catch (err) {

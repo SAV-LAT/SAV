@@ -20,7 +20,12 @@ export default function FloatingQuestionnaire() {
     try {
       const res = await api.get('/users/cuestionario');
       if (res && res.activo && !res.ya_respondio) {
-        setCuestionario(res.datos);
+        if (res.expirado) {
+          // Opcional: mostrar un aviso de que ya expiró si el usuario estaba navegando
+          setCuestionario(null);
+        } else {
+          setCuestionario(res.datos);
+        }
       } else {
         setCuestionario(null);
       }

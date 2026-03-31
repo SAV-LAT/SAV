@@ -76,6 +76,16 @@ export const boliviaTime = {
     return new Date(date).toLocaleTimeString('en-GB', { timeZone: 'America/La_Paz', hour: '2-digit', minute: '2-digit' });
   },
 
+  // Comprueba si un horario (HH:mm) está dentro de un rango
+  isTimeInWindow: (timeStr, start = '00:00', end = '23:59') => {
+    if (start <= end) {
+      return timeStr >= start && timeStr <= end;
+    } else {
+      // ventana que cruza medianoche
+      return timeStr >= start || timeStr <= end;
+    }
+  },
+
   // Obtiene un objeto Date ajustado a Bolivia para comparaciones
   getBoliviaDate: (date) => {
     if (!date) return null;

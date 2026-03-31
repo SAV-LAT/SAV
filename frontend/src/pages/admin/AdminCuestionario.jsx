@@ -7,6 +7,8 @@ export default function AdminCuestionario() {
     cuestionario_activo: false,
     cuestionario_data: {
       titulo: 'Cuestionario Diario Obligatorio',
+      hora_inicio: '00:00',
+      hora_fin: '23:59',
       preguntas: [
         {
           id: 1,
@@ -199,14 +201,36 @@ export default function AdminCuestionario() {
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Título del Cuestionario</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-black text-gray-800"
-                  value={config.cuestionario_data.titulo}
-                  onChange={e => setConfig({...config, cuestionario_data: {...config.cuestionario_data, titulo: e.target.value}})}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Título del Cuestionario</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-black text-gray-800"
+                    value={config.cuestionario_data.titulo}
+                    onChange={e => setConfig({...config, cuestionario_data: {...config.cuestionario_data, titulo: e.target.value}})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Hora Inicio</label>
+                    <input
+                      type="time"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-black text-gray-800"
+                      value={config.cuestionario_data.hora_inicio || '00:00'}
+                      onChange={e => setConfig({...config, cuestionario_data: {...config.cuestionario_data, hora_inicio: e.target.value}})}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Hora Fin</label>
+                    <input
+                      type="time"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-black text-gray-800"
+                      value={config.cuestionario_data.hora_fin || '23:59'}
+                      onChange={e => setConfig({...config, cuestionario_data: {...config.cuestionario_data, hora_fin: e.target.value}})}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-6 pt-4">

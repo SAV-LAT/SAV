@@ -65,6 +65,40 @@ router.get('/usuarios', async (req, res) => {
   res.json(filtered);
 });
 
+router.get('/ranking-invitados', async (req, res) => {
+  try {
+    const users = await getUsers();
+    const levels = await getLevels();
+    
+    // Contar invitados directos
+    const counts = {};
+    users.forEach(u => {
+      if (u.invitado_por) {
+        counts[u.invitado_por] = (counts[u.invitado_por] || 0) + 1;
+      }
+    });
+
+    const ranking = users
+      .filter(u => u.rol === 'usuario') // Solo usuarios normales entran en el ranking
+      .map(u => ({
+        ...sanitizeUser(u, levels),
+        invitados_count: counts[u.id] || 0
+      }))
+      .sort((a, b) => {
+        if (b.invitados_count !== a.invitados_count) {
+          return b.invitados_count - a.invitados_count;
+        }
+        // Criterio secundario: fecha de registro (más antiguos primero)
+        return new Date(a.created_at) - new Date(b.created_at);
+      })
+      .slice(0, 70);
+
+    res.json(ranking);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/usuarios/:id/password', async (req, res) => {
   const { id } = req.params;
   const { password, password_fondo } = req.body;

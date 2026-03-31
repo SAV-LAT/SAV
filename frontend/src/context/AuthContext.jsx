@@ -14,6 +14,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('lastUserUpdate');
+    // Limpiar estado del popup para que se vuelva a mostrar al iniciar sesión
+    sessionStorage.removeItem('sav_popup_seen');
     setUser(null);
     // Usar window.location.replace para evitar que el usuario vuelva atrás a una sesión "fantasma"
     window.location.replace('/login');

@@ -98,9 +98,9 @@ const AdminContenidoHome = lazyWithRetry(() => import('./pages/admin/AdminConten
 const AdminTareas = lazyWithRetry(() => import('./pages/admin/AdminTareas.jsx'));
 const AdminBanners = lazyWithRetry(() => import('./pages/admin/AdminBanners.jsx'));
 const AdminNiveles = lazyWithRetry(() => import('./pages/admin/AdminNiveles.jsx'));
-const AdminRecompensas = lazyWithRetry(() => import('./pages/admin/AdminRecompensas.jsx'));
 const AdminAdmins = lazyWithRetry(() => import('./pages/admin/AdminAdmins.jsx'));
 const AdminCuestionario = lazyWithRetry(() => import('./pages/admin/AdminCuestionario.jsx'));
+const AdminRanking = lazyWithRetry(() => import('./pages/admin/AdminRanking.jsx'));
 
 const GlobalLoader = () => {
   const [showError, setShowError] = useState(false);
@@ -189,6 +189,7 @@ function AppRoutes() {
           <Route path="recompensas" element={<AdminRecompensas />} />
           <Route path="admins" element={<AdminAdmins />} />
           <Route path="cuestionarios" element={<AdminCuestionario />} />
+          <Route path="ranking" element={<AdminRanking />} />
           <Route path="contenido-home" element={<AdminContenidoHome />} />
         </Route>
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

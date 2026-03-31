@@ -651,7 +651,7 @@ export async function distributeTaskCommissions(userId, baseAmount) {
         await addUserEarnings(
           upline.id, 
           commission, 
-          'comision_subordinado', 
+          'comision_tarea', 
           user.id, 
           `Comisión Tarea Nivel ${config.key} (Origen: ${user.nombre_usuario})`
         );
@@ -708,7 +708,7 @@ export async function distributeInvestmentCommissions(userId, amount) {
         await addUserEarnings(
           upline.id, 
           commission, 
-          'comision_subordinado', 
+          'comision_inversion', 
           user.id, 
           `Comisión Inversión Nivel ${config.key} (Origen: ${user.nombre_usuario})`
         );
@@ -747,7 +747,7 @@ export async function getUserEarningsSummary(userId) {
         .from('movimientos_saldo')
         .select('*')
         .eq('usuario_id', userId)
-        .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion', 'ajuste_admin']);
+        .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion', 'ajuste_admin', 'comision_inversion', 'comision_tarea']);
       
       if (error) throw error;
       movimientos = data || [];
@@ -836,7 +836,12 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
   }
 
   const referencia = `EARN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  const desc = descripcion || (tipo === 'ganancia_tarea' ? 'Ganancia por tarea completada' : 'Comisión de red');
+  const desc = descripcion || (
+    tipo === 'ganancia_tarea' ? 'Ganancia por tarea completada' : 
+    tipo === 'comision_tarea' ? 'Comisión por tarea de red' :
+    tipo === 'comision_inversion' ? 'Comisión por inversión de red' :
+    'Comisión de red'
+  );
 
   console.log(`[Earnings] Intentando acreditar ${amount} a ${userId} via RPC...`);
 

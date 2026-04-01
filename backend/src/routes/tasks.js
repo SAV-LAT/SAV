@@ -133,7 +133,7 @@ router.get('/', authenticate, async (req, res) => {
         return {
           id: t.id,
           nombre: t.nombre,
-          recompensa: level.recompensa_tarea, // REGLA: Recompensa según el NIVEL del usuario, no de la tarea
+          recompensa: level.comision_por_tarea, // REGLA: Recompensa según el NIVEL del usuario, no de la tarea
           video_url: t.video_url,
           descripcion: t.descripcion,
           pregunta: t.pregunta,
@@ -169,8 +169,17 @@ router.get('/:id', authenticate, async (req, res) => {
       console.error(`[Tasks v4] ALERTA: La tarea ${task.id} tiene una respuesta correcta ("${task.respuesta_correcta}") que no figura en sus opciones: ${JSON.stringify(options)}`);
     }
 
+    // Obtener el nivel del usuario actual para devolver la recompensa correcta
+    const user = await findUserById(req.user.id);
+    const userLevel = levels.find(l => 
+      String(l.id) === String(user.nivel_id) || 
+      String(l.codigo).toUpperCase() === String(user.nivel_id).toUpperCase() ||
+      String(l.nombre).toUpperCase() === String(user.nivel_id).toUpperCase()
+    );
+
     res.json({
       ...task,
+      recompensa: userLevel?.comision_por_tarea || task.recompensa, // REGLA: Usar recompensa del nivel si es posible
       nivel: level?.nombre,
       completada_hoy: false,
       error_configuracion: !hasCorrectAnswerInOptions
@@ -257,7 +266,7 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       }
 
       // REGLA: La recompensa NO viene de la tarea (pool global), sino del NIVEL del usuario
-      const recompensa = esCorrectaReal ? Number(level.recompensa_tarea) : 0;
+      const recompensa = esCorrectaReal ? Number(level.comision_por_tarea) : 0;
 
       console.log(`\n[VALIDACIÓN PASO A PASO]`);
       console.log(`  - Task ID: ${task.id}`);

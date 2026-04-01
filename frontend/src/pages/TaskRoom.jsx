@@ -32,6 +32,7 @@ export default function TaskRoom() {
   const [videoFinished, setVideoFinished] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showResult, setShowResult] = useState(false);
+  const [earnedAmount, setEarnedAmount] = useState(0);
   const [correctAnswerFromServer, setCorrectAnswerFromServer] = useState('');
 
   // Manejo del botón Atrás físico en Android para cerrar tareas activas
@@ -225,6 +226,10 @@ export default function TaskRoom() {
     try {
       const res = await api.tasks.responder(activeTask.id, selectedOption);
       setShowResult(true);
+      
+      if (res.monto) {
+        setEarnedAmount(res.monto);
+      }
       
       if (res.respuesta_correcta) {
         setCorrectAnswerFromServer(res.respuesta_correcta);
@@ -455,7 +460,7 @@ export default function TaskRoom() {
                       <div className="bg-emerald-50 py-6 px-8 rounded-[2.5rem] border border-emerald-100 inline-flex flex-col items-center gap-2 mb-8 shadow-inner w-full">
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center">Respuesta: {selectedOption}</span>
                         <div className="flex items-center gap-3">
-                          <span className="text-4xl font-black text-[#1a1f36] tracking-tighter">+{activeTask.recompensa}</span>
+                          <span className="text-4xl font-black text-[#1a1f36] tracking-tighter">+{earnedAmount || activeTask.recompensa}</span>
                           <span className="text-sm font-black text-[#1a1f36]/40 uppercase tracking-widest">BOB</span>
                         </div>
                       </div>

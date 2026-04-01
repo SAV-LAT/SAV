@@ -244,16 +244,6 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       const valCorrect = normalizeStr(task.respuesta_correcta);
       const esCorrectaReal = valUser === valCorrect && valCorrect !== '';
       
-      // REGLA: La recompensa NO viene de la tarea (pool global), sino del NIVEL del usuario
-      const recompensa = esCorrectaReal ? Number(level.recompensa_tarea) : 0;
-
-      console.log(`\n[VALIDACIÓN PASO A PASO]`);
-      console.log(`  - Task ID: ${task.id}`);
-      console.log(`  - User ID: ${user.id} (${user.nombre_usuario})`);
-      console.log(`  - Recibido Original: "${respuesta}" -> Normalizado: "${valUser}"`);
-      console.log(`  - Esperado Original: "${task.respuesta_correcta}" -> Normalizado: "${valCorrect}"`);
-      console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
-
       const levels = await getLevels();
       const level = levels.find(l => 
         String(l.id) === String(user.nivel_id) || 
@@ -265,6 +255,16 @@ router.post('/:id/responder', authenticate, async (req, res) => {
         console.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id} al responder: ${user.nivel_id}`);
         throw new Error('Nivel de usuario no válido');
       }
+
+      // REGLA: La recompensa NO viene de la tarea (pool global), sino del NIVEL del usuario
+      const recompensa = esCorrectaReal ? Number(level.recompensa_tarea) : 0;
+
+      console.log(`\n[VALIDACIÓN PASO A PASO]`);
+      console.log(`  - Task ID: ${task.id}`);
+      console.log(`  - User ID: ${user.id} (${user.nombre_usuario})`);
+      console.log(`  - Recibido Original: "${respuesta}" -> Normalizado: "${valUser}"`);
+      console.log(`  - Esperado Original: "${task.respuesta_correcta}" -> Normalizado: "${valCorrect}"`);
+      console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
 
       // Registrar actividad PRIMERO
       const activityId = uuidv4();

@@ -107,12 +107,8 @@ router.get('/', authenticate, async (req, res) => {
     if (remaining <= 0) {
       mensaje = 'Has completado tu cupo diario de tareas. ¡Vuelve mañana!';
     } else {
-      // Obtener todas las tareas del nivel actual
-      const allTasks = await getTasks(level.id);
-      
-      // Ya NO filtramos por intentos. El usuario puede ver todas las tareas de su nivel.
-      // Pero identificamos cuáles ya completó exitosamente para que no gane doble.
-      const successfulTaskIdsToday = new Set(todaySuccessfulActivity.map(a => String(a.tarea_id)));
+      // Obtener pool GLOBAL de todas las tareas activas (ya no filtramos por nivel_id)
+      const allTasks = await getTasks();
       
       // FILTRO DE INTEGRIDAD ESTRICTO
       const pool = allTasks.filter(t => {
@@ -137,7 +133,7 @@ router.get('/', authenticate, async (req, res) => {
         return {
           id: t.id,
           nombre: t.nombre,
-          recompensa: t.recompensa,
+          recompensa: level.recompensa_tarea, // REGLA: Recompensa según el NIVEL del usuario, no de la tarea
           video_url: t.video_url,
           descripcion: t.descripcion,
           pregunta: t.pregunta,
@@ -247,7 +243,9 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       const valUser = normalizeStr(respuesta);
       const valCorrect = normalizeStr(task.respuesta_correcta);
       const esCorrectaReal = valUser === valCorrect && valCorrect !== '';
-      const recompensa = esCorrectaReal ? Number(task.recompensa) : 0;
+      
+      // REGLA: La recompensa NO viene de la tarea (pool global), sino del NIVEL del usuario
+      const recompensa = esCorrectaReal ? Number(level.recompensa_tarea) : 0;
 
       console.log(`\n[VALIDACIÓN PASO A PASO]`);
       console.log(`  - Task ID: ${task.id}`);

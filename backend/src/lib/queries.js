@@ -526,11 +526,10 @@ export async function getAllTasks() {
   return data || [];
 }
 
-export async function getTasks(nivelId) {
+export async function getTasks() {
   const { data } = await trySupabase(() => 
     supabase.from('tareas')
       .select('*')
-      .eq('nivel_id', nivelId)
       .eq('activa', true)
       .not('video_url', 'ilike', '%youtube%') // Excluir YouTube
       .not('video_url', 'ilike', '%youtu.be%') // Excluir YouTube (acortado)

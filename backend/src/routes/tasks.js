@@ -125,7 +125,7 @@ router.get('/', authenticate, async (req, res) => {
       });
       
       // Selección aleatoria de las tareas disponibles
-      availableTasks = pool.sort(() => 0.5 - Math.random()).slice(0, remaining + 5); // Mostramos un poco más por si acaso
+      availableTasks = pool.slice(0, remaining + 3); // Mostramos un poco más del cupo
     }
 
     res.json({

@@ -527,8 +527,25 @@ export async function getAllTasks() {
 }
 
 export async function getTasks(nivelId) {
-  const { data } = await trySupabase(() => supabase.from('tareas').select('*').eq('nivel_id', nivelId).eq('activa', true));
-  return data || [];
+  const { data } = await trySupabase(() => 
+    supabase.from('tareas')
+      .select('*')
+      .eq('nivel_id', nivelId)
+      .eq('activa', true)
+      .not('video_url', 'ilike', '%youtube%') // Excluir YouTube
+      .not('video_url', 'ilike', '%youtu.be%') // Excluir YouTube (acortado)
+  );
+  
+  if (!data) return [];
+
+  // Mezcla aleatoria (Fisher-Yates Shuffle)
+  const shuffled = [...data];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled;
 }
 
 export async function getPremiosRuleta() {

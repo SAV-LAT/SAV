@@ -10,85 +10,101 @@ function getToken() {
   return localStorage.getItem('token');
 }
 
+const inflightRequests = new Map();
+const staticCache = new Map();
+const CACHE_TTL = 30000; // 30 segundos para datos semi-estáticos
+
 async function request(url, options = {}, retries = 3) {
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-  
   const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
-  const finalUrl = API + normalizedUrl;
+  const method = options.method || 'GET';
+  
+  const isGet = method === 'GET';
+  const cacheKey = isGet ? `${normalizedUrl}:${JSON.stringify(options.params || {})}` : null;
 
-  try {
-    const controller = new AbortController();
-    // Aumentamos a 120s para dar margen a los cold starts de Render
-    const timeoutId = setTimeout(() => controller.abort(), 120000);
-
-    const res = await fetch(finalUrl, { 
-      ...options, 
-      headers,
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-
-    // 304 Not Modified es un éxito (usando caché del navegador)
-    if (res.status === 304) {
-      console.log(`[API Cache] 304 Not Modified para ${url}.`);
-      // Si es la ruta de usuario, devolvemos lo que hay en local
-      if (normalizedUrl === '/users/me') {
-        const cachedUser = localStorage.getItem('user');
-        return cachedUser ? JSON.parse(cachedUser) : {};
-      }
-      // Para otras rutas, devolvemos un objeto vacío para forzar un nuevo fetch si es necesario
-      return {};
+  // 1. Verificar Caché Estática (Solo para rutas específicas)
+  const staticRoutes = ['/public-content', '/niveles', '/banners', '/withdrawals/montos'];
+  if (isGet && staticRoutes.includes(normalizedUrl)) {
+    const cached = staticCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
     }
+  }
 
-    if (!res.ok) {
-      let data = {};
-      try {
-        data = await res.json();
-      } catch (e) {
-        // No hay JSON en la respuesta, lo ignoramos
+  // 2. Deduplicación de peticiones en vuelo
+  if (isGet && inflightRequests.has(cacheKey)) {
+    return inflightRequests.get(cacheKey);
+  }
+
+  const promise = (async () => {
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    
+    const finalUrl = API + normalizedUrl;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+      const res = await fetch(finalUrl, { 
+        ...options, 
+        headers,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (res.status === 304) {
+        if (normalizedUrl === '/users/me') {
+          const cachedUser = localStorage.getItem('user');
+          return cachedUser ? JSON.parse(cachedUser) : {};
+        }
+        return {};
       }
-      
-      console.error(`[API Error] ${res.status} ${finalUrl}`, data);
-      
-      if (res.status === 401) {
-        const isAuthRoute = normalizedUrl.includes('/auth/');
-        if (!isAuthRoute) {
-          console.warn('Sesión expirada o inválida. Limpiando credenciales...');
+
+      if (!res.ok) {
+        let data = {};
+        try { data = await res.json(); } catch (e) {}
+        
+        if (res.status === 401 && !normalizedUrl.includes('/auth/')) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
+
+        const error = new Error(data.error || `Error ${res.status}: ${res.statusText}`);
+        error.status = res.status;
+        throw error;
       }
 
-      const error = new Error(data.error || `Error ${res.status}: ${res.statusText}`);
-      error.status = res.status;
-      throw error;
-    }
+      const result = await res.json().catch(() => ({}));
 
-    return await res.json().catch(() => ({}));
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      console.error(`[API Timeout] La petición a ${url} excedió el tiempo de espera (120s) debido a un inicio en frío del servidor.`);
-      // No reintentar en caso de timeout, es probable que el servidor esté caído o saturado
-      throw new Error('El servidor de Render está "despertando". Por favor, espera 30 segundos e intenta de nuevo.');
-    }
+      // Guardar en caché estática si corresponde
+      if (isGet && staticRoutes.includes(normalizedUrl)) {
+        staticCache.set(cacheKey, { data: result, timestamp: Date.now() });
+      }
 
-    // No reintentar en errores de cliente (4xx)
-    if (err.status >= 400 && err.status < 500) {
+      return result;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('El servidor está tardando demasiado en responder. Por favor, reintenta en unos segundos.');
+      }
+
+      if (err.status >= 400 && err.status < 500) throw err;
+
+      if (retries > 0) {
+        const delay = 2000 * (4 - retries);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return request(url, options, retries - 1);
+      }
+      
       throw err;
+    } finally {
+      if (isGet) inflightRequests.delete(cacheKey);
     }
+  })();
 
-    if (retries > 0) {
-      const delay = 2000 * (4 - retries); // Delay incremental: 2s, 4s, 6s
-      console.warn(`Error en ${url}, reintentando en ${delay}ms... (${retries} restantes)`, err.message);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return request(url, options, retries - 1);
-    }
-    
-    throw err;
-  }
+  if (isGet) inflightRequests.set(cacheKey, promise);
+  return promise;
 }
 
 export const api = {

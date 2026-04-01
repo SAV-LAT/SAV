@@ -31,81 +31,46 @@ export function AuthProvider({ children }) {
   }, []);
 
   const loadUser = useCallback(async (force = false) => {
-    // Evitar múltiples llamadas simultáneas usando un ref
-    if (isUpdatingRef.current && !force) return;
-    
-    // Si no es forzado, evitar llamadas demasiado frecuentes (ej: render loops)
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     const lastUpdate = localStorage.getItem('lastUserUpdate');
     const now = Date.now();
-    if (!force && lastUpdate && now - parseInt(lastUpdate) < 2000) {
+    // Evitar recargas si la última fue hace menos de 5 segundos, a menos que sea forzado
+    if (!force && lastUpdate && now - parseInt(lastUpdate) < 5000) {
       return;
     }
 
+    if (isUpdatingRef.current && !force) return;
     isUpdatingRef.current = true;
-    localStorage.setItem('lastUserUpdate', now.toString());
-    
-    const token = localStorage.getItem('token');
-    
-    // Al cargar por primera vez, intentar recuperar del localStorage para evitar el flicker
-    const savedUser = localStorage.getItem('user');
-    if (savedUser && !user) {
-      try {
-        const parsed = JSON.parse(savedUser);
-        if (parsed && typeof parsed === 'object') {
-          setUser(parsed);
-        }
-      } catch (e) {
-        localStorage.removeItem('user');
-      }
-    }
-
-    if (!token) {
-      setUser(null);
-      localStorage.removeItem('user');
-      setLoading(false);
-      isUpdatingRef.current = false;
-      return;
-    }
 
     try {
-      console.log(`[Auth] Solicitando /me... (Forzado: ${force})`);
-      
-      // Timeout de seguridad de 10 segundos para la carga del perfil
-      const profilePromise = api.users.me();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('TIMEOUT_PROFILE')), 10000)
-      );
-
-      const u = await Promise.race([profilePromise, timeoutPromise]);
-      
-      if (u && typeof u === 'object') {
-        const newUserStr = JSON.stringify(u);
-        setUser(u);
-        localStorage.setItem('user', newUserStr);
+      // Usamos api.get directamente, que ya tiene deduplicación implementada en api.js
+      const data = await api.get('/users/me');
+      if (data && data.id) {
+        setUser(data);
+        localStorage.setItem('user', JSON.stringify(data));
         localStorage.setItem('lastUserUpdate', Date.now().toString());
       }
     } catch (err) {
-      if (err.message === 'TIMEOUT_PROFILE') {
-        console.warn('Timeout cargando perfil, usando datos locales temporalmente...');
-        // El usuario ya está seteado desde el inicio de loadUser si existía en localStorage
-      } else if (err.status === 401 || err.status === 403 || err.status === 404) {
-        console.error('Sesión inválida o expirada, cerrando sesión...', err.message);
-        logout();
-      } else {
-        console.warn('Error de red al cargar usuario, manteniendo sesión previa:', err.message);
-      }
+      console.error('[AuthContext] Error loading user:', err.message);
+      if (err.status === 401) logout();
     } finally {
-      setLoading(false);
       isUpdatingRef.current = false;
+      setLoading(false);
     }
-  }, [logout, user]);
+  }, [logout]);
 
   useEffect(() => {
     // Carga inicial al montar el componente
     const init = async () => {
       const token = localStorage.getItem('token');
       if (token) {
-        await loadUser(true);
+        // Solo forzamos si no tenemos datos en el ref o son muy viejos
+        await loadUser();
       } else {
         setLoading(false);
       }

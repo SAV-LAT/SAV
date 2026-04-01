@@ -11,10 +11,15 @@ export async function trySupabase(operation, retries = 3) {
     try {
       const { data, error } = await operation();
       if (error) {
+        // Manejo específico de errores 522 o timeouts de Cloudflare/Supabase
+        const isTimeout = error.message?.includes('timeout') || error.code === '408' || error.status === 522;
+        
         console.error(`[Supabase Error Logged] (Intento ${i + 1}/${retries}):`, JSON.stringify(error, null, 2));
         lastError = error;
+        
         if (i < retries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff simple
+          const wait = isTimeout ? 2000 * (i + 1) : 1000 * (i + 1);
+          await new Promise(resolve => setTimeout(resolve, wait));
           continue;
         }
         throw error;
@@ -227,8 +232,16 @@ export async function updateUser(id, updates) {
   }
 }
 
+let levelsCache = { data: null, lastFetch: 0 };
 export async function getLevels() {
+  const now = Date.now();
+  if (levelsCache.data && now - levelsCache.lastFetch < 300000) { // Caché de 5 minutos para niveles
+    return levelsCache.data;
+  }
   const { data } = await trySupabase(() => supabase.from('niveles').select('*').order('orden', { ascending: true }));
+  if (data) {
+    levelsCache = { data, lastFetch: now };
+  }
   return data || [];
 }
 
@@ -481,28 +494,39 @@ export async function deleteTarjeta(id, userId) {
   return true;
 }
 
+let publicContentCache = { data: null, lastFetch: 0 };
 export async function getPublicContent() {
+  const now = Date.now();
+  if (publicContentCache.data && now - publicContentCache.lastFetch < 30000) {
+    return publicContentCache.data;
+  }
+
   const { data } = await trySupabase(() => supabase.from('configuraciones').select('*'));
-  return (data || []).reduce((acc, curr) => {
+  const result = (data || []).reduce((acc, curr) => {
     let valor = curr.valor;
-    // Intentar parsear CUALQUIER valor que pueda ser JSON (objetos, arrays, booleans, números)
     try {
       if (valor === 'true') valor = true;
       else if (valor === 'false') valor = false;
       else if (valor && (valor.startsWith('{') || valor.startsWith('['))) {
         valor = JSON.parse(valor);
       } else if (!isNaN(valor) && valor.trim() !== '') {
-        // Si es un número puro, parsearlo (opcional, pero útil para recompensas_amigos_cantidad)
         valor = parseFloat(valor);
       }
-    } catch (e) {
-      // Si falla, mantener como string
-    }
+    } catch (e) {}
     return { ...acc, [curr.clave]: valor };
   }, {});
+
+  publicContentCache = { data: result, lastFetch: now };
+  return result;
 }
 
+let bannersCache = { data: null, lastFetch: 0 };
 export async function getBanners() {
+  const now = Date.now();
+  if (bannersCache.data && now - bannersCache.lastFetch < 60000) {
+    return bannersCache.data;
+  }
+
   const { data } = await trySupabase(() => supabase.from('banners_carrusel').select('*').eq('activo', true).order('orden', { ascending: true }));
   
   const defaultBanners = [
@@ -512,13 +536,18 @@ export async function getBanners() {
     { id: 'def-4', imagen_url: '/imag/carrusel4.jpeg', titulo: 'SAV 4', orden: 3, activo: true },
   ];
 
+  let result;
   if (data && data.length > 0) {
-    return data.map(b => ({
+    result = data.map(b => ({
       ...b,
       imagen_url: b.imagen_url === '/imag/carusel1.jpeg' ? '/imag/carrusel1.jpeg' : b.imagen_url
     }));
+  } else {
+    result = defaultBanners;
   }
-  return defaultBanners;
+
+  bannersCache = { data: result, lastFetch: now };
+  return result;
 }
 
 export async function getAllTasks() {
@@ -772,24 +801,28 @@ export async function createMovimiento(movimiento) {
 /**
  * Calcula las ganancias de un usuario para diferentes periodos en zona horaria de Bolivia
  */
-export async function getUserEarningsSummary(userId) {
+export async function getUserEarningsSummary(userId, providedUser = null) {
   console.log(`[Resumen] Calculando ganancias para usuario ${userId}...`);
   try {
-    const user = await findUserById(userId);
+    const user = providedUser || await findUserById(userId);
     if (!user) return null;
 
-    // Obtener todos los movimientos de ingreso del usuario
+    // Obtener movimientos de ingreso del usuario (Solo los últimos 35 días para optimizar)
+    // Esto cubre hoy, ayer, semana y mes actual sin saturar Supabase
     let movimientos = [];
     try {
+      const thirtyFiveDaysAgo = new Date(boliviaTime.now());
+      thirtyFiveDaysAgo.setDate(thirtyFiveDaysAgo.getDate() - 35);
+      
       const { data, error } = await supabase
         .from('movimientos_saldo')
-        .select('*')
+        .select('monto, fecha, tipo_movimiento')
         .eq('usuario_id', userId)
+        .gte('fecha', thirtyFiveDaysAgo.toISOString())
         .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion', 'ajuste_admin', 'comision_inversion', 'comision_tarea']);
       
       if (error) throw error;
       movimientos = data || [];
-      console.log(`  - [OK] ${movimientos.length} movimientos recuperados.`);
     } catch (e) {
       console.warn(`[Resumen] No se pudo leer de movimientos_saldo. Usando caché de usuario.`);
       // Si la tabla no existe, devolvemos los campos de la tabla usuarios como fallback
@@ -824,7 +857,7 @@ export async function getUserEarningsSummary(userId) {
     const startOfMonth = new Date(boliviaNow.getFullYear(), boliviaNow.getMonth(), 1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    let hoy = 0, ayer = 0, semana = 0, mes = 0, total = 0;
+    let hoy = 0, ayer = 0, semana = 0, mes = 0;
 
     movimientos.forEach(m => {
       const mDateStr = boliviaTime.getDateString(m.fecha);
@@ -833,7 +866,6 @@ export async function getUserEarningsSummary(userId) {
 
       // Solo contar como "ingreso" si el monto es positivo
       if (monto > 0) {
-        total += monto;
         if (mDateStr === todayStr) hoy += monto;
         if (mDateStr === yesterdayStr) ayer += monto;
         if (mDate >= startOfWeek) semana += monto;
@@ -841,14 +873,12 @@ export async function getUserEarningsSummary(userId) {
       }
     });
 
-    console.log(`  - [RESULTADO REAL] Hoy: ${hoy.toFixed(2)}, Total: ${total.toFixed(2)}`);
-
     return {
       hoy: Number(hoy.toFixed(2)),
       ayer: Number(ayer.toFixed(2)),
       semana: Number(semana.toFixed(2)),
       mes: Number(mes.toFixed(2)),
-      total: Number(total.toFixed(2)),
+      total: Number(user.ganancias_totales || 0), // Usamos el campo persistente del usuario
       saldo_principal: Number(user.saldo_principal || 0),
       saldo_comisiones: Number(user.saldo_comisiones || 0),
       tareas_completadas: Number(user.tareas_completadas_exito || 0)

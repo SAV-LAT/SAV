@@ -60,10 +60,14 @@ export default function Dashboard() {
         });
     };
 
-    fetchStats();
+    // fetchStats(); // Eliminado duplicado
 
-    // Polling de respaldo para estadísticas cada 10 segundos
-    const statsInterval = setInterval(fetchStats, 10000);
+    // Polling de respaldo para estadísticas cada 20 segundos (solo si es visible)
+    const statsInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchStats();
+      }
+    }, 20000);
     
     const fetchBanners = () => {
       api.banners()
@@ -100,7 +104,7 @@ export default function Dashboard() {
 
     fetchBanners();
     fetchPublicConfig();
-    fetchStats();
+    // fetchStats(); // Eliminado duplicado, se llama arriba
 
     // --- SINCRONIZACIÓN REALTIME MEJORADA ---
     // 1. Cambios globales del Admin

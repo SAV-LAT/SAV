@@ -128,7 +128,10 @@ router.post('/change-fund-password', authenticate, async (req, res) => {
 
 router.get('/stats', authenticate, async (req, res) => {
   try {
-    const summary = await getUserEarningsSummary(req.user.id);
+    const user = await findUserById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const summary = await getUserEarningsSummary(req.user.id, user);
     if (!summary) return res.status(404).json({ error: 'No se pudo calcular el resumen' });
     
     res.json({

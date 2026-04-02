@@ -39,8 +39,10 @@ export function AuthProvider({ children }) {
 
     const lastUpdate = localStorage.getItem('lastUserUpdate');
     const now = Date.now();
-    // Evitar recargas si la última fue hace menos de 5 segundos, a menos que sea forzado
-    if (!force && lastUpdate && now - parseInt(lastUpdate) < 5000) {
+    
+    // Evitar recargas si la última fue hace menos de 10 segundos para /me, a menos que sea forzado
+    // Esto reduce significativamente las peticiones redundantes
+    if (!force && lastUpdate && now - parseInt(lastUpdate) < 10000) {
       return;
     }
 
@@ -48,7 +50,6 @@ export function AuthProvider({ children }) {
     isUpdatingRef.current = true;
 
     try {
-      // Usamos api.get directamente, que ya tiene deduplicación implementada en api.js
       const data = await api.get('/users/me');
       if (data && data.id) {
         setUser(data);

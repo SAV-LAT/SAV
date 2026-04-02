@@ -50,24 +50,38 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isMounted) return;
 
-    const fetchStats = () => {
+    // Ref para controlar peticiones en vuelo y evitar spam
+    const statsFetchingRef = { current: false };
+    const lastStatsFetchRef = { current: 0 };
+
+    const fetchStats = (force = false) => {
+      const now = Date.now();
+      // No permitir peticiones más frecuentes de 5 segundos a menos que sea forzado
+      if (!force && now - lastStatsFetchRef.current < 5000) return;
+      if (statsFetchingRef.current) return;
+
+      statsFetchingRef.current = true;
       api.users.stats()
         .then(data => {
-          if (isMounted) setStats(data);
+          if (isMounted) {
+            setStats(data);
+            lastStatsFetchRef.current = Date.now();
+          }
         })
         .catch((err) => {
           console.error('Error fetching stats:', err);
+        })
+        .finally(() => {
+          statsFetchingRef.current = false;
         });
     };
 
-    // fetchStats(); // Eliminado duplicado
-
-    // Polling de respaldo para estadísticas cada 45 segundos (antes 20s, solo si es visible)
+    // Polling de respaldo para estadísticas cada 60 segundos (solo si es visible)
     const statsInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetchStats();
       }
-    }, 45000);
+    }, 60000);
     
     const fetchBanners = () => {
       api.banners()
@@ -104,7 +118,7 @@ export default function Dashboard() {
 
     fetchBanners();
     fetchPublicConfig();
-    fetchStats(); // Recuperado para carga inicial, la deduplicación en api.js evita exceso
+    fetchStats(true); // Carga inicial forzada
 
     // --- SINCRONIZACIÓN REALTIME MEJORADA ---
     // 1. Cambios globales del Admin
@@ -130,8 +144,9 @@ export default function Dashboard() {
           filter: `id=eq.${user.id}` 
         }, (payload) => {
           console.log('[Realtime] Datos de usuario actualizados:', payload.new);
-          refreshUser(); // Actualiza el contexto global (Activos, Comisión)
-          fetchStats(); // Actualiza las estadísticas (Hoy, Semana, Mes)
+          refreshUser(); // Actualiza el contexto global
+          // Agregamos un pequeño delay para evitar ráfagas si hay múltiples updates seguidos
+          setTimeout(() => fetchStats(true), 500); 
         })
         .on('postgres_changes', { 
           event: 'INSERT', 
@@ -140,7 +155,7 @@ export default function Dashboard() {
           filter: `usuario_id=eq.${user.id}` 
         }, () => {
           console.log('[Realtime] Nuevo movimiento detectado. Refrescando estadísticas...');
-          fetchStats();
+          setTimeout(() => fetchStats(true), 500);
         })
         .subscribe();
     }

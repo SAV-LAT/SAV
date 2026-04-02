@@ -6,7 +6,7 @@ import {
   getPublicContent, getMetodosQr, getAllMetodosQr, getBanners, getAllTasks, getRecargaById, 
   updateRecarga, getRetiroById, updateRetiro, trySupabase, handleLevelUpRewards,
   getUserEarningsSummary, createMovimiento, boliviaTime, getPunishedUsers, unpunishUser,
-  unpunishAllUsers, distributeInvestmentCommissions
+  unpunishAllUsers, distributeInvestmentCommissions, refreshPublicContent
 } from '../lib/queries.js';
 import { getStore } from '../data/store.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
@@ -796,6 +796,8 @@ router.put('/public-content', async (req, res) => {
         supabase.from('configuraciones').upsert({ clave, valor: valorFinal }, { onConflict: 'clave' })
       );
     }
+    // Invalidar caché de memoria para que los cambios se reflejen de inmediato
+    refreshPublicContent();
     const config = await getPublicContent();
     res.json(mergePublicContent(config));
   } catch (err) {
@@ -812,6 +814,8 @@ router.put('/contenido-home', async (req, res) => {
         supabase.from('configuraciones').upsert({ clave, valor: valorFinal }, { onConflict: 'clave' })
       );
     }
+    // Invalidar caché de memoria
+    refreshPublicContent();
     const config = await getPublicContent();
     res.json(mergePublicContent(config));
   } catch (err) {

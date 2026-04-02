@@ -100,9 +100,12 @@ export async function getUsers() {
   if (usersCache.data && now - usersCache.lastFetch < 30000) { 
     return usersCache.data;
   }
+  // Campos mínimos para construir el árbol de equipo y listados generales
+  const fields = 'id, nombre_usuario, codigo_invitacion, telefono, nivel_id, rol, invitado_por, saldo_principal, created_at';
+  
   const { data } = await trySupabase(
-    () => supabase.from('usuarios').select('*'),
-    1, // Solo 1 intento para la lista completa
+    () => supabase.from('usuarios').select(fields),
+    1, 
     'users:all'
   );
   if (data) {
@@ -217,7 +220,17 @@ export async function findUserById(id) {
   return data;
 }
 
+const codeCache = new Map();
+const CODE_CACHE_TTL = 5000; // 5 segundos para códigos de invitación
+
 export async function findUserByCodigo(codigo) {
+  if (!codigo) return null;
+  const now = Date.now();
+  const cached = codeCache.get(codigo);
+  if (cached && (now - cached.timestamp < CODE_CACHE_TTL)) {
+    return cached.data;
+  }
+
   const { data } = await trySupabase(
     () => supabase.from('usuarios')
       .select('id, nivel_id, nombre_usuario')
@@ -226,6 +239,10 @@ export async function findUserByCodigo(codigo) {
     2,
     'user:code:' + codigo
   );
+  
+  if (data) {
+    codeCache.set(codigo, { data, timestamp: now });
+  }
   return data;
 }
 
@@ -345,11 +362,13 @@ export async function updateUser(id, updates) {
 let levelsCache = { data: null, lastFetch: 0 };
 export async function getLevels() {
   const now = Date.now();
-  if (levelsCache.data && now - levelsCache.lastFetch < 3600000) { // 1 hora para niveles (rara vez cambian)
+  // Caché de larga duración (1 hora) ya que los niveles son estáticos
+  if (levelsCache.data && now - levelsCache.lastFetch < 3600000) {
     return levelsCache.data;
   }
+  
   const { data } = await trySupabase(
-    () => supabase.from('niveles').select('id, nombre, codigo, orden').order('orden', { ascending: true }),
+    () => supabase.from('niveles').select('id, nombre, codigo, orden, num_tareas_diarias, tareas_diarias, comision_por_tarea, deposito, costo').order('orden', { ascending: true }),
     2,
     'levels:all'
   );
@@ -609,25 +628,32 @@ export async function deleteTarjeta(id, userId) {
 }
 
 let publicContentCache = { data: null, lastFetch: 0 };
-const CONFIG_CACHE_TTL = 60000; // 1 minuto de caché para configuración global
+const CONFIG_CACHE_TTL = 300000; // 5 minutos de caché para configuración global
 
 export async function getPublicContent() {
   const now = Date.now();
+  // Retornar caché si existe y no ha expirado
   if (publicContentCache.data && now - publicContentCache.lastFetch < CONFIG_CACHE_TTL) {
     return publicContentCache.data;
   }
 
+  // Deduplicación automática vía trySupabase con la clave 'config:all'
   const { data } = await trySupabase(
     () => supabase.from('configuraciones').select('clave, valor'),
     2,
     'config:all'
   );
   
+  // Si la consulta falla pero tenemos datos viejos en caché, los reutilizamos (fallback resiliente)
   if (!data && publicContentCache.data) {
-    return publicContentCache.data; // Fallback a caché vieja si falla Supabase
+    logger.warn('[Queries] Fallo en Supabase para config:all. Usando caché anterior.');
+    return publicContentCache.data;
   }
 
-  const result = (data || []).reduce((acc, curr) => {
+  // Si no hay datos y no hay caché, lanzamos error o devolvemos objeto vacío
+  if (!data) return {};
+
+  const result = data.reduce((acc, curr) => {
     let valor = curr.valor;
     try {
       if (valor === 'true') valor = true;
@@ -643,6 +669,14 @@ export async function getPublicContent() {
 
   publicContentCache = { data: result, lastFetch: now };
   return result;
+}
+
+/**
+ * Fuerza el refresco de la configuración global de memoria
+ */
+export function refreshPublicContent() {
+  publicContentCache.lastFetch = 0;
+  logger.info('[Queries] Caché de configuración invalidada manualmente.');
 }
 
 let bannersCache = { data: null, lastFetch: 0 };

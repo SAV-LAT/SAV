@@ -25,15 +25,23 @@ export async function startTelegramPolling() {
   pollingActive = true;
   console.log('[Telegram Polling] Polling system started.');
 
+  let lastConfigFetch = 0;
+  let cachedTokens = [];
+
   const poll = async () => {
     try {
-      const config = await getPublicContent();
-      const tokens = [
-        config.telegram_recargas_token || process.env.TELEGRAM_RECARGAS_TOKEN,
-        config.telegram_retiros_token || process.env.TELEGRAM_RETIROS_TOKEN
-      ].filter(t => t && t.includes(':')); // Validar que parezca un token
+      const now = Date.now();
+      // Solo refrescar tokens de configuración cada 5 minutos para el polling
+      if (now - lastConfigFetch > 300000 || cachedTokens.length === 0) {
+        const config = await getPublicContent();
+        cachedTokens = [
+          config.telegram_recargas_token || process.env.TELEGRAM_RECARGAS_TOKEN,
+          config.telegram_retiros_token || process.env.TELEGRAM_RETIROS_TOKEN
+        ].filter(t => t && t.includes(':'));
+        lastConfigFetch = now;
+      }
 
-      for (const token of tokens) {
+      for (const token of cachedTokens) {
         const updates = await getUpdates(token);
         if (updates.length > 0) {
           console.log(`[Telegram Polling] Recibidas ${updates.length} actualizaciones para el bot ${token.substring(0, 10)}...`);

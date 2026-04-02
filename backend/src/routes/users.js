@@ -50,15 +50,18 @@ router.get('/me', authenticate, async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    // findUserById ya tiene deduplicación y caché de 2s en queries.js
-    const user = await findUserById(userId);
+    // Ejecutamos las dos consultas en paralelo (user y levels)
+    // findUserById ya tiene deduplicación y caché de 2s
+    // getLevels ya tiene caché de 1 hora
+    const [user, levels] = await Promise.all([
+      findUserById(userId),
+      getLevels()
+    ]);
+
     if (!user) {
       logger.warn(`[Users] Usuario con ID ${userId} no encontrado.`);
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
-    
-    // getLevels tiene caché de 5 minutos en memoria, no genera carga real a Supabase
-    const levels = await getLevels();
     
     if (Date.now() - startTime > 2000) {
       logger.info(`[Users] /me tardó ${Date.now() - startTime}ms para ${user.nombre_usuario}`);

@@ -111,10 +111,18 @@ export async function getUsers() {
   return data || [];
 }
 
+/**
+ * Campos mínimos necesarios para la sesión y el perfil básico
+ */
+const USER_FIELDS_BASIC = 'id, telefono, nombre_usuario, nombre_real, codigo_invitacion, nivel_id, rol, saldo_principal, saldo_comisiones, avatar_url, tipo_lider, allow_weekend_tasks, tickets_ruleta, last_device_id, password_fondo_hash, castigado_hasta';
+
 export async function findUserByTelefono(telefono) {
   if (!telefono) return null;
   const { data } = await trySupabase(
-    () => supabase.from('usuarios').select('*').eq('telefono', telefono).maybeSingle(),
+    () => supabase.from('usuarios')
+      .select(`password_hash, ${USER_FIELDS_BASIC}`)
+      .eq('telefono', telefono)
+      .maybeSingle(),
     2,
     `user:tel:${telefono}`
   );
@@ -183,7 +191,7 @@ const userCache = new Map();
 const USER_CACHE_TTL = 2000; // 2 segundos para reducir ráfagas en /me y stats
 
 /**
- * Busca un usuario por ID
+ * Busca un usuario por ID con campos optimizados
  */
 export async function findUserById(id) {
   if (!supabase || !hasDb()) return null;
@@ -195,7 +203,10 @@ export async function findUserById(id) {
   }
 
   const { data } = await trySupabase(
-    () => supabase.from('usuarios').select('*').eq('id', id).maybeSingle(),
+    () => supabase.from('usuarios')
+      .select(USER_FIELDS_BASIC)
+      .eq('id', id)
+      .maybeSingle(),
     2,
     `user:id:${id}`
   );
@@ -207,7 +218,14 @@ export async function findUserById(id) {
 }
 
 export async function findUserByCodigo(codigo) {
-  const { data } = await trySupabase(() => supabase.from('usuarios').select('*').eq('codigo_invitacion', codigo).maybeSingle());
+  const { data } = await trySupabase(
+    () => supabase.from('usuarios')
+      .select('id, nivel_id, nombre_usuario')
+      .eq('codigo_invitacion', codigo)
+      .maybeSingle(),
+    2,
+    'user:code:' + codigo
+  );
   return data;
 }
 
@@ -327,11 +345,11 @@ export async function updateUser(id, updates) {
 let levelsCache = { data: null, lastFetch: 0 };
 export async function getLevels() {
   const now = Date.now();
-  if (levelsCache.data && now - levelsCache.lastFetch < 300000) { // Caché de 5 minutos para niveles
+  if (levelsCache.data && now - levelsCache.lastFetch < 3600000) { // 1 hora para niveles (rara vez cambian)
     return levelsCache.data;
   }
   const { data } = await trySupabase(
-    () => supabase.from('niveles').select('*').order('orden', { ascending: true }),
+    () => supabase.from('niveles').select('id, nombre, codigo, orden').order('orden', { ascending: true }),
     2,
     'levels:all'
   );
@@ -591,17 +609,24 @@ export async function deleteTarjeta(id, userId) {
 }
 
 let publicContentCache = { data: null, lastFetch: 0 };
+const CONFIG_CACHE_TTL = 60000; // 1 minuto de caché para configuración global
+
 export async function getPublicContent() {
   const now = Date.now();
-  if (publicContentCache.data && now - publicContentCache.lastFetch < 30000) {
+  if (publicContentCache.data && now - publicContentCache.lastFetch < CONFIG_CACHE_TTL) {
     return publicContentCache.data;
   }
 
   const { data } = await trySupabase(
-    () => supabase.from('configuraciones').select('*'),
+    () => supabase.from('configuraciones').select('clave, valor'),
     2,
     'config:all'
   );
+  
+  if (!data && publicContentCache.data) {
+    return publicContentCache.data; // Fallback a caché vieja si falla Supabase
+  }
+
   const result = (data || []).reduce((acc, curr) => {
     let valor = curr.valor;
     try {
@@ -609,7 +634,7 @@ export async function getPublicContent() {
       else if (valor === 'false') valor = false;
       else if (valor && (valor.startsWith('{') || valor.startsWith('['))) {
         valor = JSON.parse(valor);
-      } else if (!isNaN(valor) && valor.trim() !== '') {
+      } else if (!isNaN(valor) && valor.trim() !== '' && !valor.startsWith('0')) {
         valor = parseFloat(valor);
       }
     } catch (e) {}

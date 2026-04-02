@@ -14,15 +14,20 @@ router.post('/register', async (req, res) => {
     if (!telefono || !nombre_usuario || !password || !codigo_invitacion) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
-    const exists = await findUserByTelefono(telefono);
+
+    // 1. Validaciones en paralelo para reducir tiempo total
+    const [exists, inviter, levels] = await Promise.all([
+      findUserByTelefono(telefono),
+      findUserByCodigo(codigo_invitacion),
+      getLevels()
+    ]);
+
     if (exists) return res.status(400).json({ error: 'Teléfono ya registrado' });
-    const inviter = await findUserByCodigo(codigo_invitacion);
     if (!inviter) return res.status(400).json({ error: 'Código de invitación inválido' });
     
-    const levels = await getLevels();
     const pasanteLevel = levels.find(l => String(l.codigo).toLowerCase() === 'pasante' || String(l.id) === 'l1');
     
-    // Verificar que el invitador no sea un pasante (usando el ID del nivel pasante detectado)
+    // Verificar que el invitador no sea un pasante
     if (pasanteLevel && String(inviter.nivel_id) === String(pasanteLevel.id)) {
       return res.status(400).json({ error: 'Este código de invitación pertenece a un usuario en prueba (pasante) y no es válido para nuevos registros. Por favor solicita un código de un usuario VIP.' });
     }
@@ -42,20 +47,14 @@ router.post('/register', async (req, res) => {
       rol: 'usuario',
       bloqueado: false,
       tickets_ruleta: 0,
-      primer_ascenso_completado: false
+      primer_ascenso_completado: false,
+      last_device_id: deviceId || null
     };
     
-    // Solo agregar campos extra si no estamos seguros de que causen error en Supabase
-    // (A futuro se deberían agregar estas columnas a la DB)
-    const fullUser = {
-      ...user,
-      last_device_id: deviceId || null,
-    };
-
-    await createUser(user); // Insertamos solo lo esencial para asegurar éxito en Supabase
+    await createUser(user); 
     
     const token = jwt.sign({ id: user.id, rol: user.rol }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ user: sanitizeUser({ ...user, ...fullUser }, levels), token });
+    res.json({ user: sanitizeUser(user, levels), token });
   } catch (e) {
     logger.error('[Auth] Error en register:', e);
     res.status(500).json({ error: e.message || 'Error interno en el servidor' });

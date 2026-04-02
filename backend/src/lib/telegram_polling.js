@@ -27,12 +27,19 @@ export async function startTelegramPolling() {
 
   const poll = async () => {
     try {
-      // Usar getPublicContent que ahora siempre sirve desde memoria (CERO CONSULTAS A DB)
+      // getPublicContent ahora lee de globalConfig en memoria (latencia cero)
       const config = await getPublicContent();
+      
       const tokens = [
         config.telegram_recargas_token || process.env.TELEGRAM_RECARGAS_TOKEN,
         config.telegram_retiros_token || process.env.TELEGRAM_RETIROS_TOKEN
       ].filter(t => t && t.includes(':'));
+
+      if (tokens.length === 0) {
+        // Si no hay tokens, esperar un poco más antes de reintentar
+        if (pollingActive) setTimeout(poll, 30000);
+        return;
+      }
 
       for (const token of tokens) {
         const updates = await getUpdates(token);

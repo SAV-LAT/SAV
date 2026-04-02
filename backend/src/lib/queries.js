@@ -635,18 +635,30 @@ let configInMemory = null;
 let lastConfigFetch = 0;
 const CONFIG_CACHE_TTL = 300000; // 5 minutos de caché para configuración global
 
+// Valores por defecto para evitar que el sistema se rompa si falla Supabase al inicio
+const DEFAULT_CONFIG = {
+  telegram_recargas_token: process.env.TELEGRAM_RECARGAS_TOKEN || '',
+  telegram_retiros_token: process.env.TELEGRAM_RETIROS_TOKEN || '',
+  monto_minimo_retiro: 20,
+  comision_retiro: 0.05,
+  horario_retiros: '09:00-18:00',
+  mantenimiento_activo: false
+};
+
 /**
  * Carga inicial de configuración (debe llamarse en index.js)
  */
 export async function preloadConfig() {
   try {
-    const { data } = await trySupabase(
+    const { data, error } = await trySupabase(
       () => supabase.from('configuraciones').select('clave, valor'),
-      3, // Más reintentos para el arranque
+      3, // 3 reintentos para el arranque crítico
       'config:all'
     );
 
-    if (data) {
+    if (error) throw error;
+
+    if (data && data.length > 0) {
       configInMemory = data.reduce((acc, curr) => {
         let valor = curr.valor;
         try {
@@ -662,24 +674,36 @@ export async function preloadConfig() {
       }, {});
       lastConfigFetch = Date.now();
       logger.info('[Queries] Configuración global cargada en memoria correctamente.');
+    } else {
+      // Si no hay datos, usar valores por defecto
+      configInMemory = { ...DEFAULT_CONFIG };
+      logger.warn('[Queries] No se encontró configuración en DB. Usando valores por defecto.');
     }
   } catch (err) {
     logger.error('[Queries] Error crítico al precargar configuración:', err.message);
+    // FALLBACK SEGURO: Si falla Supabase por completo, no rompemos el servidor
+    if (!configInMemory) {
+      configInMemory = { ...DEFAULT_CONFIG };
+      logger.warn('[Queries] Usando FALLBACK de configuración por defecto debido a fallo en DB.');
+    }
   }
 }
 
 export async function getPublicContent() {
   const now = Date.now();
   
-  // Si tenemos datos en memoria y no han expirado, los devolvemos de inmediato (CERO LATENCIA)
-  if (configInMemory && (now - lastConfigFetch < CONFIG_CACHE_TTL)) {
+  // REGLA ABSOLUTA: Si tenemos datos en memoria, los devolvemos de inmediato (CERO CONSULTAS A DB)
+  if (configInMemory) {
+    // Si han pasado más de 5 minutos, intentamos refrescar en segundo plano (sin bloquear)
+    if (now - lastConfigFetch > CONFIG_CACHE_TTL) {
+      preloadConfig().catch(e => logger.error('[Queries] Refresco de config falló en background:', e.message));
+    }
     return configInMemory;
   }
 
-  // Si no hay datos o expiraron, intentamos recargar en segundo plano o bajo demanda
+  // Caso extremo: Si por alguna razón no hay configInMemory (ej: fallo total al inicio)
   await preloadConfig();
-  
-  return configInMemory || {};
+  return configInMemory || DEFAULT_CONFIG;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { supabase, hasDb } from './db.js';
 import logger from './logger.js';
 
-export async function trySupabase(operation, retries = 3) {
+export async function trySupabase(operation, retries = 2) {
   if (!supabase || !hasDb()) {
     logger.error('No se pudo conectar con la base de datos de Supabase.');
     throw new Error('Error crítico de conexión: No hay base de datos disponible.');
@@ -10,7 +10,13 @@ export async function trySupabase(operation, retries = 3) {
   let lastError;
   for (let i = 0; i < retries; i++) {
     try {
-      const { data, error } = await operation();
+      // Timeout forzado para la operación de Supabase para evitar colgar el proceso
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Supabase Timeout: La base de datos no respondió a tiempo.')), 15000)
+      );
+
+      const { data, error } = await Promise.race([operation(), timeoutPromise]);
+
       if (error) {
         const errorStr = JSON.stringify(error);
         const isTimeout = errorStr.includes('timeout') || error.code === '408' || error.status === 522 || errorStr.includes('522');
@@ -19,7 +25,8 @@ export async function trySupabase(operation, retries = 3) {
         lastError = error;
         
         if (i < retries - 1) {
-          const wait = isTimeout ? 2000 * Math.pow(2, i) : 1000 * (i + 1);
+          // Si es un error de timeout o 522, esperamos menos y reintentamos rápido o abortamos
+          const wait = isTimeout ? 1000 : 500 * (i + 1);
           await new Promise(resolve => setTimeout(resolve, wait));
           continue;
         }
@@ -27,10 +34,13 @@ export async function trySupabase(operation, retries = 3) {
       }
       return { data, error: null, fallback: false };
     } catch (err) {
+      const isTimeout = err.message?.includes('Timeout') || err.status === 522 || JSON.stringify(err).includes('522');
       logger.error(`Supabase Critical (Intento ${i + 1}/${retries}): ${err.message || err}`);
       lastError = err;
+
       if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1500 * (i + 1)));
+        const wait = isTimeout ? 1000 : 1000 * (i + 1);
+        await new Promise(resolve => setTimeout(resolve, wait));
         continue;
       }
       throw err;

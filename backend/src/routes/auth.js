@@ -57,7 +57,8 @@ router.post('/register', async (req, res) => {
     const token = jwt.sign({ id: user.id, rol: user.rol }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ user: sanitizeUser({ ...user, ...fullUser }, levels), token });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    logger.error('[Auth] Error en register:', e);
+    res.status(500).json({ error: e.message || 'Error interno en el servidor' });
   }
 });
 
@@ -75,14 +76,16 @@ router.post('/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Credenciales incorrectas' });
 
     if (deviceId) {
-      await updateUser(user.id, { last_device_id: deviceId });
+      // No bloqueamos el login por esta actualización, la lanzamos en background
+      updateUser(user.id, { last_device_id: deviceId }).catch(err => logger.error('[Auth] Error actualizando deviceId:', err));
     }
 
     const levels = await getLevels();
     const token = jwt.sign({ id: user.id, rol: user.rol }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ user: sanitizeUser(user, levels), token });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    logger.error('[Auth] Error en login:', e);
+    res.status(500).json({ error: e.message || 'Error interno en el servidor' });
   }
 });
 

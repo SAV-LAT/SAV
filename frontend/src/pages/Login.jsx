@@ -23,6 +23,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login, user: currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -37,12 +38,18 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+    
     setError('');
+    setLoading(true);
+    
     try {
       const user = await login(telefono, password);
       navigate(user?.rol === 'admin' ? '/admin' : '/');
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,10 +126,11 @@ export default function Login() {
 
             <button 
               type="submit" 
-              className="w-full py-5 mt-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-[0.3em] text-xs shadow-[0_15px_30px_rgba(37,99,235,0.3)] active:scale-[0.98] transition-all relative overflow-hidden group hover:brightness-110"
+              disabled={loading}
+              className={`w-full py-5 mt-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-[0.3em] text-xs shadow-[0_15px_30px_rgba(37,99,235,0.3)] active:scale-[0.98] transition-all relative overflow-hidden group hover:brightness-110 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              <span className="relative z-10">Entrar al Sistema</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+              <span className="relative z-10">{loading ? 'Accediendo...' : 'Entrar al Sistema'}</span>
+              {!loading && <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />}
             </button>
           </form>
         </div>

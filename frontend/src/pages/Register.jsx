@@ -25,6 +25,7 @@ export default function Register() {
 
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -32,11 +33,15 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     setError('');
     if (data.password !== data.repeat_password) {
       setError('Las contraseñas no coinciden');
       return;
     }
+
+    setLoading(true);
     try {
       await register({
         telefono: '+591' + data.telefono,
@@ -47,6 +52,8 @@ export default function Register() {
       navigate('/');
     } catch (err) {
       setError(err.message || 'Error al registrarse');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -171,10 +178,11 @@ export default function Register() {
 
             <button 
               type="submit" 
-              className="w-full py-5 mt-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-black uppercase tracking-[0.3em] text-xs shadow-[0_15px_30px_rgba(79,70,229,0.3)] active:scale-[0.98] transition-all relative overflow-hidden group hover:brightness-110"
+              disabled={loading}
+              className={`w-full py-5 mt-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-black uppercase tracking-[0.3em] text-xs shadow-[0_15px_30px_rgba(79,70,229,0.3)] active:scale-[0.98] transition-all relative overflow-hidden group hover:brightness-110 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              <span className="relative z-10">Crear Cuenta VIP</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+              <span className="relative z-10">{loading ? 'Procesando...' : 'Crear Cuenta VIP'}</span>
+              {!loading && <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />}
             </button>
           </form>
         </div>

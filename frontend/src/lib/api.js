@@ -34,9 +34,10 @@ async function request(url, options = {}, retries = 3) {
     }
   }
 
-  // 2. Deduplicación de peticiones en vuelo
-  if (isGet && inflightRequests.has(cacheKey)) {
-    return inflightRequests.get(cacheKey);
+  // 2. Deduplicación de peticiones en vuelo (GET y POST sensibles como Login/Register)
+  const isAuth = normalizedUrl.includes('/auth/');
+  if ((isGet || isAuth) && inflightRequests.has(cacheKey || normalizedUrl)) {
+    return inflightRequests.get(cacheKey || normalizedUrl);
   }
 
   const promise = (async () => {
@@ -48,7 +49,9 @@ async function request(url, options = {}, retries = 3) {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
+      // Timeout más corto para auth (30s) vs otros endpoints (120s)
+      const timeoutMs = isAuth ? 30000 : 120000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const res = await fetch(finalUrl, { 
         ...options, 
@@ -68,9 +71,19 @@ async function request(url, options = {}, retries = 3) {
 
       if (!res.ok) {
         let data = {};
-        try { data = await res.json(); } catch (e) {}
+        try { 
+          // Intentar parsear JSON, si falla es que devolvió HTML o texto plano
+          const text = await res.text();
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            data = { error: `Error del servidor (${res.status}). Intenta de nuevo.` };
+          }
+        } catch (e) {
+          data = { error: 'Error de conexión con el servidor.' };
+        }
         
-        if (res.status === 401 && !normalizedUrl.includes('/auth/')) {
+        if (res.status === 401 && !isAuth) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
@@ -90,12 +103,16 @@ async function request(url, options = {}, retries = 3) {
       return result;
     } catch (err) {
       if (err.name === 'AbortError') {
-        throw new Error('El servidor está tardando demasiado en responder. Por favor, reintenta en unos segundos.');
+        throw new Error(isAuth 
+          ? 'La autenticación está tardando demasiado. Por favor, verifica tu conexión o intenta en unos minutos.' 
+          : 'El servidor está tardando demasiado en responder. Por favor, reintenta en unos segundos.'
+        );
       }
 
       if (err.status >= 400 && err.status < 500) throw err;
 
-      if (retries > 0) {
+      // No reintentar auth para evitar bucles pesados
+      if (retries > 0 && !isAuth) {
         const delay = 2000 * (4 - retries);
         await new Promise(resolve => setTimeout(resolve, delay));
         return request(url, options, retries - 1);
@@ -103,11 +120,11 @@ async function request(url, options = {}, retries = 3) {
       
       throw err;
     } finally {
-      if (isGet) inflightRequests.delete(cacheKey);
+      if (isGet || isAuth) inflightRequests.delete(cacheKey || normalizedUrl);
     }
   })();
 
-  if (isGet) inflightRequests.set(cacheKey, promise);
+  if (isGet || isAuth) inflightRequests.set(cacheKey || normalizedUrl, promise);
   return promise;
 }
 

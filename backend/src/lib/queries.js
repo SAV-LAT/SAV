@@ -1,8 +1,9 @@
 import { supabase, hasDb } from './db.js';
+import logger from './logger.js';
 
 export async function trySupabase(operation, retries = 3) {
   if (!supabase || !hasDb()) {
-    console.error('[CRITICAL] No se pudo conectar con la base de datos de Supabase. El modo memoria (demo) está DESACTIVADO.');
+    logger.error('No se pudo conectar con la base de datos de Supabase.');
     throw new Error('Error crítico de conexión: No hay base de datos disponible.');
   }
   
@@ -11,14 +12,14 @@ export async function trySupabase(operation, retries = 3) {
     try {
       const { data, error } = await operation();
       if (error) {
-        // Manejo específico de errores 522 o timeouts de Cloudflare/Supabase
-        const isTimeout = error.message?.includes('timeout') || error.code === '408' || error.status === 522;
+        const errorStr = JSON.stringify(error);
+        const isTimeout = errorStr.includes('timeout') || error.code === '408' || error.status === 522 || errorStr.includes('522');
         
-        console.error(`[Supabase Error Logged] (Intento ${i + 1}/${retries}):`, JSON.stringify(error, null, 2));
+        logger.warn(`Supabase Error (Intento ${i + 1}/${retries}): ${error.message || 'Error desconocido'}`);
         lastError = error;
         
         if (i < retries - 1) {
-          const wait = isTimeout ? 2000 * (i + 1) : 1000 * (i + 1);
+          const wait = isTimeout ? 2000 * Math.pow(2, i) : 1000 * (i + 1);
           await new Promise(resolve => setTimeout(resolve, wait));
           continue;
         }
@@ -26,10 +27,10 @@ export async function trySupabase(operation, retries = 3) {
       }
       return { data, error: null, fallback: false };
     } catch (err) {
-      console.error(`[Supabase Critical Logged] (Intento ${i + 1}/${retries}):`, err.message || err);
+      logger.error(`Supabase Critical (Intento ${i + 1}/${retries}): ${err.message || err}`);
       lastError = err;
       if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        await new Promise(resolve => setTimeout(resolve, 1500 * (i + 1)));
         continue;
       }
       throw err;
@@ -38,8 +39,16 @@ export async function trySupabase(operation, retries = 3) {
   throw lastError;
 }
 
+let usersCache = { data: null, lastFetch: 0 };
 export async function getUsers() {
+  const now = Date.now();
+  if (usersCache.data && now - usersCache.lastFetch < 30000) { // 30 segundos de caché para lista de usuarios
+    return usersCache.data;
+  }
   const { data } = await trySupabase(() => supabase.from('usuarios').select('*'));
+  if (data) {
+    usersCache = { data, lastFetch: now };
+  }
   return data || [];
 }
 
@@ -106,11 +115,26 @@ export const boliviaTime = {
   }
 };
 
+const userCache = new Map();
+const USER_CACHE_TTL = 2000; // 2 segundos para reducir ráfagas en /me y stats
+
 /**
  * Busca un usuario por ID
  */
 export async function findUserById(id) {
+  if (!supabase || !hasDb()) return null;
+  
+  const now = Date.now();
+  const cached = userCache.get(id);
+  if (cached && (now - cached.timestamp < USER_CACHE_TTL)) {
+    return cached.data;
+  }
+
   const { data } = await trySupabase(() => supabase.from('usuarios').select('*').eq('id', id).maybeSingle());
+  
+  if (data) {
+    userCache.set(id, { data, timestamp: now });
+  }
   return data;
 }
 
@@ -196,9 +220,9 @@ export async function linkAdminTelegram(userId, telegramData) {
 }
 
 export async function createUser(userData) {
-  console.log(`[Queries] Intentando crear usuario: ${userData.nombre_usuario} (${userData.telefono})`);
+  logger.info(`[Queries] Intentando crear usuario: ${userData.nombre_usuario} (${userData.telefono})`);
   const { data } = await trySupabase(() => supabase.from('usuarios').insert([userData]).select().maybeSingle());
-  console.log(`[Queries] Usuario creado exitosamente en Supabase: ${userData.nombre_usuario}`);
+  logger.info(`[Queries] Usuario creado exitosamente en Supabase: ${userData.nombre_usuario}`);
   return data;
 }
 
@@ -361,7 +385,7 @@ export async function getMetodosQr() {
       return todo || [];
     }
   } catch (err) {
-    console.error('[Queries] Error crítico en getMetodosQr:', err.message);
+    logger.error(`[Queries] Error crítico en getMetodosQr: ${err.message}`);
     return [];
   }
 }
@@ -629,7 +653,7 @@ export async function handleLevelUpRewards(userId, oldLevelId, newLevelId) {
 
     // Solo otorgar si es el PRIMER ascenso (nunca antes ha ascendido)
     if (user.primer_ascenso_completado) {
-      console.log(`[Recompensas] El usuario ${user.nombre_usuario} ya realizó su primer ascenso anteriormente.`);
+      logger.debug(`[Recompensas] El usuario ${user.nombre_usuario} ya realizó su primer ascenso anteriormente.`);
       return;
     }
 
@@ -648,11 +672,11 @@ export async function handleLevelUpRewards(userId, oldLevelId, newLevelId) {
         // VERIFICAR SI EL INVITADOR ESTÁ CASTIGADO
         const castigado = await isUserPunished(inviter.id);
         if (castigado) {
-          console.log(`[Recompensas] Invitador ${inviter.nombre_usuario} está castigado. No recibe tickets de primer ascenso.`);
+          logger.debug(`[Recompensas] Invitador ${inviter.nombre_usuario} está castigado. No recibe tickets de primer ascenso.`);
           return;
         }
 
-        console.log(`[Recompensas] Primer ascenso de ${user.nombre_usuario} a ${levelCode}. Otorgando ${rewardTickets} tickets a ${inviter.nombre_usuario}.`);
+        logger.info(`[Recompensas] Primer ascenso de ${user.nombre_usuario} a ${levelCode}. Otorgando ${rewardTickets} tickets a ${inviter.nombre_usuario}.`);
         
         // Marcar el primer ascenso como completado para este usuario
         await updateUser(user.id, { primer_ascenso_completado: true });
@@ -664,7 +688,7 @@ export async function handleLevelUpRewards(userId, oldLevelId, newLevelId) {
       }
     }
   } catch (err) {
-    console.error('[Recompensas] Error en handleLevelUpRewards:', err);
+    logger.error('[Recompensas] Error en handleLevelUpRewards:', err);
   }
 }
 
@@ -676,7 +700,7 @@ export async function handleLevelUpRewards(userId, oldLevelId, newLevelId) {
  * Distribuye comisiones por tareas a la red (Niveles A, B, C)
  */
 export async function distributeTaskCommissions(userId, baseAmount) {
-  console.log(`[Comisiones Tareas] Iniciando distribución para usuario ${userId}, monto base: ${baseAmount}`);
+  logger.debug(`[Comisiones Tareas] Iniciando distribución para usuario ${userId}, monto base: ${baseAmount}`);
   
   try {
     const user = await findUserById(userId);
@@ -688,7 +712,7 @@ export async function distributeTaskCommissions(userId, baseAmount) {
     const userLevelCode = String(userLevel?.codigo || '').toLowerCase();
     
     if (userLevelCode === 'pasante' || userLevelCode === 'internar') {
-      console.log(`[Comisiones Tareas] Usuario ${user.nombre_usuario} es pasante. No genera comisiones.`);
+      logger.debug(`[Comisiones Tareas] Usuario ${user.nombre_usuario} es pasante. No genera comisiones.`);
       return;
     }
 
@@ -707,14 +731,14 @@ export async function distributeTaskCommissions(userId, baseAmount) {
 
       const castigado = await isUserPunished(upline.id);
       if (castigado) {
-        console.log(`[Comisiones Tareas] Upline ${upline.nombre_usuario} castigado. Salta.`);
+        logger.debug(`[Comisiones Tareas] Upline ${upline.nombre_usuario} castigado. Salta.`);
         currentUplineId = upline.invitado_por;
         continue;
       }
 
       const commission = Number((baseAmount * config.percent).toFixed(4)); // Más precisión para tareas
       if (commission > 0) {
-        console.log(`[Comisiones Tareas] Nivel ${config.key}: ${commission} BOB para ${upline.nombre_usuario}`);
+        logger.info(`[Comisiones Tareas] Nivel ${config.key}: ${commission} BOB para ${upline.nombre_usuario}`);
         await addUserEarnings(
           upline.id, 
           commission, 
@@ -727,7 +751,7 @@ export async function distributeTaskCommissions(userId, baseAmount) {
       currentUplineId = upline.invitado_por;
     }
   } catch (err) {
-    console.error('[Comisiones Tareas] Error:', err);
+    logger.error('[Comisiones Tareas] Error:', err);
   }
 }
 
@@ -735,7 +759,7 @@ export async function distributeTaskCommissions(userId, baseAmount) {
  * Distribuye comisiones por inversión (Recargas/Ascensos) a la red (Niveles A, B, C)
  */
 export async function distributeInvestmentCommissions(userId, amount) {
-  console.log(`[Comisiones Inversión] Iniciando distribución para usuario ${userId}, monto: ${amount}`);
+  logger.debug(`[Comisiones Inversión] Iniciando distribución para usuario ${userId}, monto: ${amount}`);
   
   try {
     const user = await findUserById(userId);
@@ -746,7 +770,7 @@ export async function distributeInvestmentCommissions(userId, amount) {
     const userLevelCode = String(userLevel?.codigo || '').toLowerCase();
     
     if (userLevelCode === 'pasante' || userLevelCode === 'internar') {
-      console.log(`[Comisiones Inversión] Usuario ${user.nombre_usuario} es pasante. No genera comisiones.`);
+      logger.debug(`[Comisiones Inversión] Usuario ${user.nombre_usuario} es pasante. No genera comisiones.`);
       return;
     }
 
@@ -771,7 +795,7 @@ export async function distributeInvestmentCommissions(userId, amount) {
 
       const commission = Number((amount * config.percent).toFixed(2));
       if (commission > 0) {
-        console.log(`[Comisiones Inversión] Nivel ${config.key}: ${commission} BOB para ${upline.nombre_usuario}`);
+        logger.info(`[Comisiones Inversión] Nivel ${config.key}: ${commission} BOB para ${upline.nombre_usuario}`);
         await addUserEarnings(
           upline.id, 
           commission, 
@@ -784,7 +808,7 @@ export async function distributeInvestmentCommissions(userId, amount) {
       currentUplineId = upline.invitado_por;
     }
   } catch (err) {
-    console.error('[Comisiones Inversión] Error:', err);
+    logger.error('[Comisiones Inversión] Error:', err);
   }
 }
 
@@ -801,8 +825,16 @@ export async function createMovimiento(movimiento) {
 /**
  * Calcula las ganancias de un usuario para diferentes periodos en zona horaria de Bolivia
  */
+const earningsSummaryCache = new Map();
+const EARNINGS_CACHE_TTL = 15000; // 15 segundos de caché para estadísticas (antes 5s)
+
 export async function getUserEarningsSummary(userId, providedUser = null) {
-  console.log(`[Resumen] Calculando ganancias para usuario ${userId}...`);
+  const now = Date.now();
+  const cached = earningsSummaryCache.get(userId);
+  if (cached && (now - cached.timestamp < EARNINGS_CACHE_TTL)) {
+    return cached.data;
+  }
+
   try {
     const user = providedUser || await findUserById(userId);
     if (!user) return null;
@@ -824,7 +856,7 @@ export async function getUserEarningsSummary(userId, providedUser = null) {
       if (error) throw error;
       movimientos = data || [];
     } catch (e) {
-      console.warn(`[Resumen] No se pudo leer de movimientos_saldo. Usando caché de usuario.`);
+      logger.warn(`[Resumen] No se pudo leer de movimientos_saldo. Usando caché de usuario.`);
       // Si la tabla no existe, devolvemos los campos de la tabla usuarios como fallback
       return {
         hoy: Number(user.ganancias_hoy || 0),
@@ -873,7 +905,7 @@ export async function getUserEarningsSummary(userId, providedUser = null) {
       }
     });
 
-    return {
+    const result = {
       hoy: Number(hoy.toFixed(2)),
       ayer: Number(ayer.toFixed(2)),
       semana: Number(semana.toFixed(2)),
@@ -883,8 +915,11 @@ export async function getUserEarningsSummary(userId, providedUser = null) {
       saldo_comisiones: Number(user.saldo_comisiones || 0),
       tareas_completadas: Number(user.tareas_completadas_exito || 0)
     };
+
+    earningsSummaryCache.set(userId, { data: result, timestamp: Date.now() });
+    return result;
   } catch (err) {
-    console.error('[Resumen] Error crítico:', err);
+    logger.error('[Resumen] Error crítico:', err);
     return null;
   }
 }
@@ -899,7 +934,7 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
   // VERIFICAR SI EL USUARIO ESTÁ CASTIGADO
   const castigado = await isUserPunished(userId);
   if (castigado) {
-    console.log(`[Earnings] Usuario ${userId} está castigado. No se acredita ganancia.`);
+    logger.debug(`[Earnings] Usuario ${userId} está castigado. No se acredita ganancia.`);
     return;
   }
 
@@ -911,7 +946,7 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
     'Comisión de red'
   );
 
-  console.log(`[Earnings] Intentando acreditar ${amount} a ${userId} via RPC...`);
+  logger.info(`[Earnings] Acreditando ${amount} a ${userId} (${tipo})`);
 
   // Intentamos usar la función RPC que maneja todo en una sola transacción SQL
   const { data, error } = await supabase.rpc('acreditar_ganancia', {
@@ -924,10 +959,10 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
   });
 
   if (error) {
-    console.error(`[Earnings] Error RPC 'acreditar_ganancia':`, error);
+    logger.error(`[Earnings] Error RPC 'acreditar_ganancia': ${error.message}`);
     
     // FALLBACK: Si el RPC falla (ej. no existe aún la función), usamos el método manual anterior
-    console.warn(`[Earnings] RPC falló. Iniciando fallback manual...`);
+    logger.warn(`[Earnings] RPC falló. Iniciando fallback manual...`);
     
     const user = await findUserById(userId);
     if (!user) throw new Error(`Usuario ${userId} no encontrado para acreditar ganancias.`);
@@ -951,13 +986,13 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
 
       if (moveError) {
         if (moveError.message?.includes('not find the table') || moveError.message?.includes('does not exist')) {
-          console.error(`[Earnings] CRÍTICO: La tabla 'movimientos_saldo' no existe. Acreditando solo en caché.`);
+          logger.error(`[Earnings] CRÍTICO: La tabla 'movimientos_saldo' no existe.`);
         } else {
           throw new Error(`Fallo en registro contable (fallback): ${moveError.message}`);
         }
       }
     } catch (e) {
-      console.error(`[Earnings] No se pudo registrar movimiento contable, pero seguiremos con la actualización del saldo:`, e.message);
+      logger.error(`[Earnings] No se pudo registrar movimiento contable: ${e.message}`);
     }
 
     // 2. Actualizar el caché en la tabla usuarios (Este paso es el que hace que el saldo suba)
@@ -1008,7 +1043,7 @@ export async function addUserEarnings(userId, amount, tipo = 'ganancia_tarea', o
  * Esta función es llamada por un cron job a medianoche Bolivia
  */
 export async function resetDailyEarnings() {
-  console.log('[Cron] Iniciando mantenimiento diario (00:00 Bolivia)...');
+  logger.info('[Cron] Iniciando mantenimiento diario (00:00 Bolivia)...');
   try {
     const users = await getUsers();
     
@@ -1018,7 +1053,7 @@ export async function resetDailyEarnings() {
     
     // Solo si el cuestionario estuvo activo ayer (o sigue activo hoy para la revisión)
     if (config.cuestionario_activo || config.cuestionario_data?.preguntas?.length > 0) {
-      console.log('[Cron] Revisando respuestas del cuestionario...');
+      logger.info('[Cron] Revisando respuestas del cuestionario...');
       
       // Obtener quiénes respondieron HOY (que en el momento de las 00:00 se refiere al día que acaba de terminar)
       // Nota: Si el cron corre exactamente a las 00:00, "todayStr" ya es el nuevo día.
@@ -1040,7 +1075,7 @@ export async function resetDailyEarnings() {
         if (user.rol === 'usuario' && !respondedIds.has(user.id)) {
           // Solo castigar si no tiene ya un castigo activo que cubra hoy
           if (!user.castigado_hasta || user.castigado_hasta < todayStr) {
-            console.log(`[Cron] Aplicando castigo a: ${user.nombre_usuario} (No respondió el ${yesterdayStr})`);
+            logger.info(`[Cron] Aplicando castigo a: ${user.nombre_usuario} (No respondió el ${yesterdayStr})`);
             await updateUser(user.id, { castigado_hasta: todayStr }); // Castigado por todo el día de hoy
           }
         }
@@ -1055,9 +1090,9 @@ export async function resetDailyEarnings() {
       };
       await updateUser(user.id, updates);
     }
-    console.log('[Cron] Mantenimiento diario completado.');
+    logger.info('[Cron] Mantenimiento diario completado.');
   } catch (err) {
-    console.error('[Cron] Error en maintenance:', err);
+    logger.error('[Cron] Error en maintenance:', err);
   }
 }
 
@@ -1065,8 +1100,17 @@ export async function resetDailyEarnings() {
  * CUESTIONARIOS Y CASTIGOS
  */
 
+const questionnaireCache = new Map();
 export async function checkUserQuestionnaire(userId) {
+  const now = Date.now();
   const today = boliviaTime.todayStr();
+  const cacheKey = `${userId}:${today}`;
+  
+  const cached = questionnaireCache.get(cacheKey);
+  if (cached && (now - cached.timestamp < 30000)) { // 30 segundos de caché
+    return cached.data;
+  }
+
   const { data } = await trySupabase(() => 
     supabase.from('respuestas_cuestionario')
       .select('id')
@@ -1074,7 +1118,10 @@ export async function checkUserQuestionnaire(userId) {
       .eq('fecha', today)
       .maybeSingle()
   );
-  return !!data;
+  
+  const result = !!data;
+  questionnaireCache.set(cacheKey, { data: result, timestamp: now });
+  return result;
 }
 
 export async function submitQuestionnaire(userId, respuestas = {}) {

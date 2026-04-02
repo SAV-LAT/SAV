@@ -62,12 +62,12 @@ export default function Dashboard() {
 
     // fetchStats(); // Eliminado duplicado
 
-    // Polling de respaldo para estadísticas cada 20 segundos (solo si es visible)
+    // Polling de respaldo para estadísticas cada 45 segundos (antes 20s, solo si es visible)
     const statsInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetchStats();
       }
-    }, 20000);
+    }, 45000);
     
     const fetchBanners = () => {
       api.banners()
@@ -104,7 +104,7 @@ export default function Dashboard() {
 
     fetchBanners();
     fetchPublicConfig();
-    // fetchStats(); // Eliminado duplicado, se llama arriba
+    fetchStats(); // Recuperado para carga inicial, la deduplicación en api.js evita exceso
 
     // --- SINCRONIZACIÓN REALTIME MEJORADA ---
     // 1. Cambios globales del Admin

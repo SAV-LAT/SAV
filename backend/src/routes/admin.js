@@ -12,6 +12,7 @@ import { getStore } from '../data/store.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { supabase } from '../lib/db.js';
 import { mergePublicContent } from '../data/publicContentDefaults.js';
+import logger from '../lib/logger.js';
 
 const router = Router();
 router.use(authenticate);
@@ -165,7 +166,7 @@ router.get('/ranking-invitados', async (req, res) => {
 
     res.json(ranking);
   } catch (err) {
-    console.error('[Ranking Error]:', err);
+    logger.error('[Ranking Error]:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -208,6 +209,7 @@ router.get('/usuarios/:id/earnings', async (req, res) => {
     );
     res.json({ summary, history: movimientos || [] });
   } catch (err) {
+    logger.error('[Admin Earnings Error]:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -241,13 +243,13 @@ router.post('/usuarios/:id/ajuste', async (req, res) => {
         fecha: new Date().toISOString()
       });
     } catch (movErr) {
-      console.error('[Admin Adjustment] Error creando movimiento:', movErr.message);
+      logger.error('[Admin Adjustment] Error creando movimiento:', movErr.message);
       // El error del movimiento no debe bloquear la respuesta exitosa del ajuste de saldo
     }
     
     res.json({ ok: true, nuevo_saldo: nuevoSaldo.toFixed(2) });
   } catch (err) {
-    console.error('[Admin Adjustment] Error crítico:', err);
+    logger.error('[Admin Adjustment] Error crítico:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -391,7 +393,7 @@ router.post('/retiros/:id/rechazar', async (req, res) => {
     
     res.json({ ok: true });
   } catch (err) {
-    console.error('[Admin Reject Error]:', err);
+    logger.error('[Admin Reject Error]:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -448,7 +450,7 @@ router.get('/metodos-qr', async (req, res) => {
     const metodos = await getMetodosQr();
     res.json(metodos);
   } catch (err) {
-    console.error('[Admin] Error en get /metodos-qr:', err.message);
+    logger.error('[Admin] Error en get /metodos-qr:', err.message);
     res.status(500).json({ error: 'Error al obtener métodos QR' });
   }
 });
@@ -458,7 +460,7 @@ router.get('/metodos-qr-all', async (req, res) => {
     const metodos = await getAllMetodosQr();
     res.json(metodos);
   } catch (err) {
-    console.error('[Admin] Error en get /metodos-qr-all:', err.message);
+    logger.error('[Admin] Error en get /metodos-qr-all:', err.message);
     res.status(500).json({ error: 'Error al obtener todos los métodos QR' });
   }
 });
@@ -486,7 +488,7 @@ router.post('/metodos-qr', async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error('[Admin] Error en post /metodos-qr:', err.message);
+    logger.error('[Admin] Error en post /metodos-qr:', err.message);
     res.status(500).json({ error: 'Error al crear método QR' });
   }
 });
@@ -502,10 +504,10 @@ router.delete('/metodos-qr/:id', async (req, res) => {
     const admin = await findAdminByUserId(req.user.id);
     if (admin) {
       await setActiveAdminForRecharges(admin.id);
-      console.log(`[Admin] Turno dinámico activado para: ${admin.nombre} por eliminar QR`);
+      logger.info(`[Admin] Turno dinámico activado para: ${admin.nombre} por eliminar QR`);
     }
   } catch (e) {
-    console.error('[Admin] Error activando turno dinámico:', e.message);
+    logger.error('[Admin] Error activando turno dinámico:', e.message);
   }
 
   res.json({ ok: true });
@@ -634,11 +636,11 @@ router.post('/regalar-tickets', async (req, res) => {
 
     // Realizar la actualización en bloques pequeños para evitar saturar Render free tier
     const CHUNK_SIZE = 5;
-    console.log(`[Admin] Iniciando regalo de ${numTickets} tickets a ${users.length} usuarios en bloques de ${CHUNK_SIZE}`);
+    logger.info(`[Admin] Iniciando regalo de ${numTickets} tickets a ${users.length} usuarios en bloques de ${CHUNK_SIZE}`);
     
     for (let i = 0; i < users.length; i += CHUNK_SIZE) {
       const chunk = users.slice(i, i + CHUNK_SIZE);
-      console.log(`[Admin] Procesando bloque ${Math.floor(i/CHUNK_SIZE) + 1}...`);
+      logger.info(`[Admin] Procesando bloque ${Math.floor(i/CHUNK_SIZE) + 1}...`);
       
       await Promise.all(chunk.map(async (user) => {
         try {
@@ -658,16 +660,16 @@ router.post('/regalar-tickets', async (req, res) => {
             throw updError;
           }
         } catch (e) {
-          console.error(`[Admin] Falló actualización de usuario ${user.id}:`, e.message);
+          logger.error(`[Admin] Falló actualización de usuario ${user.id}:`, e.message);
           throw e;
         }
       }));
     }
 
-    console.log(`[Admin] Regalo de tickets completado exitosamente`);
+    logger.info(`[Admin] Regalo de tickets completado exitosamente`);
     res.json({ ok: true, message: `Se han regalado ${numTickets} tickets a ${users.length} usuario(s).` });
   } catch (err) {
-    console.error('[Admin] Error al regalar tickets:', err);
+    logger.error('[Admin] Error al regalar tickets:', err);
     res.status(500).json({ error: 'Error al procesar el regalo de tickets: ' + err.message });
   }
 });
@@ -877,7 +879,7 @@ router.post('/cuestionario/castigar', async (req, res) => {
       message: `Sanciones aplicadas para el día ${targetDate}.`
     });
   } catch (err) {
-    console.error('[Admin Castigar] Error:', err);
+    logger.error('[Admin Castigar] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

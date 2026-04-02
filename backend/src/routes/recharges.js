@@ -6,6 +6,7 @@ import { authenticate } from '../middleware/auth.js';
 import { mergePublicContent } from '../data/publicContentDefaults.js';
 import { isScheduleOpen } from '../lib/schedule.js';
 import { telegram } from '../lib/telegram.js';
+import logger from '../lib/logger.js';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.get('/metodos', async (req, res) => {
       imagen_base64: m.imagen_base64 
     })));
   } catch (err) {
-    console.error('[Recharges] Error en get /metodos:', err.message);
+    logger.error('[Recharges] Error en get /metodos:', err.message);
     res.status(500).json({ error: 'Error al obtener métodos de pago' });
   }
 });
@@ -64,7 +65,7 @@ router.post('/', authenticate, async (req, res) => {
         });
       }
     } catch (err) {
-      console.error('[Recharge] Error al validar límite diario:', err);
+      logger.error('[Recharge] Error al validar límite diario:', err);
     }
 
     // Validar requisitos para S4/S5 (20 subordinados S3)
@@ -94,10 +95,10 @@ router.post('/', authenticate, async (req, res) => {
       created_at: boliviaTime.now().toISOString(),
     };
     
-    console.log(`[Recharge] Creating recharge for ${user?.nombre_usuario} - Amount: ${recarga.monto}`);
+    logger.info(`[Recharge] Creating recharge for ${user?.nombre_usuario} - Amount: ${recarga.monto}`);
     const startDb = Date.now();
     await createRecarga(recarga);
-    console.log(`[Recharge] Recharge created in DB in ${Date.now() - startDb}ms: ${recarga.id}`);
+    logger.info(`[Recharge] Recharge created in DB in ${Date.now() - startDb}ms: ${recarga.id}`);
 
     // Responder inmediatamente al cliente para evitar timeouts, 
     // y procesar las notificaciones en segundo plano.
@@ -116,25 +117,25 @@ router.post('/', authenticate, async (req, res) => {
         
         let results = [];
         if (recarga.comprobante_url && recarga.comprobante_url.startsWith('data:image')) {
-          console.log(`[Recharge] Sending Telegram with photo for ${recarga.id}`);
+          logger.info(`[Recharge] Sending Telegram with photo for ${recarga.id}`);
           results = await telegram.sendRecargaConFoto(msg, recarga.comprobante_url, recarga.id);
-          console.log(`[Recharge] Telegram with photo sent for ${recarga.id}`);
+          logger.info(`[Recharge] Telegram with photo sent for ${recarga.id}`);
         } else {
-          console.log(`[Recharge] Sending Telegram text only for ${recarga.id}`);
+          logger.info(`[Recharge] Sending Telegram text only for ${recarga.id}`);
           results = await telegram.sendRecarga(msg, recarga.id);
-          console.log(`[Recharge] Telegram text sent for ${recarga.id}`);
+          logger.info(`[Recharge] Telegram text sent for ${recarga.id}`);
         }
 
         if (results && results.length > 0) {
           await updateRecarga(recarga.id, { telegram_metadata: results });
-          console.log(`[Recharge] Metadata stored for ${recarga.id}: ${results.length} messages`);
+          logger.info(`[Recharge] Metadata stored for ${recarga.id}: ${results.length} messages`);
         }
       } catch (tgErr) {
-        console.error(`[Recharge] Error en notificación de Telegram:`, tgErr);
+        logger.error(`[Recharge] Error en notificación de Telegram:`, tgErr);
       }
     })();
   } catch (err) {
-    console.error('[Recharge] Error fatal en POST /:', err);
+    logger.error('[Recharge] Error fatal en POST /:', err);
     res.status(500).json({ error: 'Error interno al procesar la recarga' });
   }
 });

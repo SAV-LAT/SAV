@@ -7,6 +7,7 @@ import { mergePublicContent } from '../data/publicContentDefaults.js';
 import { isScheduleOpen } from '../lib/schedule.js';
 import { telegram } from '../lib/telegram.js';
 import { supabase } from '../lib/db.js';
+import logger from '../lib/logger.js';
 
 const router = Router();
 
@@ -155,25 +156,25 @@ router.post('/', authenticate, async (req, res) => {
         
         let results = [];
         if (retiro.qr_retiro && retiro.qr_retiro.startsWith('data:image')) {
-          console.log(`[Withdrawal] Sending Telegram with photo for ${retiro.id}`);
+          logger.info(`[Withdrawal] Sending Telegram with photo for ${retiro.id}`);
           results = await telegram.sendRetiroConFoto(msg, retiro.qr_retiro, retiro.id);
-          console.log(`[Withdrawal] Telegram with photo sent for ${retiro.id}`);
+          logger.info(`[Withdrawal] Telegram with photo sent for ${retiro.id}`);
         } else {
-          console.log(`[Withdrawal] Sending Telegram text only for ${retiro.id}`);
+          logger.info(`[Withdrawal] Sending Telegram text only for ${retiro.id}`);
           results = await telegram.sendRetiro(msg, retiro.id);
-          console.log(`[Withdrawal] Telegram text sent for ${retiro.id}`);
+          logger.info(`[Withdrawal] Telegram text sent for ${retiro.id}`);
         }
 
         if (results && results.length > 0) {
           await updateRetiro(retiro.id, { telegram_metadata: results });
-          console.log(`[Withdrawal] Metadata stored for ${retiro.id}: ${results.length} messages`);
+          logger.info(`[Withdrawal] Metadata stored for ${retiro.id}: ${results.length} messages`);
         }
       } catch (tgErr) {
-        console.error(`[Withdrawal] Error en notificación de Telegram:`, tgErr);
+        logger.error(`[Withdrawal] Error en notificación de Telegram:`, tgErr);
       }
     })();
   } catch (error) {
-    console.error('[Withdrawal Route Error]:', error);
+    logger.error('[Withdrawal Route Error]:', error);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Error interno al procesar el retiro' });
     }

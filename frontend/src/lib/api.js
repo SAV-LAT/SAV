@@ -22,7 +22,11 @@ async function request(url, options = {}, retries = 3) {
   const cacheKey = isGet ? `${normalizedUrl}:${JSON.stringify(options.params || {})}` : null;
 
   // 1. Verificar Caché Estática (Solo para rutas específicas)
-  const staticRoutes = ['/public-content', '/niveles', '/banners', '/withdrawals/montos'];
+  const staticRoutes = [
+    '/public-content', '/niveles', '/banners', '/withdrawals/montos', 
+    '/users/stats', '/users/earnings', '/tasks', '/users/cuestionario', 
+    '/users/status-castigo', '/users/team'
+  ];
   if (isGet && staticRoutes.includes(normalizedUrl)) {
     const cached = staticCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {

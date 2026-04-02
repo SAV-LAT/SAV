@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { findUserByTelefono, findUserByCodigo, createUser, getLevels, updateUser } from '../lib/queries.js';
+import logger from '../lib/logger.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'sav-demo-secret';

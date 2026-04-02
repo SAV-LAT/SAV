@@ -77,12 +77,12 @@ export function AuthProvider({ children }) {
     };
     init();
     
-    // Polling inteligente: cada 30s como respaldo
+    // Polling inteligente: cada 60s como respaldo (antes 30s)
     const pollInterval = setInterval(async () => {
       if (localStorage.getItem('token') && document.visibilityState === 'visible') {
         await loadUser();
       }
-    }, 30000);
+    }, 60000);
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && localStorage.getItem('token')) {

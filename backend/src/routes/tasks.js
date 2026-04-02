@@ -6,6 +6,7 @@ import {
   boliviaTime, isUserPunished, getPublicContent 
 } from '../lib/queries.js';
 import { authenticate } from '../middleware/auth.js';
+import logger from '../lib/logger.js';
 
 const router = Router();
 
@@ -57,7 +58,7 @@ router.get('/', authenticate, async (req, res) => {
     );
     
     if (!level) {
-      console.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id}: ${user.nivel_id}`);
+      logger.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id}: ${user.nivel_id}`);
       return res.status(400).json({ 
         error: 'Tu cuenta tiene un nivel inválido o no configurado. Contacta a soporte.',
         nivel_id: user.nivel_id 
@@ -166,7 +167,7 @@ router.get('/:id', authenticate, async (req, res) => {
     );
 
     if (!hasCorrectAnswerInOptions && task.respuesta_correcta) {
-      console.error(`[Tasks v4] ALERTA: La tarea ${task.id} tiene una respuesta correcta ("${task.respuesta_correcta}") que no figura en sus opciones: ${JSON.stringify(options)}`);
+      logger.warn(`[Tasks v4] ALERTA: La tarea ${task.id} tiene una respuesta correcta ("${task.respuesta_correcta}") que no figura en sus opciones: ${JSON.stringify(options)}`);
     }
 
     // Obtener el nivel del usuario actual para devolver la recompensa correcta
@@ -201,7 +202,7 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     try {
       config = await getPublicContent();
     } catch (e) {
-      console.warn('[Tasks] No se pudo cargar configuración pública al responder, usando por defecto (L-V)');
+      logger.warn('[Tasks] No se pudo cargar configuración pública al responder, usando por defecto (L-V)');
     }
     const allowedDays = (config.task_allowed_days || '1,2,3,4,5').split(',').map(Number);
     const day = boliviaTime.getDay();
@@ -219,12 +220,12 @@ router.post('/:id/responder', authenticate, async (req, res) => {
     const task = await getTaskById(req.params.id);
     if (!task) return res.status(404).json({ error: 'Tarea no encontrada' });
 
-    console.log(`[Tasks v4] Respuesta recibida de ${user.nombre_usuario} para tarea ${req.params.id}: "${respuesta}"`);
+    logger.debug(`[Tasks v4] Respuesta recibida de ${user.nombre_usuario} para tarea ${req.params.id}: "${respuesta}"`);
 
     // --- BLOQUEO ANTI-DUPLICADO (Race Condition Prevention) ---
     const lockKey = `${user.id}:${task.id}`;
     if (taskLocks.has(lockKey)) {
-      console.log(`  - [BLOQUEO] Petición duplicada detectada para ${lockKey}. Ignorando...`);
+      logger.warn(`  - [BLOQUEO] Petición duplicada detectada para ${lockKey}. Ignorando...`);
       return res.status(429).json({ error: 'Procesando tu respuesta anterior. Por favor, espera.' });
     }
     
@@ -261,23 +262,23 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       );
       
       if (!level) {
-        console.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id} al responder: ${user.nivel_id}`);
+        logger.error(`[Tasks v4] Nivel no encontrado para usuario ${user.id} al responder: ${user.nivel_id}`);
         throw new Error('Nivel de usuario no válido');
       }
 
       // REGLA: La recompensa NO viene de la tarea (pool global), sino del NIVEL del usuario
       const recompensa = esCorrectaReal ? Number(level.comision_por_tarea) : 0;
 
-      console.log(`\n[VALIDACIÓN PASO A PASO]`);
-      console.log(`  - Task ID: ${task.id}`);
-      console.log(`  - User ID: ${user.id} (${user.nombre_usuario})`);
-      console.log(`  - Recibido Original: "${respuesta}" -> Normalizado: "${valUser}"`);
-      console.log(`  - Esperado Original: "${task.respuesta_correcta}" -> Normalizado: "${valCorrect}"`);
-      console.log(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
+      logger.debug(`\n[VALIDACIÓN PASO A PASO]`);
+      logger.debug(`  - Task ID: ${task.id}`);
+      logger.debug(`  - User ID: ${user.id} (${user.nombre_usuario})`);
+      logger.debug(`  - Recibido Original: "${respuesta}" -> Normalizado: "${valUser}"`);
+      logger.debug(`  - Esperado Original: "${task.respuesta_correcta}" -> Normalizado: "${valCorrect}"`);
+      logger.debug(`  - Resultado: ${esCorrectaReal ? 'CORRECTO ✅' : 'INCORRECTO ❌'}`);
 
       // Registrar actividad PRIMERO
       const activityId = uuidv4();
-      console.log(`  - [STEP 1] Registrando actividad_tareas...`);
+      logger.debug(`  - [STEP 1] Registrando actividad_tareas...`);
       
       const activityData = {
         id: activityId,
@@ -291,36 +292,36 @@ router.post('/:id/responder', authenticate, async (req, res) => {
 
       try {
         await createTaskActivity(activityData);
-        console.log(`  - [OK] Actividad registrada.`);
+        logger.debug(`  - [OK] Actividad registrada.`);
       } catch (schemaErr) {
-        console.warn(`  - [FALLBACK] Error al registrar actividad con nivel_id. Reintentando sin nivel_id...`);
+        logger.warn(`  - [FALLBACK] Error al registrar actividad con nivel_id. Reintentando sin nivel_id...`);
         delete activityData.nivel_id;
         await createTaskActivity(activityData);
-        console.log(`  - [OK] Actividad registrada (fallback).`);
+        logger.debug(`  - [OK] Actividad registrada (fallback).`);
       }
 
       if (esCorrectaReal) {
-        console.log(`  - [STEP 2] Tarea correcta. Iniciando acreditación de ${recompensa} BOB...`);
+        logger.debug(`  - [STEP 2] Tarea correcta. Iniciando acreditación de ${recompensa} BOB...`);
         
         // 1. Registrar ganancia y actualizar saldo
         try {
           await addUserEarnings(user.id, recompensa, 'ganancia_tarea', activityId, `Ganancia por tarea: ${task.nombre}`);
-          console.log(`  - [OK] Ganancia, saldo y movimiento contable registrados.`);
+          logger.debug(`  - [OK] Ganancia, saldo y movimiento contable registrados.`);
         } catch (e) {
-          console.error(`  - [ERROR] Fallo al acreditar ganancia:`, e.message);
+          logger.error(`  - [ERROR] Fallo al acreditar ganancia: ${e.message}`);
           throw new Error(`Fallo contable: ${e.message}`);
         }
         
         // 2. Distribuir comisiones (No bloqueante para el usuario)
         try {
-          console.log(`  - [STEP 3] Procesando comisiones de red...`);
+          logger.debug(`  - [STEP 3] Procesando comisiones de red...`);
           await distributeTaskCommissions(user.id, recompensa);
-          console.log(`  - [OK] Comisiones enviadas a cola de procesamiento.`);
+          logger.debug(`  - [OK] Comisiones enviadas a cola de procesamiento.`);
         } catch (e) {
-          console.error(`  - [AVISO] Fallo no crítico en comisiones:`, e.message);
+          logger.warn(`  - [AVISO] Fallo no crítico en comisiones: ${e.message}`);
         }
       } else {
-        console.log(`  - [STEP 2] Tarea incorrecta. No se acredita recompensa.`);
+        logger.debug(`  - [STEP 2] Tarea incorrecta. No se acredita recompensa.`);
       }
 
       res.json({
@@ -335,11 +336,11 @@ router.post('/:id/responder', authenticate, async (req, res) => {
       // SIEMPRE liberamos el bloqueo al terminar (con éxito o error interno)
       clearTimeout(lockTimeout);
       taskLocks.delete(lockKey);
-      console.log(`  - [BLOQUEO] Liberado para ${lockKey}.`);
+      logger.debug(`  - [BLOQUEO] Liberado para ${lockKey}.`);
     }
 
   } catch (err) {
-    console.error(`[Tasks v4] Error crítico en responder tarea ${req.params.id}:`, err);
+    logger.error(`[Tasks v4] Error crítico en responder tarea ${req.params.id}:`, err);
     res.status(500).json({ 
       error: 'Error al procesar la respuesta',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined

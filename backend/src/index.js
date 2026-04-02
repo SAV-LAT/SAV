@@ -1,7 +1,8 @@
 import 'dotenv/config';
+import logger from './lib/logger.js';
 // Forzar Zona Horaria de Bolivia a nivel de proceso Node.js
 process.env.TZ = 'America/La_Paz';
-console.log('[TIMEZONE] Configurado a: ' + process.env.TZ + ' (Bolivia)');
+logger.info('[TIMEZONE] Configurado a: ' + process.env.TZ + ' (Bolivia)');
 
 import express from 'express';
 import cors from 'cors';
@@ -19,6 +20,7 @@ import telegramWebhookRoutes from './routes/telegram_webhook.js';
 import { getPublicContent, getBanners } from './lib/queries.js';
 import { mergePublicContent } from './data/publicContentDefaults.js';
 import { startTelegramPolling } from './lib/telegram_polling.js';
+import { rateLimiter } from './middleware/rateLimiter.js';
 
 console.log('\n[SERVER] Proceso de servidor iniciado. BUILD_ID: ' + Date.now());
 console.log('[SERVER] Versión: 4.2.0 - Telegram Polling & Secure Recharges');
@@ -27,14 +29,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Logger simple para ver peticiones en Render
+// Logger simple para ver peticiones en Render (Solo en desarrollo o auditoría)
 app.use((req, res, next) => {
-  console.log(`[REQUEST] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  if (process.env.NODE_ENV !== 'production') {
+    logger.debug(`[REQUEST] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  }
   next();
 });
 
 // Configuración de CORS estricta para producción
-console.log('[SERVER] Configurando CORS...');
+logger.info('[SERVER] Configurando CORS...');
 const whitelist = [
   'https://sav-lat.vercel.app',          // Dominio principal
   'https://sav-g9xx-cr2q3gvo5-sav3.vercel.app', // URL de despliegue Vercel
@@ -110,9 +114,12 @@ app.get('/api', (req, res) => {
     endpoints: ['/api/health', '/api/auth', '/api/users', '/api/tasks']
   });
 });
-app.use('/api/auth', authRoutes);
+
+// Aplicar Rate Limiting selectivo para proteger recursos
+app.use('/api/auth', rateLimiter(60000, 15), authRoutes);
+app.use('/api/users/stats', rateLimiter(60000, 20)); // Limitar stats específicamente
 app.use('/api/users', userRoutes);
-app.use('/api/tasks', taskRoutes);
+app.use('/api/tasks', rateLimiter(60000, 40), taskRoutes);
 app.use('/api/levels', levelRoutes);
 app.use('/api/recharges', rechargeRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);

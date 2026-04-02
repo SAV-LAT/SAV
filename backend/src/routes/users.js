@@ -9,6 +9,7 @@ import {
 import { authenticate } from '../middleware/auth.js';
 import { getStore } from '../data/store.js';
 import { supabase } from '../lib/db.js';
+import logger from '../lib/logger.js';
 
 const router = Router();
 
@@ -48,16 +49,13 @@ router.get('/me', authenticate, async (req, res) => {
     
     const user = await findUserById(req.user.id);
     if (!user) {
-      console.warn(`[Users] Usuario con ID ${req.user.id} no encontrado en la base de datos.`);
+      logger.warn(`[Users] Usuario con ID ${req.user.id} no encontrado en la base de datos.`);
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
     const levels = await getLevels();
     res.json(sanitizeUser(user, levels));
   } catch (err) {
-    console.error('[Users] Error en /me:', err);
-    // Log details if it's a Supabase error
-    if (err.message) console.error('[Users] Error message:', err.message);
-    if (err.stack) console.error('[Users] Error stack:', err.stack);
+    logger.error('[Users] Error en /me:', err);
     res.status(500).json({ error: 'Error al recuperar perfil' });
   }
 });
@@ -73,7 +71,7 @@ router.put('/me', authenticate, async (req, res) => {
     const levels = await getLevels();
     res.json(sanitizeUser(user, levels));
   } catch (err) {
-    console.error('[Users] Error en PUT /me:', err);
+    logger.error('[Users] Error en PUT /me:', err);
     res.status(500).json({ error: 'Error al actualizar perfil' });
   }
 });
@@ -96,7 +94,7 @@ router.post('/change-password', authenticate, async (req, res) => {
     await updateUser(user.id, { password_hash });
     res.json({ ok: true });
   } catch (err) {
-    console.error('[Users] Error en change-password:', err);
+    logger.error('[Users] Error en change-password:', err);
     res.status(500).json({ error: 'Error al cambiar contraseña' });
   }
 });
@@ -121,7 +119,7 @@ router.post('/change-fund-password', authenticate, async (req, res) => {
     await updateUser(user.id, { password_fondo_hash });
     res.json({ ok: true });
   } catch (err) {
-    console.error('[Users] Error en change-fund-password:', err);
+    logger.error('[Users] Error en change-fund-password:', err);
     res.status(500).json({ error: 'Error al cambiar contraseña de fondo' });
   }
 });
@@ -148,7 +146,7 @@ router.get('/stats', authenticate, async (req, res) => {
       pasante_limit_reached: false,
     });
   } catch (err) {
-    console.error('[Stats] Error crítico:', err);
+    logger.error('[Stats] Error crítico:', err);
     res.status(500).json({ error: 'Error al calcular estadísticas' });
   }
 });
@@ -168,12 +166,12 @@ router.get('/earnings', authenticate, async (req, res) => {
           .limit(50)
       );
       if (error) {
-        console.warn('[Earnings] Error al consultar movimientos_saldo:', error.message);
+        logger.warn('[Earnings] Error al consultar movimientos_saldo:', error.message);
       } else {
         movimientos = data || [];
       }
     } catch (e) {
-      console.warn('[Earnings] La tabla movimientos_saldo no es accesible aún.');
+      logger.warn('[Earnings] La tabla movimientos_saldo no es accesible aún.');
     }
     
     res.json({
@@ -186,7 +184,7 @@ router.get('/earnings', authenticate, async (req, res) => {
       history: movimientos
     });
   } catch (err) {
-    console.error('[Earnings] Error:', err);
+    logger.error('[Earnings] Error:', err);
     res.status(500).json({ error: 'Error al obtener historial de ganancias' });
   }
 });
@@ -196,7 +194,7 @@ router.get('/tarjetas', authenticate, async (req, res) => {
     const tarjetas = await getTarjetasByUser(req.user.id);
     res.json(tarjetas);
   } catch (err) {
-    console.error('[Users] Error en /tarjetas:', err);
+    logger.error('[Users] Error en /tarjetas:', err);
     res.status(500).json({ error: 'Error al recuperar tarjetas' });
   }
 });
@@ -220,7 +218,7 @@ router.post('/tarjetas', authenticate, async (req, res) => {
     const nuevaTarjeta = await createTarjeta(tarjeta);
     res.json(nuevaTarjeta);
   } catch (err) {
-    console.error('[Users] Error en POST /tarjetas:', err);
+    logger.error('[Users] Error en POST /tarjetas:', err);
     res.status(500).json({ error: 'Error al guardar la tarjeta' });
   }
 });
@@ -231,7 +229,7 @@ router.delete('/tarjetas/:id', authenticate, async (req, res) => {
     await deleteTarjeta(id, req.user.id);
     res.json({ ok: true });
   } catch (err) {
-    console.error('[Users] Error en DELETE /tarjetas:', err);
+    logger.error('[Users] Error en DELETE /tarjetas:', err);
     res.status(500).json({ error: 'Error al eliminar la tarjeta' });
   }
 });
@@ -248,7 +246,7 @@ router.get('/notificaciones', authenticate, async (req, res) => {
     if (error) throw error;
     res.json(data || []);
   } catch (err) {
-    console.error('[Users] Error en /notificaciones:', err);
+    logger.error('[Users] Error en /notificaciones:', err);
     res.status(500).json({ error: 'Error al recuperar notificaciones' });
   }
 });
@@ -264,14 +262,25 @@ router.put('/notificaciones/:id/read', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ ok: true });
   } catch (err) {
-    console.error('[Users] Error en /notificaciones/read:', err);
+    logger.error('[Users] Error en /notificaciones/read:', err);
     res.status(500).json({ error: 'Error al marcar como leída' });
   }
 });
 
+const teamCache = new Map();
+const TEAM_CACHE_TTL = 60000; // 1 minuto de caché para el equipo
+
 router.get('/team', authenticate, async (req, res) => {
   try {
-    const root = await findUserById(req.user.id);
+    const userId = req.user.id;
+    const now = Date.now();
+    const cached = teamCache.get(userId);
+    
+    if (cached && (now - cached.timestamp < TEAM_CACHE_TTL)) {
+      return res.json(cached.data);
+    }
+
+    const root = await findUserById(userId);
     if (!root) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     // Consultar todos los usuarios directamente de Supabase/Persistencia
@@ -321,7 +330,7 @@ router.get('/team', authenticate, async (req, res) => {
     const totalIngresos = descendants.reduce((s, d) => s + (d.saldo_principal || 0), 0);
     const hoyIngresos = descendants.slice(0, 2).reduce((s, d) => s + (d.saldo_principal || 0), 0);
 
-    res.json({
+    const responseData = {
       resumen: {
         ingresos_totales: totalIngresos,
         ingresos_hoy: hoyIngresos,
@@ -335,9 +344,12 @@ router.get('/team', authenticate, async (req, res) => {
       },
       niveles: [groupStats('A'), groupStats('B'), groupStats('C')],
       tree,
-    });
+    };
+
+    teamCache.set(userId, { data: responseData, timestamp: now });
+    res.json(responseData);
   } catch (err) {
-    console.error('[Users] Error en /team:', err);
+    logger.error('[Users] Error en /team:', err);
     res.status(500).json({ error: 'Error al calcular equipo' });
   }
 });

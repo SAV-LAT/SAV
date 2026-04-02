@@ -50,8 +50,7 @@ router.get('/me', authenticate, async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    // Ejecutamos las dos consultas en paralelo (user y levels)
-    // findUserById ya tiene deduplicación y caché de 2s
+    // REGLA: findUserById ya tiene caché de 10s en queries.js
     // getLevels ya tiene caché de 1 hora
     const [user, levels] = await Promise.all([
       findUserById(userId),
@@ -143,11 +142,11 @@ router.get('/stats', authenticate, async (req, res) => {
   const startTime = Date.now();
   
   try {
-    // 1. findUserById usa deduplicación y caché de 2s (Rápido)
+    // findUserById usa deduplicación y caché de 10s (Rápido)
     const user = await findUserById(userId);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    // 2. getUserEarningsSummary ahora es instantáneo si le pasamos el objeto user
+    // getUserEarningsSummary usa caché de 10s e interno utiliza el objeto user ya obtenido
     const summary = await getUserEarningsSummary(userId, user);
     
     if (!summary) {

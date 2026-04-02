@@ -119,8 +119,19 @@ export async function getUsers() {
  */
 const USER_FIELDS_BASIC = 'id, telefono, nombre_usuario, nombre_real, codigo_invitacion, nivel_id, rol, saldo_principal, saldo_comisiones, avatar_url, tipo_lider, allow_weekend_tasks, tickets_ruleta, last_device_id, password_fondo_hash, castigado_hasta';
 
+const userCache = new Map();
+const USER_CACHE_TTL = 10000; // 10 segundos para reducir ráfagas en /me y stats
+
 export async function findUserByTelefono(telefono) {
   if (!telefono) return null;
+  
+  const now = Date.now();
+  const cacheKey = `tel:${telefono}`;
+  const cached = userCache.get(cacheKey);
+  if (cached && (now - cached.timestamp < USER_CACHE_TTL)) {
+    return cached.data;
+  }
+
   const { data } = await trySupabase(
     () => supabase.from('usuarios')
       .select(`password_hash, ${USER_FIELDS_BASIC}`)
@@ -129,6 +140,10 @@ export async function findUserByTelefono(telefono) {
     2,
     `user:tel:${telefono}`
   );
+
+  if (data) {
+    userCache.set(cacheKey, { data, timestamp: now });
+  }
   return data;
 }
 
@@ -189,9 +204,6 @@ export const boliviaTime = {
     return new Date(boliviaStr);
   }
 };
-
-const userCache = new Map();
-const USER_CACHE_TTL = 2000; // 2 segundos para reducir ráfagas en /me y stats
 
 /**
  * Busca un usuario por ID con campos optimizados

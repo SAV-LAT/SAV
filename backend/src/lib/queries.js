@@ -627,56 +627,67 @@ export async function deleteTarjeta(id, userId) {
   return true;
 }
 
-let publicContentCache = { data: null, lastFetch: 0 };
+/**
+ * EJECUCIÓN ÚNICA AL INICIAR EL SERVIDOR
+ * Mantiene la configuración en memoria para evitar consultas repetitivas
+ */
+let configInMemory = null;
+let lastConfigFetch = 0;
 const CONFIG_CACHE_TTL = 300000; // 5 minutos de caché para configuración global
+
+/**
+ * Carga inicial de configuración (debe llamarse en index.js)
+ */
+export async function preloadConfig() {
+  try {
+    const { data } = await trySupabase(
+      () => supabase.from('configuraciones').select('clave, valor'),
+      3, // Más reintentos para el arranque
+      'config:all'
+    );
+
+    if (data) {
+      configInMemory = data.reduce((acc, curr) => {
+        let valor = curr.valor;
+        try {
+          if (valor === 'true') valor = true;
+          else if (valor === 'false') valor = false;
+          else if (valor && (valor.startsWith('{') || valor.startsWith('['))) {
+            valor = JSON.parse(valor);
+          } else if (!isNaN(valor) && valor.trim() !== '' && !valor.startsWith('0')) {
+            valor = parseFloat(valor);
+          }
+        } catch (e) {}
+        return { ...acc, [curr.clave]: valor };
+      }, {});
+      lastConfigFetch = Date.now();
+      logger.info('[Queries] Configuración global cargada en memoria correctamente.');
+    }
+  } catch (err) {
+    logger.error('[Queries] Error crítico al precargar configuración:', err.message);
+  }
+}
 
 export async function getPublicContent() {
   const now = Date.now();
-  // Retornar caché si existe y no ha expirado
-  if (publicContentCache.data && now - publicContentCache.lastFetch < CONFIG_CACHE_TTL) {
-    return publicContentCache.data;
-  }
-
-  // Deduplicación automática vía trySupabase con la clave 'config:all'
-  const { data } = await trySupabase(
-    () => supabase.from('configuraciones').select('clave, valor'),
-    2,
-    'config:all'
-  );
   
-  // Si la consulta falla pero tenemos datos viejos en caché, los reutilizamos (fallback resiliente)
-  if (!data && publicContentCache.data) {
-    logger.warn('[Queries] Fallo en Supabase para config:all. Usando caché anterior.');
-    return publicContentCache.data;
+  // Si tenemos datos en memoria y no han expirado, los devolvemos de inmediato (CERO LATENCIA)
+  if (configInMemory && (now - lastConfigFetch < CONFIG_CACHE_TTL)) {
+    return configInMemory;
   }
 
-  // Si no hay datos y no hay caché, lanzamos error o devolvemos objeto vacío
-  if (!data) return {};
-
-  const result = data.reduce((acc, curr) => {
-    let valor = curr.valor;
-    try {
-      if (valor === 'true') valor = true;
-      else if (valor === 'false') valor = false;
-      else if (valor && (valor.startsWith('{') || valor.startsWith('['))) {
-        valor = JSON.parse(valor);
-      } else if (!isNaN(valor) && valor.trim() !== '' && !valor.startsWith('0')) {
-        valor = parseFloat(valor);
-      }
-    } catch (e) {}
-    return { ...acc, [curr.clave]: valor };
-  }, {});
-
-  publicContentCache = { data: result, lastFetch: now };
-  return result;
+  // Si no hay datos o expiraron, intentamos recargar en segundo plano o bajo demanda
+  await preloadConfig();
+  
+  return configInMemory || {};
 }
 
 /**
  * Fuerza el refresco de la configuración global de memoria
  */
-export function refreshPublicContent() {
-  publicContentCache.lastFetch = 0;
-  logger.info('[Queries] Caché de configuración invalidada manualmente.');
+export async function refreshPublicContent() {
+  await preloadConfig();
+  logger.info('[Queries] Caché de configuración invalidada y refrescada manualmente.');
 }
 
 let bannersCache = { data: null, lastFetch: 0 };

@@ -17,9 +17,9 @@ import withdrawalRoutes from './routes/withdrawals.js';
 import adminRoutes from './routes/admin.js';
 import sorteoRoutes from './routes/sorteo.js';
 import telegramWebhookRoutes from './routes/telegram_webhook.js';
-import { getPublicContent, getBanners } from './lib/queries.js';
+import { getPublicContent, getBanners, preloadConfig } from './lib/queries.js';
 import { mergePublicContent } from './data/publicContentDefaults.js';
-import { startTelegramPolling } from './lib/telegram_polling.js';
+import { startTelegramPolling as startPollingEngine } from './lib/telegram_polling.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
 
 console.log('\n[SERVER] Proceso de servidor iniciado. BUILD_ID: ' + Date.now());
@@ -142,13 +142,18 @@ app.get('/api/public-content', async (req, res) => {
   res.json(mergePublicContent(config));
 });
 
-app.listen(PORT, async () => {
-  console.log(`\n[SUCCESS] ¡Servidor SAV API escuchando en http://localhost:${PORT}!\n`);
-  
-  // Iniciar Polling de Telegram (Para cuando no hay Webhook como en Local)
-  startTelegramPolling();
-  
-  // Tarea de mantenimiento: Reset de ganancias diarias a las 00:00 Bolivia (UTC-4)
+const startServer = async () => {
+  try {
+    // 1. Precargar configuración en memoria (CRÍTICO)
+    await preloadConfig();
+    
+    // 2. Iniciar polling de Telegram
+    startPollingEngine();
+    
+    app.listen(PORT, async () => {
+      console.log(`\n[SUCCESS] ¡Servidor SAV API escuchando en http://localhost:${PORT}!\n`);
+      
+      // Tarea de mantenimiento: Reset de ganancias diarias a las 00:00 Bolivia (UTC-4)
   const setupCron = async () => {
     const { resetDailyEarnings } = await import('./lib/queries.js');
     
@@ -167,5 +172,11 @@ app.listen(PORT, async () => {
     console.log('[CRON] Sistema de reset diario iniciado.');
   };
   
-  setupCron().catch(err => console.error('[CRON] Error al iniciar:', err));
-});
+      setupCron().catch(err => console.error('[CRON] Error al iniciar:', err));
+    });
+  } catch (err) {
+    console.error('[SERVER] Failed to start:', err);
+  }
+};
+
+startServer();

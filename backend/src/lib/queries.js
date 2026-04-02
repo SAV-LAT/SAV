@@ -1,61 +1,110 @@
 import { supabase, hasDb } from './db.js';
 import logger from './logger.js';
 
-export async function trySupabase(operation, retries = 2) {
+const inFlightQueries = new Map();
+
+/**
+ * Ejecuta una operación de Supabase con timeout y reintentos inteligentes
+ */
+export async function trySupabase(operation, retries = 2, key = null) {
   if (!supabase || !hasDb()) {
     logger.error('No se pudo conectar con la base de datos de Supabase.');
     throw new Error('Error crítico de conexión: No hay base de datos disponible.');
   }
-  
-  let lastError;
-  for (let i = 0; i < retries; i++) {
-    try {
-      // Timeout forzado para la operación de Supabase para evitar colgar el proceso
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Supabase Timeout: La base de datos no respondió a tiempo.')), 15000)
-      );
 
-      const { data, error } = await Promise.race([operation(), timeoutPromise]);
+  // Deduplicación de consultas en vuelo (Evita sobrecarga por ráfagas)
+  if (key && inFlightQueries.has(key)) {
+    return inFlightQueries.get(key);
+  }
 
-      if (error) {
-        const errorStr = JSON.stringify(error);
-        const isTimeout = errorStr.includes('timeout') || error.code === '408' || error.status === 522 || errorStr.includes('522');
+  const execute = async () => {
+    let lastError;
+    const startTime = Date.now();
+    const DEFAULT_TIMEOUT = 6000; // 6 segundos (Respuesta rápida o falla)
+    
+    for (let i = 0; i < retries; i++) {
+      try {
+        const attemptStart = Date.now();
         
-        logger.warn(`Supabase Error (Intento ${i + 1}/${retries}): ${error.message || 'Error desconocido'}`);
-        lastError = error;
+        // Timeout forzado para la operación
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Supabase Timeout: La base de datos no respondió a tiempo.')), DEFAULT_TIMEOUT)
+        );
+
+        const { data, error } = await Promise.race([operation(), timeoutPromise]);
+
+        const duration = Date.now() - attemptStart;
+
+        if (error) {
+          const errorStr = JSON.stringify(error);
+          const isTimeout = errorStr.includes('timeout') || error.code === '408' || error.status === 522 || errorStr.includes('522');
+          
+          logger.warn(`Supabase Error (Intento ${i + 1}/${retries}) [${duration}ms]: ${error.message || 'Error desconocido'}${key ? ' Key: ' + key : ''}`);
+          lastError = error;
+          
+          if (i < retries - 1) {
+            // Si es timeout, esperamos poco para no bloquear. Si es otro error, esperamos más.
+            const wait = isTimeout ? 300 : 500 * (i + 1);
+            await new Promise(resolve => setTimeout(resolve, wait));
+            continue;
+          }
+          throw error;
+        }
         
+        // Log de consultas lentas (> 1s)
+        if (duration > 1000) {
+          logger.info(`Supabase Slow Query [${key || 'unknown'}]: ${duration}ms (Intento ${i + 1})`);
+        }
+        
+        return { data, error: null };
+      } catch (err) {
+        const duration = Date.now() - startTime;
+        const isTimeout = err.message?.includes('Timeout') || err.status === 522 || JSON.stringify(err).includes('522');
+        
+        logger.error(`Supabase Critical (Intento ${i + 1}/${retries}) [${duration}ms]: ${err.message || err}${key ? ' Key: ' + key : ''}`);
+        lastError = err;
+
         if (i < retries - 1) {
-          // Si es un error de timeout o 522, esperamos menos y reintentamos rápido o abortamos
-          const wait = isTimeout ? 1000 : 500 * (i + 1);
+          const wait = isTimeout ? 500 : 1000 * (i + 1);
           await new Promise(resolve => setTimeout(resolve, wait));
           continue;
         }
-        throw error;
+        throw err;
       }
-      return { data, error: null, fallback: false };
-    } catch (err) {
-      const isTimeout = err.message?.includes('Timeout') || err.status === 522 || JSON.stringify(err).includes('522');
-      logger.error(`Supabase Critical (Intento ${i + 1}/${retries}): ${err.message || err}`);
-      lastError = err;
-
-      if (i < retries - 1) {
-        const wait = isTimeout ? 1000 : 1000 * (i + 1);
-        await new Promise(resolve => setTimeout(resolve, wait));
-        continue;
-      }
-      throw err;
     }
+    throw lastError;
+  };
+
+  if (key) {
+    const promise = execute()
+      .catch(err => {
+        // Limpiar el mapa inmediatamente en caso de error para permitir reintentos posteriores
+        inFlightQueries.delete(key);
+        throw err;
+      })
+      .finally(() => {
+        // Eliminar del mapa tras un tiempo prudencial (ej. 100ms) para evitar colisiones instantáneas
+        setTimeout(() => inFlightQueries.delete(key), 100);
+      });
+      
+    inFlightQueries.set(key, promise);
+    return promise;
   }
-  throw lastError;
+
+  return execute();
 }
 
 let usersCache = { data: null, lastFetch: 0 };
 export async function getUsers() {
   const now = Date.now();
-  if (usersCache.data && now - usersCache.lastFetch < 30000) { // 30 segundos de caché para lista de usuarios
+  if (usersCache.data && now - usersCache.lastFetch < 30000) { 
     return usersCache.data;
   }
-  const { data } = await trySupabase(() => supabase.from('usuarios').select('*'));
+  const { data } = await trySupabase(
+    () => supabase.from('usuarios').select('*'),
+    1, // Solo 1 intento para la lista completa
+    'users:all'
+  );
   if (data) {
     usersCache = { data, lastFetch: now };
   }
@@ -63,7 +112,12 @@ export async function getUsers() {
 }
 
 export async function findUserByTelefono(telefono) {
-  const { data } = await trySupabase(() => supabase.from('usuarios').select('*').eq('telefono', telefono).maybeSingle());
+  if (!telefono) return null;
+  const { data } = await trySupabase(
+    () => supabase.from('usuarios').select('*').eq('telefono', telefono).maybeSingle(),
+    2,
+    `user:tel:${telefono}`
+  );
   return data;
 }
 
@@ -140,7 +194,11 @@ export async function findUserById(id) {
     return cached.data;
   }
 
-  const { data } = await trySupabase(() => supabase.from('usuarios').select('*').eq('id', id).maybeSingle());
+  const { data } = await trySupabase(
+    () => supabase.from('usuarios').select('*').eq('id', id).maybeSingle(),
+    2,
+    `user:id:${id}`
+  );
   
   if (data) {
     userCache.set(id, { data, timestamp: now });
@@ -272,7 +330,11 @@ export async function getLevels() {
   if (levelsCache.data && now - levelsCache.lastFetch < 300000) { // Caché de 5 minutos para niveles
     return levelsCache.data;
   }
-  const { data } = await trySupabase(() => supabase.from('niveles').select('*').order('orden', { ascending: true }));
+  const { data } = await trySupabase(
+    () => supabase.from('niveles').select('*').order('orden', { ascending: true }),
+    2,
+    'levels:all'
+  );
   if (data) {
     levelsCache = { data, lastFetch: now };
   }
@@ -535,7 +597,11 @@ export async function getPublicContent() {
     return publicContentCache.data;
   }
 
-  const { data } = await trySupabase(() => supabase.from('configuraciones').select('*'));
+  const { data } = await trySupabase(
+    () => supabase.from('configuraciones').select('*'),
+    2,
+    'config:all'
+  );
   const result = (data || []).reduce((acc, curr) => {
     let valor = curr.valor;
     try {
@@ -561,7 +627,11 @@ export async function getBanners() {
     return bannersCache.data;
   }
 
-  const { data } = await trySupabase(() => supabase.from('banners_carrusel').select('*').eq('activo', true).order('orden', { ascending: true }));
+  const { data } = await trySupabase(
+    () => supabase.from('banners_carrusel').select('*').eq('activo', true).order('orden', { ascending: true }),
+    2,
+    'banners:active'
+  );
   
   const defaultBanners = [
     { id: 'def-1', imagen_url: '/imag/carrusel1.jpeg', titulo: 'SAV 1', orden: 0, activo: true },
@@ -834,104 +904,87 @@ export async function createMovimiento(movimiento) {
 
 /**
  * Calcula las ganancias de un usuario para diferentes periodos en zona horaria de Bolivia
+ * OPTIMIZADO: Usa campos persistentes de la tabla usuarios en lugar de recalcular movimientos
  */
 const earningsSummaryCache = new Map();
-const EARNINGS_CACHE_TTL = 15000; // 15 segundos de caché para estadísticas (antes 5s)
+const EARNINGS_CACHE_TTL = 10000; // 10 segundos de caché para estadísticas
 
-export async function getUserEarningsSummary(userId, providedUser = null) {
+export async function getUserEarningsSummary(userId, providedUser = null, deepRefresh = false) {
   const now = Date.now();
   const cached = earningsSummaryCache.get(userId);
-  if (cached && (now - cached.timestamp < EARNINGS_CACHE_TTL)) {
+  
+  if (!deepRefresh && cached && (now - cached.timestamp < EARNINGS_CACHE_TTL)) {
     return cached.data;
   }
 
-  try {
-    const user = providedUser || await findUserById(userId);
-    if (!user) return null;
+  // Si no se provee el usuario, lo buscamos (usa caché de 2s)
+  const user = providedUser || await findUserById(userId);
+  if (!user) return null;
 
-    // Obtener movimientos de ingreso del usuario (Solo los últimos 35 días para optimizar)
-    // Esto cubre hoy, ayer, semana y mes actual sin saturar Supabase
-    let movimientos = [];
+  // LÓGICA OPTIMIZADA: Usar los campos que el sistema ya mantiene actualizados
+  // Esto evita la consulta pesada a movimientos_saldo que causa timeouts
+  const summary = {
+    hoy: Number(Number(user.ganancias_hoy || 0).toFixed(2)),
+    ayer: Number(Number(user.ganancias_ayer || 0).toFixed(2)),
+    semana: Number(Number(user.ganancias_semana || 0).toFixed(2)),
+    mes: Number(Number(user.ganancias_mes || 0).toFixed(2)),
+    total: Number(Number(user.ganancias_totales || 0).toFixed(2)),
+    saldo_principal: Number(Number(user.saldo_principal || 0).toFixed(2)),
+    saldo_comisiones: Number(Number(user.saldo_comisiones || 0).toFixed(2)),
+    tareas_completadas: Number(user.tareas_completadas_exito || user.tareas_completadas || 0)
+  };
+
+  // Solo si se solicita un "deepRefresh" (ej. desde admin) hacemos la consulta pesada
+  if (deepRefresh) {
     try {
       const thirtyFiveDaysAgo = new Date(boliviaTime.now());
       thirtyFiveDaysAgo.setDate(thirtyFiveDaysAgo.getDate() - 35);
       
-      const { data, error } = await supabase
-        .from('movimientos_saldo')
-        .select('monto, fecha, tipo_movimiento')
-        .eq('usuario_id', userId)
-        .gte('fecha', thirtyFiveDaysAgo.toISOString())
-        .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion', 'ajuste_admin', 'comision_inversion', 'comision_tarea']);
-      
-      if (error) throw error;
-      movimientos = data || [];
-    } catch (e) {
-      logger.warn(`[Resumen] No se pudo leer de movimientos_saldo. Usando caché de usuario.`);
-      // Si la tabla no existe, devolvemos los campos de la tabla usuarios como fallback
-      return {
-        hoy: Number(user.ganancias_hoy || 0),
-        ayer: Number(user.ganancias_ayer || 0),
-        semana: Number(user.ganancias_semana || 0),
-        mes: Number(user.ganancias_mes || 0),
-        total: Number(user.ganancias_totales || 0),
-        saldo_principal: Number(user.saldo_principal || 0),
-        saldo_comisiones: Number(user.saldo_comisiones || 0),
-        tareas_completadas: Number(user.tareas_completadas_exito || 0)
-      };
-    }
+      const { data } = await trySupabase(
+        () => supabase
+          .from('movimientos_saldo')
+          .select('monto, fecha')
+          .eq('usuario_id', userId)
+          .gte('fecha', thirtyFiveDaysAgo.toISOString())
+          .in('tipo_movimiento', ['ganancia_tarea', 'comision_subordinado', 'recompensa_invitacion', 'ajuste_admin', 'comision_inversion', 'comision_tarea']),
+        1,
+        `earnings_deep:${userId}`
+      );
 
-    const todayStr = boliviaTime.todayStr();
-    
-    const yesterday = new Date(boliviaTime.now());
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = boliviaTime.getDateString(yesterday);
+      if (data) {
+        const todayStr = boliviaTime.todayStr();
+        const yesterday = new Date(boliviaTime.now());
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = boliviaTime.getDateString(yesterday);
+        const boliviaNow = boliviaTime.now();
+        
+        const startOfWeek = new Date(boliviaNow);
+        const day = startOfWeek.getDay(); 
+        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+        startOfWeek.setDate(diff);
+        startOfWeek.setHours(0, 0, 0, 0);
 
-    // Inicio de semana (Lunes) en Bolivia
-    const boliviaNow = boliviaTime.now();
-    
-    const startOfWeek = new Date(boliviaNow);
-    const day = startOfWeek.getDay(); // 0 (Dom) a 6 (Sab)
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Ajuste a Lunes
-    startOfWeek.setDate(diff);
-    startOfWeek.setHours(0, 0, 0, 0);
+        let hoy = 0, ayer = 0, semana = 0;
+        data.forEach(m => {
+          const mDateStr = boliviaTime.getDateString(m.fecha);
+          const mDate = boliviaTime.getBoliviaDate(m.fecha);
+          const monto = Number(m.monto) || 0;
+          if (mDateStr === todayStr) hoy += monto;
+          if (mDateStr === yesterdayStr) ayer += monto;
+          if (mDate >= startOfWeek) semana += monto;
+        });
 
-    // Inicio de mes
-    const startOfMonth = new Date(boliviaNow.getFullYear(), boliviaNow.getMonth(), 1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    let hoy = 0, ayer = 0, semana = 0, mes = 0;
-
-    movimientos.forEach(m => {
-      const mDateStr = boliviaTime.getDateString(m.fecha);
-      const mDate = boliviaTime.getBoliviaDate(m.fecha);
-      const monto = Number(m.monto) || 0;
-
-      // Solo contar como "ingreso" si el monto es positivo
-      if (monto > 0) {
-        if (mDateStr === todayStr) hoy += monto;
-        if (mDateStr === yesterdayStr) ayer += monto;
-        if (mDate >= startOfWeek) semana += monto;
-        if (mDate >= startOfMonth) mes += monto;
+        summary.hoy = Number(hoy.toFixed(2));
+        summary.ayer = Number(ayer.toFixed(2));
+        summary.semana = Number(semana.toFixed(2));
       }
-    });
-
-    const result = {
-      hoy: Number(hoy.toFixed(2)),
-      ayer: Number(ayer.toFixed(2)),
-      semana: Number(semana.toFixed(2)),
-      mes: Number(mes.toFixed(2)),
-      total: Number(user.ganancias_totales || 0), // Usamos el campo persistente del usuario
-      saldo_principal: Number(user.saldo_principal || 0),
-      saldo_comisiones: Number(user.saldo_comisiones || 0),
-      tareas_completadas: Number(user.tareas_completadas_exito || 0)
-    };
-
-    earningsSummaryCache.set(userId, { data: result, timestamp: Date.now() });
-    return result;
-  } catch (err) {
-    logger.error('[Resumen] Error crítico:', err);
-    return null;
+    } catch (e) {
+      logger.error(`[Stats] Deep refresh falló para ${userId}, usando valores persistentes.`);
+    }
   }
+
+  earningsSummaryCache.set(userId, { data: summary, timestamp: now });
+  return summary;
 }
 
 /**

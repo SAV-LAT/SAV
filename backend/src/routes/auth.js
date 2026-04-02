@@ -63,29 +63,51 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
+  const startTime = Date.now();
+  const { telefono, password, deviceId } = req.body;
+  
   try {
-    const { telefono, password, deviceId } = req.body;
+    // 1. findUserByTelefono ya tiene deduplicación y timeout rápido en queries.js
     const user = await findUserByTelefono(telefono);
-    if (!user) return res.status(401).json({ error: 'Credenciales incorrectas' });
+    
+    if (!user) {
+      logger.warn(`[Auth] Intento de login fallido para ${telefono}: No existe`);
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+    
     if (user.bloqueado) {
+      logger.warn(`[Auth] Usuario bloqueado intentó entrar: ${telefono}`);
       return res.status(403).json({ 
         error: 'Tu cuenta ha sido bloqueada por cometer una infracción. Debes comunicarte con el gerente para poder desbloquearla.' 
       });
     }
+    
     const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Credenciales incorrectas' });
-
-    if (deviceId) {
-      // No bloqueamos el login por esta actualización, la lanzamos en background
-      updateUser(user.id, { last_device_id: deviceId }).catch(err => logger.error('[Auth] Error actualizando deviceId:', err));
+    if (!ok) {
+      logger.warn(`[Auth] Intento de login fallido para ${telefono}: Password incorrecto`);
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
 
+    // 2. No bloqueamos el login por esta actualización (deviceId), se lanza en background
+    if (deviceId && user.last_device_id !== deviceId) {
+      updateUser(user.id, { last_device_id: deviceId }).catch(err => {
+        logger.error(`[Auth] Error de fondo actualizando deviceId para ${user.nombre_usuario}:`, err.message);
+      });
+    }
+
+    // 3. getLevels tiene caché de 5 minutos en memoria (no genera carga real)
     const levels = await getLevels();
+    
     const token = jwt.sign({ id: user.id, rol: user.rol }, JWT_SECRET, { expiresIn: '7d' });
+    
+    if (Date.now() - startTime > 2000) {
+      logger.info(`[Auth] /login tardó ${Date.now() - startTime}ms para ${user.nombre_usuario}`);
+    }
+    
     res.json({ user: sanitizeUser(user, levels), token });
   } catch (e) {
-    logger.error('[Auth] Error en login:', e);
-    res.status(500).json({ error: e.message || 'Error interno en el servidor' });
+    logger.error(`[Auth] Error crítico en login [${Date.now() - startTime}ms]:`, e.message || e);
+    res.status(500).json({ error: 'Error interno en el servidor. Intente de nuevo.' });
   }
 });
 

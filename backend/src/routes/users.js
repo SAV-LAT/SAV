@@ -41,21 +41,32 @@ function sanitizeUser(u, levels) {
 }
 
 router.get('/me', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const startTime = Date.now();
+  
   try {
-    // Forzar que no se use cache para evitar problemas de 304 o net::ERR_ABORTED en algunos navegadores/proxies
+    // Forzar que no se use cache para evitar problemas de 304 o net::ERR_ABORTED
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    const user = await findUserById(req.user.id);
+    // findUserById ya tiene deduplicación y caché de 2s en queries.js
+    const user = await findUserById(userId);
     if (!user) {
-      logger.warn(`[Users] Usuario con ID ${req.user.id} no encontrado en la base de datos.`);
+      logger.warn(`[Users] Usuario con ID ${userId} no encontrado.`);
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
+    
+    // getLevels tiene caché de 5 minutos en memoria, no genera carga real a Supabase
     const levels = await getLevels();
+    
+    if (Date.now() - startTime > 2000) {
+      logger.info(`[Users] /me tardó ${Date.now() - startTime}ms para ${user.nombre_usuario}`);
+    }
+    
     res.json(sanitizeUser(user, levels));
   } catch (err) {
-    logger.error('[Users] Error en /me:', err);
+    logger.error(`[Users] Error en /me [${Date.now() - startTime}ms]:`, err);
     res.status(500).json({ error: 'Error al recuperar perfil' });
   }
 });
@@ -125,12 +136,25 @@ router.post('/change-fund-password', authenticate, async (req, res) => {
 });
 
 router.get('/stats', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const startTime = Date.now();
+  
   try {
-    const user = await findUserById(req.user.id);
+    // 1. findUserById usa deduplicación y caché de 2s (Rápido)
+    const user = await findUserById(userId);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    const summary = await getUserEarningsSummary(req.user.id, user);
-    if (!summary) return res.status(404).json({ error: 'No se pudo calcular el resumen' });
+    // 2. getUserEarningsSummary ahora es instantáneo si le pasamos el objeto user
+    const summary = await getUserEarningsSummary(userId, user);
+    
+    if (!summary) {
+      return res.status(500).json({ error: 'No se pudo obtener estadísticas. Intente de nuevo.' });
+    }
+    
+    const duration = Date.now() - startTime;
+    if (duration > 1500) {
+      logger.info(`[Stats] /stats tardó ${duration}ms para ${user.nombre_usuario}`);
+    }
     
     res.json({
       ingresos_ayer: summary.ayer,
@@ -146,8 +170,13 @@ router.get('/stats', authenticate, async (req, res) => {
       pasante_limit_reached: false,
     });
   } catch (err) {
-    logger.error('[Stats] Error crítico:', err);
-    res.status(500).json({ error: 'Error al calcular estadísticas' });
+    const duration = Date.now() - startTime;
+    const isTimeout = err.message?.includes('Timeout');
+    logger.error(`[Stats] Error ${isTimeout ? 'Timeout' : 'Crítico'} [${duration}ms]:`, err.message || err);
+    
+    res.status(isTimeout ? 504 : 500).json({ 
+      error: isTimeout ? 'La base de datos está lenta. Reintente en unos segundos.' : 'Error al calcular estadísticas' 
+    });
   }
 });
 
